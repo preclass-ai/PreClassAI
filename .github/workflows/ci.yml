@@ -31,7 +31,9 @@ jobs:
           test -s GEMINI.md
           test -s .agents/README.md
   app:
-    if: ${{ hashFiles('package.json') != '' }}
+    # Enable after the application scaffold and lockfile are committed.
+    # `hashFiles()` is not available in this job-level expression context.
+    if: ${{ vars.APP_CI_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
