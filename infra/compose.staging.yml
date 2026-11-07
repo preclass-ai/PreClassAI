@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    env_file: .env.staging
+    networks: [internal]
+    volumes:
+      - postgres-staging:/var/lib/postgresql/data
+  web:
+    image: ghcr.io/preclass-ai/preclass-ai:${IMAGE_TAG:?set IMAGE_TAG}
+    env_file: .env.staging
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal, edge]
+    restart: unless-stopped
+  caddy:
+    image: caddy:2-alpine
+    env_file: .env.staging
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge]
+    restart: unless-stopped
+
+networks:
+  internal:
+    internal: true
+  edge:
+
+volumes:
+  postgres-staging:
+  caddy-data:
+  caddy-config:

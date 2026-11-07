@@ -1,0 +1,15 @@
+{
+  email {$TLS_CONTACT_EMAIL}
+  admin off
+}
+
+{$APP_HOSTNAME} {
+  encode gzip
+  header {
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "no-referrer"
+    Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  }
+  reverse_proxy web:3000
+}

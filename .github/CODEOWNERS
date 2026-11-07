@@ -1,0 +1,16 @@
+# Default review owner
+* @preclass-ai/leads
+
+# High-risk surfaces require the Tech Lead
+/apps/web/src/core/ @preclass-ai/leads
+/apps/web/src/ai/ @preclass-ai/leads
+/drizzle/ @preclass-ai/leads
+/infra/ @preclass-ai/leads
+/docs/security/ @preclass-ai/leads
+
+# Domain ownership
+/apps/web/src/learning/ @preclass-ai/dev
+/apps/web/src/teacher/ @preclass-ai/dev
+/apps/web/app/ @preclass-ai/dev
+/apps/web/src/ui/ @preclass-ai/dev
+/content/ @preclass-ai/dev

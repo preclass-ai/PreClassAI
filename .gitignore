@@ -1,0 +1,26 @@
+# Local dependencies and build output
+node_modules/
+.pnpm-store/
+.next/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Agent/worktree scratch space
+.superpowers/
+.worktrees/
+worktrees/
+.agents/local/
+
+# OS/editor files
+.DS_Store
+.vscode/
+.idea/

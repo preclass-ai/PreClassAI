@@ -1,14 +1,14 @@
 ---
 title: "03 — Dự toán chi phí — PreClass AI"
 owner: "Khải (Tech/Dev Lead); phối hợp Mentor"
-status: "Draft v0.3 — chỉ dự toán chi phí API AI; mọi hạng mục khác dùng phương án miễn phí và không tính vào ngân sách"
+status: "Draft v0.4 — API AI + vận hành tối thiểu; chờ Mentor chốt trần"
 last_reviewed: 2026-11-06
 related: [Q-01, Q-02, 01, 02, 04, Tech Proposal v3.0]
 ---
 
 # 03 — Dự toán chi phí
 
-> **Nguyên tắc:** đây là dự án học sinh THPT, nên **ngân sách chỉ dành cho API AI (LLM)**. Mọi hạng mục khác (máy chủ, domain, công cụ phát triển, kiểm thử, bảo mật, nhân sự) phải dùng phương án **miễn phí** và **không tính vào dự toán**. Hạng mục nào chưa có phương án miễn phí được ghi ở mục 4 để Mentor/nhà trường quyết định, không cộng vào tổng.
+> **Nguyên tắc:** ưu tiên miễn phí nhưng phải ghi rõ các chi phí vận hành có thể phát sinh. API AI vẫn là khoản chính; VPS, domain, backup storage, điện/mạng dự phòng và công cụ trả phí là các khoản dự phòng, không được coi là chắc chắn bằng 0.
 > **Đọc trước:** giá token là **giá tham chiếu quốc tế** *(nguồn)*; giá GreenNode/FPT cho từng model chỉ hiện trong console — **chưa xác minh**. **Tỷ giá:** 1 USD ≈ 26.000 VND. **Kỳ tính:** 06/11/2026 – 10/01/2027 (dev, eval, thực địa, 2 tháng vận hành).
 
 ## 1. Tổng hợp
@@ -21,6 +21,17 @@ related: [Q-01, Q-02, 01, 02, 04, Tech Proposal v3.0]
 | Trần lý thuyết: 1.000 HS dùng hết quota mỗi ngày | ~5.400.000 | ~15.000.000 |
 
 Con số đã **trừ 100 triệu token miễn phí ban đầu** của FPT AI Factory *(nguồn)*. Nếu model được chọn không có trên FPT hoặc phải dùng GreenNode, xem số chưa trừ ở mục 2.2.
+
+### 1.1 Kịch bản vận hành
+
+| Kịch bản | Hạ tầng cố định dự kiến | Dự phòng 8,5 tuần | Điều kiện |
+|---|---:|---:|---|
+| Pilot desktop + Cloudflare Tunnel | 0 đ | 0–1.000.000 đ API | Chỉ mở dữ liệu thật khi có người trực, backup và restart plan |
+| School/lab VM | 0 đ | 0–1.000.000 đ API | Có owner hạ tầng, điện/mạng và quyền vận hành |
+| Vietnam VPS fallback | ~240.000 đ/tháng chưa VAT | 1.000.000 đ API + ~600.000 đ VPS cho 2,5 tháng | Mentor/nhà trường đứng tên thanh toán |
+| GPU dedicated inference | Theo console/provider quote | Không dùng cho MVP | Chỉ xem xét khi load test chứng minh cần thiết |
+
+**Khuyến nghị xin duyệt:** trần API 1.000.000 đ, cộng quỹ hạ tầng dự phòng tối đa 600.000 đ nếu không có VM miễn phí. Kill switch phải chuyển sang hint tĩnh trước khi chạm trần.
 
 **Khuyến nghị:**
 - **Phạm vi nghiên cứu (80 HS) và thi 20/11: 0 đồng** — dùng token miễn phí.

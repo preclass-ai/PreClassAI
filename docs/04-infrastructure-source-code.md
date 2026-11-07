@@ -1,7 +1,7 @@
 ---
 title: "04 — Source code, môi trường, hạ tầng và phương án tìm hạ tầng — PreClass AI"
 owner: "Khải (Tech/Dev Lead); thực hiện chính: Khải + Khôi"
-status: "Draft v0.2 — cập nhật đội (Khải, Khôi, Thiện; cố vấn EdTech chị Hiển, anh Khang)"
+status: "Draft v0.3 — bổ sung collaboration contract, security gates và operations runbooks"
 last_reviewed: 2026-11-06
 related: [Q-01, Q-02, Q-07, ADR-0009, 03-budget-estimate]
 ---
@@ -176,6 +176,13 @@ tag v* ──▶ (duyệt) → pg_dump trước deploy → migrate → deploy pr
 | 08/11 | Có trần ngân sách và người đứng tên (Q-01) | Bật `ai.enabled` chỉ cho 80 HS nghiên cứu |
 | 09/11 | Backup đã khôi phục thử; k6 100 người ảo đạt | Không mở prod cho học sinh thật |
 | 10/11 | Domain chính thức (Q-07); danh sách mã HS (Q-04) | Dùng domain tạm + tài khoản mock |
+
+### 7.1 Điều kiện production bổ sung
+
+- Có owner vận hành và người thay thế; không dùng tài khoản cá nhân của học sinh.
+- Restore drill thành công trên máy/VM khác với production.
+- Health checks, backup-age alert, disk alert, 5xx alert và AI budget alert đã thử nghiệm.
+- Desktop + tunnel chỉ là pilot fallback; nếu không có kế hoạch điện/mạng/restart, không mở dữ liệu thật.
 
 ## 8. Task phát sinh
 
