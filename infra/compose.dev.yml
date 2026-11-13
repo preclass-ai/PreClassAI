@@ -9,11 +9,23 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - postgres-dev:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U preclass -d preclass"]
       interval: 5s
       timeout: 5s
       retries: 10
+  api:
+    build:
+      context: ../apps/api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://preclass:preclass@postgres:5432/preclass
+      LLM_PROVIDER: mock
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
 
 volumes:
   postgres-dev:

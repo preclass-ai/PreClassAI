@@ -5,17 +5,28 @@ services:
     networks: [internal]
     volumes:
       - postgres-staging:/var/lib/postgresql/data
-  web:
-    image: ghcr.io/preclass-ai/preclass-ai:${IMAGE_TAG:?set IMAGE_TAG}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  api:
+    image: ghcr.io/preclass-ai/preclass-api:${IMAGE_TAG:?set IMAGE_TAG}
     env_file: .env.staging
     depends_on:
       postgres:
         condition: service_healthy
-    networks: [internal, edge]
+    networks: [internal, edge]  # edge gives outbound access to the LLM provider
+    restart: unless-stopped
+  web:
+    image: ghcr.io/preclass-ai/preclass-web:${IMAGE_TAG:?set IMAGE_TAG}
+    env_file: .env.staging
+    networks: [edge]
     restart: unless-stopped
   caddy:
     image: caddy:2-alpine
     env_file: .env.staging
+    depends_on: [api, web]
     ports:
       - "80:80"
       - "443:443"

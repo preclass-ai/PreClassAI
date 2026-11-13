@@ -30,6 +30,33 @@ jobs:
           test -s CLAUDE.md
           test -s GEMINI.md
           test -s .agents/README.md
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: preclass_test
+          POSTGRES_USER: preclass
+          POSTGRES_PASSWORD: preclass
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U preclass -d preclass_test" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      PYTHONUTF8: "1"
+      TEST_DATABASE_URL: postgresql+asyncpg://preclass:preclass@localhost:5432/preclass_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.12
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run mypy --strict app
+      - run: uv run pytest
   app:
     # Enable after the application scaffold and lockfile are committed.
     # `hashFiles()` is not available in this job-level expression context.

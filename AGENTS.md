@@ -2,40 +2,38 @@
 
 ## Project Structure & Module Organization
 
-`README.md` is the entry point. Application source is under `apps/web/`; design, planning, research, security, and operations material lives in `docs/`. The repository layout is documented in `docs/02-system-architecture-design.md`:
+`README.md` is the entry point. Architecture decision: `docs/adr/ADR-0010-fastapi-backend.md` (supersedes the Next.js monolith in `docs/02`). Product spec and plan live in `docs/v2/`.
 
-- `apps/web/`: Next.js full-stack application
-- `apps/web/app/`: routes, pages, and API route handlers
-- `apps/web/src/`: `core`, `learning`, `ai`, `teacher`, `db`, and shared `ui` modules
-- `apps/web/tests/`: Vitest and Playwright tests
-- `content/`: lesson packages and evaluation cases
-- `drizzle/`: database migrations
+- `apps/api/`: FastAPI backend (Python 3.12, managed with `uv`); `app/`, `alembic/`, `seed/`, `tests/`, `openapi/openapi.json`
+- `apps/web/`: Next.js frontend (owned by Thiện); calls the REST API under `/v1`
+- `docs/`: design, planning, security, operations; API guides in `docs/api/`
+- `content/`: lesson packages and evaluation cases (real content later)
 - `infra/`: Docker Compose, Caddy, backup, and load-test configuration
 - `.agents/skills/`: project-local reusable skills shared by coding harnesses
 
-When adding implementation code, keep route handlers thin, place business logic in services, and access repositories through services. Keep API contracts and architectural decisions in `docs/`.
+In `apps/api`, keep route handlers thin, place business logic in services, and access repositories through services. Keep API contracts and architectural decisions in `docs/`.
 
 ## Build, Test, and Development Commands
 
-No executable application, package manifest, or build script exists yet, so there are currently no repository-local build or test commands. Once the planned app is added, document the canonical commands here and in the README. The planned workflow is:
+Backend (run in `apps/api/`, set `PYTHONUTF8=1` on Windows):
 
 ```text
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm test:e2e
-pnpm build
+uv sync
+uv run ruff check .
+uv run mypy --strict app
+uv run pytest
+docker compose -f ../../infra/compose.dev.yml up -d
 ```
 
-CI is expected to run linting, type checking, unit/integration tests, image builds, secret scanning, and dependency auditing.
+Frontend (`apps/web/`) commands are documented by its owner once the scaffold exists (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`). CI runs the Python job and repository policy checks; the pnpm job stays off until `APP_CI_ENABLED=true`.
 
 ## Coding Style & Naming Conventions
 
-Use TypeScript with `strict: true`, two-space indentation, and the project’s configured formatter/linter. Use kebab-case for route directories, descriptive lower-case module filenames (for example, `revisions.service.ts`), PascalCase for React components, and camelCase for variables and functions. Validate API inputs and outputs with Zod.
+Backend: Python with `mypy --strict`, `ruff`, type hints everywhere, snake_case; validate API inputs and outputs with Pydantic. Frontend: TypeScript with `strict: true`, two-space indentation, kebab-case route directories, PascalCase React components, camelCase variables; validate with Zod or the generated OpenAPI client.
 
 ## Testing Guidelines
 
-The planned stack is Vitest with Testing Library for unit/component tests and Playwright for end-to-end tests across 390, 768, and 1280px viewports. Integration tests should use PostgreSQL/Testcontainers rather than mocking database behavior. Add tests beside the module in `__tests__/` and name them after the behavior under test.
+Backend: `pytest` with `httpx.AsyncClient`; integration tests use a real PostgreSQL (`TEST_DATABASE_URL`), never a mocked database. Frontend: Vitest with Testing Library and Playwright across 390, 768, and 1280px viewports. Name tests after the behavior under test.
 
 ## Commit & Pull Request Guidelines
 

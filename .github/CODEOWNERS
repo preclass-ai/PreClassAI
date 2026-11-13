@@ -2,6 +2,7 @@
 * @preclass-ai/leads
 
 # High-risk surfaces require the Tech Lead
+/apps/api/ @preclass-ai/leads
 /apps/web/src/core/ @preclass-ai/leads
 /apps/web/src/ai/ @preclass-ai/leads
 /drizzle/ @preclass-ai/leads
