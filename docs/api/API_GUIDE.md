@@ -2,7 +2,7 @@
 
 Hợp đồng chính thức: [`apps/api/openapi/openapi.json`](../../apps/api/openapi/openapi.json) (sinh từ code, CI chặn lệch). Tài liệu này là hướng dẫn đọc nhanh. Mô hình dữ liệu: [`DATA_MODEL.md`](DATA_MODEL.md).
 
-> **Trạng thái v0:** mọi endpoint đã có schema + ví dụ, nhưng handler thật trả `501 NOT_IMPLEMENTED` cho tới các giai đoạn 4–9. **Hãy dựng FE trên Prism mock** (bên dưới). Sau freeze v1 chỉ *thêm* field, không đổi tên/xóa field. Mọi thay đổi hợp đồng báo Khải trước.
+> **Trạng thái:** mọi endpoint đã có schema + ví dụ. **Đã chạy thật (GĐ4):** `POST /auth/login`, `POST /auth/logout`, `GET /me`, `GET /classes`, `GET /admin/audit-logs`. Các endpoint còn lại trả `501 NOT_IMPLEMENTED` cho tới các giai đoạn 5–9. **Hãy dựng FE trên Prism mock** (bên dưới). Sau freeze v1 chỉ *thêm* field, không đổi tên/xóa field. Mọi thay đổi hợp đồng báo Khải trước.
 
 ## 1. Chạy mock và sinh client
 

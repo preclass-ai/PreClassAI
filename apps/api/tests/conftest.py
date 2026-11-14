@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 import asyncpg
+import httpx
 import pytest
 
 API_DIR = Path(__file__).resolve().parents[1]
@@ -15,6 +16,9 @@ TEST_URL = os.environ.get(
     "TEST_DATABASE_URL", "postgresql+asyncpg://preclass:preclass@localhost:5432/preclass_test"
 )
 PG_URL = TEST_URL.replace("+asyncpg", "")
+
+# The app under test uses the test database; must be set before `app.config.get_settings()` is first called.
+os.environ.update(DATABASE_URL=TEST_URL, DB_NULL_POOL="1", COOKIE_SECURE="false")
 
 
 async def _ping() -> None:
@@ -59,3 +63,19 @@ async def conn(db_ready: None) -> AsyncIterator[asyncpg.Connection]:
     yield c
     await tr.rollback()
     await c.close()
+
+
+@pytest.fixture
+async def client(db_ready: None) -> AsyncIterator[httpx.AsyncClient]:
+    from app.auth import login_limiter
+    from app.main import app
+
+    login_limiter.reset()
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://t", headers={"X-PreClass-CSRF": "1"}
+    ) as c:
+        yield c
+
+
+async def login(c: httpx.AsyncClient, identifier: str, password: str = "preclass-demo") -> httpx.Response:  # noqa: S107
+    return await c.post("/v1/auth/login", json={"identifier": identifier, "password": password})

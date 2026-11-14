@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.auth import csrf_middleware
 from app.config import get_settings
 from app.errors import install_error_handlers
 from app.routers import api_router
@@ -45,6 +46,7 @@ TAGS = [
 
 app = FastAPI(title="PreClass AI API", version="0.1.0-v0", description=DESCRIPTION, openapi_tags=TAGS)
 install_error_handlers(app)
+app.middleware("http")(csrf_middleware)
 
 # Same-origin via Caddy in staging/prod; CORS only matters for split-origin dev.
 app.add_middleware(

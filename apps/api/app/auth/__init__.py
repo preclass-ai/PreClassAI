@@ -1,0 +1,133 @@
+"""Server-side cookie sessions (D-001 #4): random token in an HttpOnly cookie, only its sha256 stored."""
+
+import hashlib
+import secrets
+import time
+from collections import defaultdict, deque
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime, timedelta
+from typing import Annotated
+from urllib.parse import urlparse
+from uuid import UUID
+
+from argon2 import PasswordHasher
+from argon2.exceptions import VerificationError
+from fastapi import Depends, Request, Response
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import get_settings
+from app.db import models as m
+from app.db.session import get_db
+from app.errors import ApiError, problem
+
+COOKIE = "preclass_session"
+CSRF_HEADER = "x-preclass-csrf"
+_hasher = PasswordHasher()
+_DUMMY_HASH = _hasher.hash("not-a-real-password")  # equalises timing for unknown users
+
+
+def verify_password(password_hash: str | None, password: str) -> bool:
+    try:
+        return _hasher.verify(password_hash or _DUMMY_HASH, password) and password_hash is not None
+    except VerificationError:
+        return False
+
+
+def token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+async def create_session(db: AsyncSession, user_id: UUID) -> str:
+    token = secrets.token_urlsafe(32)
+    expires = datetime.now(UTC) + timedelta(hours=get_settings().session_ttl_hours)
+    db.add(m.Session(token_hash=token_hash(token), user_id=user_id, expires_at=expires))
+    return token
+
+
+class LoginLimiter:
+    """shortcut: in-process sliding window (single API process in P0), move to the DB/Redis if scaled out."""
+
+    def __init__(self, max_failures: int = 5, window_s: int = 300) -> None:
+        self.max, self.window = max_failures, window_s
+        self.hits: dict[str, deque[float]] = defaultdict(deque)
+
+    def _prune(self, key: str) -> deque[float]:
+        q, now = self.hits[key], time.monotonic()
+        while q and now - q[0] > self.window:
+            q.popleft()
+        return q
+
+    def check(self, key: str) -> None:
+        if len(self._prune(key)) >= self.max:
+            raise ApiError(429, "RATE_LIMITED", "Quá nhiều lần thử, vui lòng đợi ít phút")
+
+    def fail(self, key: str) -> None:
+        self._prune(key).append(time.monotonic())
+
+    def reset(self, key: str | None = None) -> None:
+        if key is None:
+            self.hits.clear()
+        else:
+            self.hits.pop(key, None)
+
+
+login_limiter = LoginLimiter()
+
+
+class CurrentUser:
+    def __init__(self, user: m.AppUser, session: m.Session) -> None:
+        self.user, self.session = user, session
+
+    @property
+    def id(self) -> UUID:
+        return self.user.id
+
+    @property
+    def role(self) -> str:
+        return self.user.role
+
+
+async def current_user(request: Request, db: Annotated[AsyncSession, Depends(get_db)]) -> CurrentUser:
+    token = request.cookies.get(COOKIE)
+    if token:
+        row = (
+            await db.execute(
+                select(m.Session, m.AppUser)
+                .join(m.AppUser, m.AppUser.id == m.Session.user_id)
+                .where(
+                    m.Session.token_hash == token_hash(token),
+                    m.Session.revoked_at.is_(None),
+                    m.Session.expires_at > datetime.now(UTC),
+                    m.AppUser.is_active.is_(True),
+                )
+            )
+        ).first()
+        if row:
+            return CurrentUser(row[1], row[0])
+    raise ApiError(401, "UNAUTHENTICATED", "Bạn chưa đăng nhập hoặc phiên đã hết hạn")
+
+
+def require_role(*roles: str):  # type: ignore[no-untyped-def]
+    """Dependency factory: wrong role → 403 FORBIDDEN_ROLE (not 404: the route exists for everyone)."""
+
+    async def dep(user: Annotated[CurrentUser, Depends(current_user)]) -> CurrentUser:
+        if user.role not in roles:
+            raise ApiError(403, "FORBIDDEN_ROLE", "Bạn không có quyền thực hiện thao tác này")
+        return user
+
+    return dep
+
+
+async def csrf_middleware(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    """Cookie auth ⇒ CSRF defence: custom header on every non-GET plus an Origin check (D-001 #4)."""
+    if request.method not in ("GET", "HEAD", "OPTIONS") and request.url.path.startswith("/v1/"):
+        origin = request.headers.get("origin")
+        origin_ok = (
+            origin is None
+            or origin == get_settings().frontend_origin
+            or urlparse(origin).netloc == request.headers.get("host")
+        )
+        if request.headers.get(CSRF_HEADER) != "1" or not origin_ok:
+            return problem(403, "CSRF", "Yêu cầu bị từ chối (CSRF)")
+    return await call_next(request)
