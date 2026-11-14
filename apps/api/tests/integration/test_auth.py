@@ -1,9 +1,10 @@
-import asyncpg
 import httpx
 import pytest
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.main import app
-from tests.conftest import PG_URL, login
+from tests.conftest import login
 
 pytestmark = pytest.mark.db
 
@@ -48,13 +49,9 @@ async def test_logout_revokes_the_session_server_side(client: httpx.AsyncClient)
     assert r.status_code == 200
 
 
-async def test_expired_session_is_rejected(client: httpx.AsyncClient) -> None:
+async def test_expired_session_is_rejected(client: httpx.AsyncClient, db: AsyncSession) -> None:
     await login(client, "gv.dia@preclass.local")
-    c = await asyncpg.connect(PG_URL)
-    try:
-        await c.execute("UPDATE session SET expires_at = now() - interval '1 minute'")
-    finally:
-        await c.close()
+    await db.execute(text("UPDATE session SET expires_at = now() - interval '1 minute'"))
     assert (await client.get("/v1/me")).status_code == 401
 
 

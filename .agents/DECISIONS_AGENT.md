@@ -11,3 +11,10 @@
 - **Không khai báo `security` toàn cục trong OpenAPI** (chỉ `securitySchemes`): Prism sẽ đòi cookie HttpOnly mà trình duyệt không đặt được. Route nào cần phiên ghi ở mô tả + API_GUIDE.
 - **Tải bản nguồn mới không tự REVIEW_AGAIN bài** (D-001 #7): bài chỉ có `newerSourceAvailable`; AT-08 được kiểm ở `PUT /revisions/{id}/sources`.
 - **Ruff `line-length=120`, E501/S608/S603 nới cho test/seed** để giữ SQL dễ đọc.
+
+## Review Khải 14/11 — accepted
+- **accepted:** cookie session (không refresh); tách upload DOCX; 3 endpoint thêm (`PUT /revisions/{id}/sources`, `GET /classes/{id}/assignments`, `GET /admin/audit-logs`); block trả phẳng; khóa revision khi PUBLISHED/SUPERSEDED. Điều kiện kèm theo: (a) sửa block ở IN_REVIEW phải đổi `content_hash` → mất approval (trigger `APPROVAL_INVALID` đã ép; service PATCH làm ở GĐ6); (b) publish kiểm `version` (GĐ8).
+- **PUT sources (AT-08):** một transaction; mọi block có link tới anchor revision cũ, block phụ thuộc (bắc cầu) và cha trực tiếp → REVIEW_AGAIN (kể cả khi đang APPROVED/FLAGGED/REJECTED), ghi `SOURCE_REPLACED`; link đổi sang anchor trùng `excerpt_hash` ở bản mới (VERIFIED) hoặc UNRESOLVED. Không ghép theo locator khi nội dung đổi (tránh gán nhầm).
+- **Rate limit đăng nhập trong bộ nhớ:** chấp nhận cho P0; bắt buộc chạy uvicorn `--workers 1` (ghi ở RUNBOOK).
+- **Seed từ chối chạy khi `APP_ENV=production`;** mật khẩu `preclass-demo` chỉ có trong seed dev.
+- **Test DB:** 127.0.0.1 thay `localhost` (resolve IPv6 trên Windows mất ~2 s mỗi kết nối); migrate+seed 1 lần mỗi session, mỗi test chạy trong transaction + SAVEPOINT rồi rollback. Full pytest ~23 s.

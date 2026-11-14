@@ -5809,7 +5809,7 @@
     },
     "/v1/revisions/{revision_id}/sources": {
       "put": {
-        "description": "Re-matches anchors by excerptHash / locator; unmatched links become UNRESOLVED and their blocks go to REVIEW_AGAIN. Published lessons are never affected.",
+        "description": "One transaction: every block linked to an anchor of a removed source revision, the blocks depending on it and its parents go to REVIEW_AGAIN (SOURCE_REPLACED event). Links are re-pointed by identical excerptHash (VERIFIED), otherwise UNRESOLVED. Published lessons are never affected.",
         "operationId": "replaceRevisionSources",
         "parameters": [
           {

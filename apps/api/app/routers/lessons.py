@@ -1,7 +1,12 @@
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import CurrentUser, require_role
+from app.db.session import get_db
+from app.lessons import replace_sources as replace_sources_service
 from app.routers._base import errs, todo
 from app.schemas import (
     BlockCreate,
@@ -68,11 +73,17 @@ async def get_job(job_id: UUID) -> JobOut:
 
 @router.put("/revisions/{revision_id}/sources", tags=["lessons"], operation_id="replaceRevisionSources",
             response_model=RevisionSourcesResult, summary="Attach other source revisions (DRAFT only, author)",
-            description="Re-matches anchors by excerptHash / locator; unmatched links become UNRESOLVED and their "
-            "blocks go to REVIEW_AGAIN. Published lessons are never affected.",
+            description="One transaction: every block linked to an anchor of a removed source revision, the blocks "
+            "depending on it and its parents go to REVIEW_AGAIN (SOURCE_REPLACED event). Links are re-pointed by "
+            "identical excerptHash (VERIFIED), otherwise UNRESOLVED. Published lessons are never affected.",
             responses=errs(401, 404, 422, _LOCKED))
-async def replace_sources(revision_id: UUID, body: RevisionSourcesUpdate) -> RevisionSourcesResult:
-    todo()
+async def replace_sources(
+    revision_id: UUID,
+    body: RevisionSourcesUpdate,
+    cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> RevisionSourcesResult:
+    return await replace_sources_service(db, cu, revision_id, body)
 
 
 @router.get("/revisions/{revision_id}/blocks", tags=["blocks"], operation_id="listBlocks", response_model=BlockList,

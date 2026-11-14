@@ -2,7 +2,7 @@
 
     DATABASE_URL=... uv run python -m seed.seed
 
-Re-running is a no-op once seeded. Password for every seeded account: $SEED_PASSWORD
+Refuses to run when APP_ENV=production. Re-running is a no-op once seeded. Password for every seeded account: $SEED_PASSWORD
 (default "preclass-demo", DEV ONLY; set your own anywhere else).
 """
 
@@ -260,6 +260,8 @@ async def seed(conn: AsyncConnection, password: str) -> None:
 
 
 async def main() -> None:
+    if get_settings().app_env.lower() in ("production", "prod"):
+        raise SystemExit("Refusing to seed: APP_ENV=production (demo accounts share a known password).")
     engine = create_async_engine(get_settings().database_url)
     async with engine.begin() as conn:
         if (await conn.execute(select(m.AppUser.id).where(m.AppUser.email == f"gv.dia@{DOMAIN}"))).first():

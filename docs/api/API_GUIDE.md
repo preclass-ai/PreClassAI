@@ -122,6 +122,7 @@ Các ví dụ đầy đủ cho từng endpoint nằm trong `openapi.json` (`comp
 - Không có `/auth/refresh` (cookie session thay JWT).
 - Upload DOCX tách thành `POST /sources/docx` và `POST /sources/{id}/revisions/docx` (multipart) vì một path không khai báo được cả JSON lẫn multipart.
 - Thêm `PUT /revisions/{id}/sources`, `GET /classes/{id}/assignments`, `GET /admin/audit-logs`.
-- Tải bản nguồn mới **không** tự đánh `REVIEW_AGAIN` cho bài: bài chỉ hiện `newerSourceAvailable=true` cho tới khi GV gọi `PUT /revisions/{id}/sources`.
+- Tải bản nguồn mới **không** tự đổi bài đang soạn: lesson ghim source revision; bài chỉ hiện `newerSourceAvailable=true`.
+  Khi GV gọi `PUT /revisions/{id}/sources {sourceRevisionIds, version}` (chỉ DRAFT, **một transaction**): mọi block có link tới anchor của revision cũ, block phụ thuộc chúng (bắc cầu) và block cha trực tiếp chuyển `REVIEW_AGAIN` (ghi `transformation_event` `SOURCE_REPLACED`); link nào có anchor trùng `excerptHash` ở bản mới được trỏ sang anchor mới (`VERIFIED`), còn lại thành `UNRESOLVED` (GV gán lại qua `PUT /blocks/{id}/provenance`). Duyệt cũ không còn hiệu lực (duyệt gắn hash nguồn). Response: `{revision, matchedLinks, unresolvedLinks}`. Bài đã PUBLISHED không bị ảnh hưởng (409 `REVISION_LOCKED`).
 - Chưa có cursor pagination (envelope `{items,nextCursor}` đã có sẵn).
 - Payload trong block dùng camelCase (`itemType`, `rubricPoints`), khác snake_case ghi trong đặc tả.

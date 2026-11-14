@@ -1,7 +1,7 @@
 import asyncpg
 import pytest
 
-from tests.conftest import PG_URL, _run, reset_db
+from tests.conftest import PG_URL, _run
 
 pytestmark = pytest.mark.db
 
@@ -19,5 +19,5 @@ async def test_migration_up_down_up(db_ready: None) -> None:
     assert {"content_block", "published_version", "review_event"} <= await _tables()
     _run("-m", "alembic", "downgrade", "base")
     assert await _tables() <= {"alembic_version"}  # clean down
-    reset_db()  # up again + seed
+    _run("-m", "alembic", "upgrade", "head")  # runs last: the next session resets + seeds again
     assert "content_block" in await _tables()

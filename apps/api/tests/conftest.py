@@ -10,10 +10,12 @@ from pathlib import Path
 import asyncpg
 import httpx
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.pool import NullPool
 
 API_DIR = Path(__file__).resolve().parents[1]
 TEST_URL = os.environ.get(
-    "TEST_DATABASE_URL", "postgresql+asyncpg://preclass:preclass@localhost:5432/preclass_test"
+    "TEST_DATABASE_URL", "postgresql+asyncpg://preclass:preclass@127.0.0.1:5432/preclass_test"
 )
 PG_URL = TEST_URL.replace("+asyncpg", "")
 
@@ -66,15 +68,35 @@ async def conn(db_ready: None) -> AsyncIterator[asyncpg.Connection]:
 
 
 @pytest.fixture
-async def client(db_ready: None) -> AsyncIterator[httpx.AsyncClient]:
+async def db(db_ready: None) -> AsyncIterator[AsyncSession]:
+    """Session bound to one connection inside a transaction that is rolled back after the test.
+    Handler `commit()` calls only release a SAVEPOINT, so every test starts from the seeded state."""
+    engine = create_async_engine(TEST_URL, poolclass=NullPool)
+    async with engine.connect() as c:
+        outer = await c.begin()
+        session = AsyncSession(bind=c, join_transaction_mode="create_savepoint", expire_on_commit=False)
+        yield session
+        await session.close()
+        await outer.rollback()
+    await engine.dispose()
+
+
+@pytest.fixture
+async def client(db: AsyncSession) -> AsyncIterator[httpx.AsyncClient]:
     from app.auth import login_limiter
+    from app.db.session import get_db
     from app.main import app
 
+    async def _db() -> AsyncIterator[AsyncSession]:
+        yield db
+
+    app.dependency_overrides[get_db] = _db
     login_limiter.reset()
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://t", headers={"X-PreClass-CSRF": "1"}
     ) as c:
         yield c
+    app.dependency_overrides.clear()
 
 
 async def login(c: httpx.AsyncClient, identifier: str, password: str = "preclass-demo") -> httpx.Response:  # noqa: S107
