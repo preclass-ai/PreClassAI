@@ -261,11 +261,17 @@ async def _context(db: AsyncSession, revision_id: UUID, blocks: list[m.ContentBl
                {k: sorted(v) for k, v in shash.items()})
 
 
-async def validate_revision(db: AsyncSession, revision_id: UUID) -> ValidateOut:
+async def evaluate_revision(db: AsyncSession, revision_id: UUID) -> tuple[list[m.ContentBlock], dict[UUID, list[R]]]:
+    """Fresh, read-only evaluation of every rule on every block (nothing is written)."""
     blocks = list((await db.scalars(select(m.ContentBlock).where(
         m.ContentBlock.revision_id == revision_id, m.ContentBlock.deleted_at.is_(None))
         .order_by(m.ContentBlock.position))).all())
     ctx = await _context(db, revision_id, blocks)
+    return blocks, {b.id: [r for rule in RULES if (r := rule(b, ctx)) is not None] for b in blocks}
+
+
+async def validate_revision(db: AsyncSession, revision_id: UUID) -> ValidateOut:
+    blocks, evaluated = await evaluate_revision(db, revision_id)
     prev: dict[tuple[UUID, str], tuple[str, str]] = {}  # latest stored (hash, outcome) per block+rule
     if blocks:
         for bid, rule, h, outcome in (await db.execute(
@@ -277,7 +283,7 @@ async def validate_revision(db: AsyncSession, revision_id: UUID) -> ValidateOut:
     summaries: list[BlockValidationSummary] = []
     blockers = warnings = 0
     for b in blocks:
-        results = [r for rule in RULES if (r := rule(b, ctx)) is not None]
+        results = evaluated[b.id]
         for r in results:
             if prev.get((b.id, r.rule)) != (b.content_hash, r.outcome):
                 new_rows.append({"block_id": b.id, "rule": r.rule, "severity": r.severity, "outcome": r.outcome,

@@ -233,6 +233,14 @@ async def lesson_history(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -
                            block_id=e.block_id) for e, _ in t]
     events += [HistoryEvent(at=x.created_at, actor_type="TEACHER", actor_id=x.reviewer_id, operation="REVIEW",
                             block_id=x.block_id, summary=x.action) for x in r]
+    pubs = (await db.execute(select(m.PublishedVersion).join(
+        m.LessonRevision, m.LessonRevision.id == m.PublishedVersion.lesson_revision_id)
+        .where(m.LessonRevision.lesson_id == lesson_id))).scalars().all()
+    events += [HistoryEvent(at=p.created_at, actor_type="TEACHER", actor_id=p.published_by, operation="PUBLISH") for p in pubs]
+    if pubs:
+        wd = (await db.execute(select(m.AuditLog).where(
+            m.AuditLog.action == "WITHDRAW", m.AuditLog.resource_id.in_([p.id for p in pubs])))).scalars().all()
+        events += [HistoryEvent(at=a.created_at, actor_type="TEACHER", actor_id=a.actor_id, operation="WITHDRAW") for a in wd]
     events.sort(key=lambda e: e.at, reverse=True)
     return LessonHistory(
         revisions=[HistoryRevision(revision_id=v.id, revision_no=v.revision_no, state=v.state, published_at=pub,

@@ -2083,6 +2083,22 @@
           }
         ],
         "properties": {
+          "blockIds": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "PUBLISH_BLOCKED: blocks that stop the publish.",
+            "title": "Blockids"
+          },
           "code": {
             "description": "Stable machine code, see API_GUIDE error table.",
             "title": "Code",

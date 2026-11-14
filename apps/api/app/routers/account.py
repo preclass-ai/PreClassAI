@@ -19,6 +19,7 @@ from app.config import get_settings
 from app.db import models as m
 from app.db.session import get_db
 from app.errors import ApiError
+from app.publish import list_class_assignments as list_class_assignments_service
 from app.routers._base import errs, todo
 from app.schemas import (
     AssignmentList,
@@ -117,8 +118,8 @@ async def list_classes(
 @router.get("/classes/{class_id}/assignments", tags=["classes"], operation_id="listClassAssignments",
             response_model=AssignmentList, summary="Assignments of a class (TEACHER of that class)",
             responses=errs(401, 403, 404))
-async def list_class_assignments(class_id: UUID) -> AssignmentList:
-    todo()
+async def list_class_assignments(class_id: UUID, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> AssignmentList:
+    return await list_class_assignments_service(db, cu, class_id)
 
 
 @router.get("/classes/{class_id}/assignments/{assignment_id}/progress", tags=["classes"],

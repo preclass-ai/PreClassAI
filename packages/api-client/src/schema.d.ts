@@ -489,7 +489,7 @@ export interface paths {
         put?: never;
         /**
          * Create a source from pasted text (TEACHER)
-         * @description Creates the asset and revision 1; paragraphs (blank-line separated) become anchors.
+         * @description Creates the asset and revision 1; paragraphs (blank-line separated) become anchors, the first one is the heading. `visibility=SCHOOL` requires `licenseNote` (422 `LICENSE_REQUIRED`).
          */
         post: operations["createSourceFromText"];
         delete?: never;
@@ -509,7 +509,7 @@ export interface paths {
         put?: never;
         /**
          * Create a source from a DOCX file (TEACHER, multipart)
-         * @description Upload limits: DOCX only (`PK` magic + content types), ≤ 10 MB, macros rejected → 422. Parsing is synchronous: the response already has `extractStatus` and `anchorCount`.
+         * @description Upload limits: DOCX only (`PK` magic + content types), ≤ 10 MB, macros rejected → 422 (`INVALID_FILE`, `FILE_TOO_LARGE`, `MACRO_REJECTED`, `EMPTY_SOURCE`). The client's file name is ignored. Parsing is synchronous: the response already has `extractStatus` and `anchorCount`.
          */
         post: operations["createSourceFromDocx"];
         delete?: never;
@@ -546,7 +546,7 @@ export interface paths {
         put?: never;
         /**
          * New source revision from text (owner)
-         * @description Creates revision N+1 with new hashes. Lessons are NOT changed automatically: they get `newerSourceAvailable=true`; attach it with PUT /revisions/{id}/sources.
+         * @description Creates revision N+1 with new hashes (identical content → 409 `SOURCE_UNCHANGED`). Lessons are NOT changed automatically: they get `newerSourceAvailable=true`; attach it with PUT /revisions/{id}/sources.
          */
         post: operations["createSourceRevisionFromText"];
         delete?: never;
@@ -566,7 +566,7 @@ export interface paths {
         put?: never;
         /**
          * New source revision from a DOCX file (owner, multipart)
-         * @description Upload limits: DOCX only (`PK` magic + content types), ≤ 10 MB, macros rejected → 422. Parsing is synchronous: the response already has `extractStatus` and `anchorCount`.
+         * @description Upload limits: DOCX only (`PK` magic + content types), ≤ 10 MB, macros rejected → 422 (`INVALID_FILE`, `FILE_TOO_LARGE`, `MACRO_REJECTED`, `EMPTY_SOURCE`). The client's file name is ignored. Parsing is synchronous: the response already has `extractStatus` and `anchorCount`.
          */
         post: operations["createSourceRevisionFromDocx"];
         delete?: never;
@@ -1687,6 +1687,11 @@ export interface components {
          *     }
          */
         Problem: {
+            /**
+             * Blockids
+             * @description PUBLISH_BLOCKED: blocks that stop the publish.
+             */
+            blockIds?: string[] | null;
             /**
              * Code
              * @description Stable machine code, see API_GUIDE error table.
@@ -4301,6 +4306,15 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
             /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
             404: {
                 headers: {
@@ -4490,6 +4504,15 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
             /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
             404: {
                 headers: {
@@ -4543,8 +4566,26 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
             /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description SOURCE_UNCHANGED. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4596,8 +4637,26 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
             /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description SOURCE_UNCHANGED. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

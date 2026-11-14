@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     upload_dir: str = "./data/uploads"
     llm_provider: str = "mock"  # mock | openai_compatible
     ai_enabled: bool = True
+    reviewer_enabled: bool = False  # second-person review (REVIEWER role); off by default
     mock_inject: str = ""  # fake_anchor,changed_quote,new_number,two_keys (tests)
     generation_daily_token_budget: int = 300_000
 

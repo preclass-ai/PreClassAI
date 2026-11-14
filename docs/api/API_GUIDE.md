@@ -2,7 +2,7 @@
 
 Hợp đồng chính thức: [`apps/api/openapi/openapi.json`](../../apps/api/openapi/openapi.json) (sinh từ code, CI chặn lệch). Tài liệu này là hướng dẫn đọc nhanh. Mô hình dữ liệu: [`DATA_MODEL.md`](DATA_MODEL.md).
 
-> **Trạng thái:** mọi endpoint đã có schema + ví dụ. **Đã chạy thật (GĐ4):** `POST /auth/login`, `POST /auth/logout`, `GET /me`, `GET /classes`, `GET /admin/audit-logs`. Các endpoint còn lại trả `501 NOT_IMPLEMENTED` cho tới các giai đoạn 5–9. **Hãy dựng FE trên Prism mock** (bên dưới). Sau freeze v1 chỉ *thêm* field, không đổi tên/xóa field. Mọi thay đổi hợp đồng báo Khải trước.
+> **Trạng thái:** mọi endpoint đã có schema + ví dụ. **Đã chạy thật (tới GĐ8):** auth, nguồn (text/DOCX), lesson, block, provenance, generate (MockProvider), validate, review, publish gate, new-revision, withdraw, giao bài, danh sách bài giao của lớp. **Còn 501:** `GET /classes/{id}/assignments/{aid}/progress` và toàn bộ `/student/*` (GĐ9). **Hãy dựng FE trên Prism mock** (bên dưới). Sau freeze v1 chỉ *thêm* field, không đổi tên/xóa field. Mọi thay đổi hợp đồng báo Khải trước.
 
 ## 1. Chạy mock và sinh client
 
@@ -126,3 +126,25 @@ Các ví dụ đầy đủ cho từng endpoint nằm trong `openapi.json` (`comp
   Khi GV gọi `PUT /revisions/{id}/sources {sourceRevisionIds, version}` (chỉ DRAFT, **một transaction**): mọi block có link tới anchor của revision cũ, block phụ thuộc chúng (bắc cầu) và block cha trực tiếp chuyển `REVIEW_AGAIN` (ghi `transformation_event` `SOURCE_REPLACED`); link nào có anchor trùng `excerptHash` ở bản mới được trỏ sang anchor mới (`VERIFIED`), còn lại thành `UNRESOLVED` (GV gán lại qua `PUT /blocks/{id}/provenance`). Duyệt cũ không còn hiệu lực (duyệt gắn hash nguồn). Response: `{revision, matchedLinks, unresolvedLinks}`. Bài đã PUBLISHED không bị ảnh hưởng (409 `REVISION_LOCKED`).
 - Chưa có cursor pagination (envelope `{items,nextCursor}` đã có sẵn).
 - Payload trong block dùng camelCase (`itemType`, `rubricPoints`), khác snake_case ghi trong đặc tả.
+
+## 8. Cập nhật GĐ5–8 (mã mới và hành vi cần biết)
+
+| code | HTTP | Khi nào |
+|---|---|---|
+| `INVALID_FILE`, `FILE_TOO_LARGE`, `MACRO_REJECTED`, `EMPTY_SOURCE` | 422 | Upload DOCX hỏng / quá 10 MB / có macro / không có chữ |
+| `LICENSE_REQUIRED` | 422 | Nguồn `SCHOOL` thiếu `licenseNote` |
+| `SOURCE_UNCHANGED` | 409 | Bản nguồn mới trùng hệt bản hiện tại |
+| `PAYLOAD_INVALID`, `PARENT_NOT_FOUND`, `PROVENANCE_INVALID` | 422 | Sai payload theo `kind` (khóa lạ bị từ chối; khóa `null` được bỏ qua), khối cha không tồn tại, gửi cả/không gửi `links`/`noSourceReason` |
+| `APPROVE_BLOCKED` | 409 | Duyệt (APPROVE) khối còn lỗi chặn; vẫn được REJECT / REQUEST_CHANGES |
+| `CONFIRM_REQUIRED` | 422 | Publish mà `confirmChecked` ≠ true |
+| `PUBLISH_BLOCKED` | 409 | Gate chưa đạt. Body có thêm **`blockIds`**: các khối chặn xuất bản |
+| `ALREADY_WITHDRAWN` | 409 | Thu hồi lần hai |
+| `GRADE_MISMATCH`, `INVALID_WINDOW` | 422 | Giao bài sai khối lớp / `dueAt` ≤ `openAt` |
+
+Quy tắc hành vi:
+- `POST /blocks/{id}/reviews`: `contentHash` phải là hash đang hiển thị, sai → 409 `STALE_REVIEW` và không ghi gì. `APPROVE`→`APPROVED`, `REJECT`→`REJECTED`, `REQUEST_CHANGES`→`REVIEW_AGAIN`. Reviewer chỉ dùng được khi bật `REVIEWER_ENABLED` và được gán bài (mặc định tắt: 403 `FORBIDDEN_ROLE`).
+- `GET /revisions/{id}/publish-check` tính lại toàn bộ rule tại thời điểm gọi (không ghi gì): 4 mục `ALL_APPROVED`, `NO_BLOCKERS`, `SOURCES_VALID`, `HAS_ITEMS`, mỗi mục kèm `blockIds`.
+- Publish tạo snapshot bất biến, khóa revision (sửa/duyệt → 409 `REVISION_LOCKED`), đánh bản xuất bản trước của bài là `SUPERSEDED` (bản cũ vẫn dùng được cho bài đã giao). `version` là `currentRevision.version` của bài.
+- Sửa sau khi xuất bản: `POST /revisions/{id}/new-revision` sao chép block, nguồn, link và phụ thuộc sang bản DRAFT mới; **duyệt không mang theo** (các khối về `AUTO_CHECKED`/`FLAGGED` sau khi chạy validation). Mỗi bài chỉ có một bản nháp (`DRAFT_EXISTS`).
+- Thu hồi lưu lý do cùng bản xuất bản và ghi audit `WITHDRAW` (audit không chứa lý do). Học sinh mở bản đã thu hồi sẽ nhận 410 (GĐ9).
+- AI sinh nội dung: `POST /lessons/{id}/generate` → 202 `{jobId}` rồi poll `GET /jobs/{id}`. Khối do AI sinh không bao giờ `APPROVED`. `AI_ENABLED=false` hoặc hết ngân sách token ngày → 503 `AI_DISABLED`.

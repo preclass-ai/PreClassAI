@@ -9,12 +9,15 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
 class ApiError(Exception):
-    def __init__(self, status: int, code: str, title: str, detail: str = "") -> None:
-        self.status, self.code, self.title, self.detail = status, code, title, detail
+    def __init__(
+        self, status: int, code: str, title: str, detail: str = "", extra: dict[str, Any] | None = None
+    ) -> None:
+        self.status, self.code, self.title, self.detail, self.extra = status, code, title, detail, extra or {}
 
 
 def problem(
-    status: int, code: str, title: str, detail: str = "", errors: list[Any] | None = None
+    status: int, code: str, title: str, detail: str = "", errors: list[Any] | None = None,
+    extra: dict[str, Any] | None = None,
 ) -> JSONResponse:
     body: dict[str, Any] = {
         "type": f"https://preclass.local/problems/{code.lower()}",
@@ -25,13 +28,14 @@ def problem(
     }
     if errors:
         body["errors"] = errors
+    body.update(extra or {})
     return JSONResponse(body, status_code=status, media_type="application/problem+json")
 
 
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api(_: Request, exc: ApiError) -> JSONResponse:
-        return problem(exc.status, exc.code, exc.title, exc.detail)
+        return problem(exc.status, exc.code, exc.title, exc.detail, extra=exc.extra)
 
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, exc: RequestValidationError) -> JSONResponse:

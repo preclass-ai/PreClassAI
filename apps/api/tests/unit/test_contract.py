@@ -48,7 +48,7 @@ def test_every_operation_has_id_summary_and_error_model() -> None:
 def test_contract_only_handlers_answer_501_problem() -> None:
     async def call() -> httpx.Response:
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
-            return await c.get("/v1/revisions/00000000-0000-0000-0000-000000000001/publish-check")  # not implemented until phase 8
+            return await c.get("/v1/student/assignments")  # not implemented until phase 9
 
     import asyncio
 
