@@ -25,7 +25,16 @@ uv run pytest
 docker compose -f ../../infra/compose.dev.yml up -d
 ```
 
-Frontend (`apps/web/`) commands are documented by its owner once the scaffold exists (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`). CI runs the Python job and repository policy checks; the pnpm job stays off until `APP_CI_ENABLED=true`.
+Frontend (pnpm workspace at the repo root: `apps/web` + `packages/api-client`; use `corepack pnpm@10` if `pnpm` is not installed). See `apps/web/README.md`.
+
+```text
+pnpm install
+pnpm --filter @preclass/web dev          # :3000, proxies /v1 to API_ORIGIN (default http://localhost:8000)
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
+pnpm --filter @preclass/web test:e2e     # Playwright at 390/768/1280 px against a running, seeded stack
+```
+
+CI runs the Python job and repository policy checks; the pnpm job (`app`) runs when the repository variable `APP_CI_ENABLED=true`.
 
 ## Coding Style & Naming Conventions
 
