@@ -95,7 +95,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
   app:
-    # Enable after the application scaffold and lockfile are committed.
+    # Gated by the repository variable APP_CI_ENABLED (set to true on 2026-11-14).
     # `hashFiles()` is not available in this job-level expression context.
     if: ${{ vars.APP_CI_ENABLED == 'true' }}
     runs-on: ubuntu-latest
