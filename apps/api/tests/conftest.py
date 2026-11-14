@@ -4,6 +4,7 @@ import asyncio
 import os
 import subprocess
 import sys
+import tempfile
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -20,7 +21,8 @@ TEST_URL = os.environ.get(
 PG_URL = TEST_URL.replace("+asyncpg", "")
 
 # The app under test uses the test database; must be set before `app.config.get_settings()` is first called.
-os.environ.update(DATABASE_URL=TEST_URL, DB_NULL_POOL="1", COOKIE_SECURE="false")
+os.environ.update(DATABASE_URL=TEST_URL, DB_NULL_POOL="1", COOKIE_SECURE="false",
+                  UPLOAD_DIR=tempfile.mkdtemp(prefix="preclass-uploads-"))
 
 
 async def _ping() -> None:

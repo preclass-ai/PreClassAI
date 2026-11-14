@@ -1,0 +1,117 @@
+"""Source parsing: pasted text and DOCX -> anchors (paragraphs, headings, table cells).
+
+DOCX is untrusted input: magic bytes, content types, decompressed-size limits and macro rejection happen
+BEFORE python-docx opens it. shortcut: no malware scan (D-001 #11); add one before accepting files from outside
+the school.
+"""
+
+import io
+import zipfile
+from dataclasses import dataclass
+from decimal import Decimal
+from typing import Any
+
+from app.errors import ApiError
+from app.hashing import excerpt_hash
+from app.sources.numbers import parse_numbers
+
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024  # checked on the zip directory, before extraction
+MAX_ANCHORS = 5000
+DOCX_MAIN = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+
+@dataclass
+class ParsedAnchor:
+    kind: str  # HEADING | PARAGRAPH | TABLE_CELL
+    locator: dict[str, Any]
+    excerpt: str
+
+    @property
+    def hash(self) -> str:
+        return excerpt_hash(self.excerpt)
+
+    @property
+    def numbers(self) -> list[Decimal]:
+        return parse_numbers(self.excerpt)
+
+
+def _limit(anchors: list[ParsedAnchor]) -> list[ParsedAnchor]:
+    if not anchors:
+        raise ApiError(422, "EMPTY_SOURCE", "Tài liệu không có nội dung văn bản")
+    if len(anchors) > MAX_ANCHORS:
+        raise ApiError(422, "SOURCE_TOO_LARGE", "Tài liệu quá dài")
+    return anchors
+
+
+def parse_text(text: str) -> list[ParsedAnchor]:
+    """Blank-line separated paragraphs; the first one is the heading."""
+    paras = [" ".join(p.split()) for p in text.replace("\r\n", "\n").split("\n\n")]
+    paras = [p for p in paras if p]
+    return _limit([
+        ParsedAnchor("HEADING" if i == 0 else "PARAGRAPH", {"para_index": i}, p) for i, p in enumerate(paras)
+    ])
+
+
+def check_docx_container(data: bytes) -> None:
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise ApiError(422, "FILE_TOO_LARGE", "Tệp vượt quá 10 MB")
+    if data[:2] != b"PK":
+        raise ApiError(422, "INVALID_FILE", "Chỉ nhận tệp DOCX")
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(data))
+        infos = zf.infolist()
+        if sum(i.file_size for i in infos) > MAX_UNCOMPRESSED_BYTES:
+            raise ApiError(422, "FILE_TOO_LARGE", "Tệp giải nén quá lớn")
+        names = [i.filename for i in infos]
+        if any(".." in n.split("/") or n.startswith("/") for n in names):
+            raise ApiError(422, "INVALID_FILE", "Tệp DOCX không hợp lệ")
+        if any("vbaproject" in n.lower() or n.lower().endswith(".docm") for n in names):
+            raise ApiError(422, "MACRO_REJECTED", "Tệp chứa macro nên không được nhận")
+        if "[Content_Types].xml" not in names:
+            raise ApiError(422, "INVALID_FILE", "Chỉ nhận tệp DOCX")
+        ctypes = zf.read("[Content_Types].xml").decode("utf-8", "replace")
+    except zipfile.BadZipFile as e:
+        raise ApiError(422, "INVALID_FILE", "Chỉ nhận tệp DOCX") from e
+    if "macroEnabled" in ctypes:
+        raise ApiError(422, "MACRO_REJECTED", "Tệp chứa macro nên không được nhận")
+    if "wordprocessingml.document.main+xml" not in ctypes:
+        raise ApiError(422, "INVALID_FILE", "Chỉ nhận tệp DOCX")
+
+
+def parse_docx(data: bytes) -> list[ParsedAnchor]:
+    from docx import Document
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
+
+    check_docx_container(data)
+    try:
+        doc = Document(io.BytesIO(data))
+    except Exception as e:  # noqa: BLE001 python-docx raises many types on malformed XML
+        raise ApiError(422, "INVALID_FILE", "Không đọc được tệp DOCX") from e
+    out: list[ParsedAnchor] = []
+    para_i = table_i = 0
+    for child in doc.element.body.iterchildren():
+        tag = child.tag.rsplit("}", 1)[-1]
+        if tag == "p":
+            p = Paragraph(child, doc)
+            text = " ".join(p.text.split())
+            if text:
+                style = (p.style.name if p.style is not None and p.style.name else "") or ""
+                kind = "HEADING" if style.startswith(("Heading", "Title")) else "PARAGRAPH"
+                out.append(ParsedAnchor(kind, {"para_index": para_i}, text))
+            para_i += 1
+        elif tag == "tbl":
+            for r, row in enumerate(Table(child, doc).rows):
+                seen: set[int] = set()
+                for c, cell in enumerate(row.cells):
+                    if id(cell._tc) in seen:  # noqa: SLF001 merged cells repeat the same element
+                        continue
+                    seen.add(id(cell._tc))  # noqa: SLF001
+                    text = " ".join(cell.text.split())
+                    if text:
+                        out.append(ParsedAnchor("TABLE_CELL", {"table": table_i, "row": r, "col": c}, text))
+            table_i += 1
+        if len(out) > MAX_ANCHORS:
+            break
+    return _limit(out)

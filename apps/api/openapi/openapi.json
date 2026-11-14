@@ -5990,6 +5990,16 @@
             },
             "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -6058,7 +6068,7 @@
         ]
       },
       "post": {
-        "description": "Creates the asset and revision 1; paragraphs (blank-line separated) become anchors.",
+        "description": "Creates the asset and revision 1; paragraphs (blank-line separated) become anchors, the first one is the heading. `visibility=SCHOOL` requires `licenseNote` (422 `LICENSE_REQUIRED`).",
         "operationId": "createSourceFromText",
         "requestBody": {
           "content": {
@@ -6120,7 +6130,7 @@
     },
     "/v1/sources/docx": {
       "post": {
-        "description": "Upload limits: DOCX only (`PK` magic + content types), ≤ 10 MB, macros rejected → 422. Parsing is synchronous: the response already has `extractStatus` and `anchorCount`.",
+        "description": "Upload limits: DOCX only (`PK` magic + content types), ≤ 10 MB, macros rejected → 422 (`INVALID_FILE`, `FILE_TOO_LARGE`, `MACRO_REJECTED`, `EMPTY_SOURCE`). The client's file name is ignored. Parsing is synchronous: the response already has `extractStatus` and `anchorCount`.",
         "operationId": "createSourceFromDocx",
         "requestBody": {
           "content": {
@@ -6216,6 +6226,16 @@
             },
             "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -6245,7 +6265,7 @@
     },
     "/v1/sources/{source_id}/revisions": {
       "post": {
-        "description": "Creates revision N+1 with new hashes. Lessons are NOT changed automatically: they get `newerSourceAvailable=true`; attach it with PUT /revisions/{id}/sources.",
+        "description": "Creates revision N+1 with new hashes (identical content → 409 `SOURCE_UNCHANGED`). Lessons are NOT changed automatically: they get `newerSourceAvailable=true`; attach it with PUT /revisions/{id}/sources.",
         "operationId": "createSourceRevisionFromText",
         "parameters": [
           {
@@ -6290,6 +6310,16 @@
             },
             "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -6299,6 +6329,16 @@
               }
             },
             "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "SOURCE_UNCHANGED."
           },
           "422": {
             "content": {
@@ -6319,7 +6359,7 @@
     },
     "/v1/sources/{source_id}/revisions/docx": {
       "post": {
-        "description": "Upload limits: DOCX only (`PK` magic + content types), ≤ 10 MB, macros rejected → 422. Parsing is synchronous: the response already has `extractStatus` and `anchorCount`.",
+        "description": "Upload limits: DOCX only (`PK` magic + content types), ≤ 10 MB, macros rejected → 422 (`INVALID_FILE`, `FILE_TOO_LARGE`, `MACRO_REJECTED`, `EMPTY_SOURCE`). The client's file name is ignored. Parsing is synchronous: the response already has `extractStatus` and `anchorCount`.",
         "operationId": "createSourceRevisionFromDocx",
         "parameters": [
           {
@@ -6364,6 +6404,16 @@
             },
             "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
           "404": {
             "content": {
               "application/json": {
@@ -6373,6 +6423,16 @@
               }
             },
             "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "SOURCE_UNCHANGED."
           },
           "422": {
             "content": {
