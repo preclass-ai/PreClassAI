@@ -45,6 +45,7 @@ select = ["E", "F", "I", "B", "UP", "S"]
 "tests/**" = ["S101", "S608", "S603", "E501"]
 "seed/**" = ["E731", "E501", "S105", "B023"]
 "alembic/**" = ["S608"]
+"app/generation/providers.py" = ["E501"]
 "app/routers/**" = ["E501"]  # one-line dependency signatures
 
 [tool.mypy]

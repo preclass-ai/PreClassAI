@@ -87,12 +87,18 @@ async def db(db_ready: None) -> AsyncIterator[AsyncSession]:
 async def client(db: AsyncSession) -> AsyncIterator[httpx.AsyncClient]:
     from app.auth import login_limiter
     from app.db.session import get_db
+    from app.generation import background_runner, run_job
     from app.main import app
 
     async def _db() -> AsyncIterator[AsyncSession]:
         yield db
 
     app.dependency_overrides[get_db] = _db
+
+    async def _inline(job_id: object) -> None:  # run the generation job inside the test transaction
+        await run_job(db, job_id)  # type: ignore[arg-type]
+
+    app.dependency_overrides[background_runner] = lambda: _inline
     login_limiter.reset()
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://t", headers={"X-PreClass-CSRF": "1"}

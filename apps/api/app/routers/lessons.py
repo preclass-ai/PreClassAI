@@ -8,8 +8,10 @@ from app import blocks as blocks_service
 from app import lessons as lessons_service
 from app.auth import CurrentUser, require_role
 from app.db.session import get_db
+from app.generation import JobRunner, background_runner, create_job
+from app.generation import get_job as get_job_service
 from app.lessons import replace_sources as replace_sources_service
-from app.routers._base import errs, todo
+from app.routers._base import errs
 from app.schemas import (
     BlockCreate,
     BlockList,
@@ -28,6 +30,7 @@ from app.schemas import (
     RevisionSourcesUpdate,
     ValidateOut,
 )
+from app.validation import validate_revision
 
 router = APIRouter()
 _LOCKED = (409, "VERSION_CONFLICT (version cũ) hoặc REVISION_LOCKED (bản đã xuất bản không sửa được).")
@@ -63,14 +66,24 @@ async def lesson_history(lesson_id: UUID, cu: Annotated[CurrentUser, Depends(req
              description="Only the teacher's explicit action triggers AI (PR-09). Poll GET /jobs/{id}.",
              responses=errs(401, 404, 422, (409, "JOB_ALREADY_RUNNING, REVISION_NOT_EMPTY (use mode=append)."),
                             503))
-async def generate(lesson_id: UUID, body: GenerateRequest) -> JobAccepted:
-    todo()
+async def generate(
+    lesson_id: UUID, body: GenerateRequest,
+    cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    runner: Annotated[JobRunner, Depends(background_runner)],
+) -> JobAccepted:
+    job_id = await create_job(db, cu.id, lesson_id, body)
+    await runner(job_id)
+    return JobAccepted(job_id=job_id)
 
 
 @router.get("/jobs/{job_id}", tags=["generation"], operation_id="getJob", response_model=JobOut,
             summary="Generation job status (author)", responses=errs(401, 404))
-async def get_job(job_id: UUID) -> JobOut:
-    todo()
+async def get_job(
+    job_id: UUID, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> JobOut:
+    return await get_job_service(db, cu.id, job_id)
 
 
 @router.put("/revisions/{revision_id}/sources", tags=["lessons"], operation_id="replaceRevisionSources",
@@ -139,5 +152,9 @@ async def put_provenance(block_id: UUID, body: ProvenanceUpdate, cu: Annotated[C
 
 @router.post("/revisions/{revision_id}/validate", tags=["validation"], operation_id="validateRevision",
              response_model=ValidateOut, summary="Run all validation rules (author)", responses=errs(401, 404))
-async def validate(revision_id: UUID) -> ValidateOut:
-    todo()
+async def validate(
+    revision_id: UUID, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ValidateOut:
+    await blocks_service.revision_for(db, cu, revision_id, write=True)
+    return await validate_revision(db, revision_id)

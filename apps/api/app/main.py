@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI
@@ -7,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from app.auth import csrf_middleware
 from app.config import get_settings
 from app.errors import install_error_handlers
+from app.generation import recover_after_restart
 from app.routers import api_router
 
 DESCRIPTION = """\
@@ -45,7 +48,14 @@ TAGS = [
     {"name": "system", "description": "Health."},
 ]
 
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    await recover_after_restart()  # RUNNING jobs cannot survive a restart
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="PreClass AI API", version="0.1.0-v0", description=DESCRIPTION, openapi_tags=TAGS,
     docs_url=None, redoc_url=None, openapi_url="/v1/openapi.json",  # /docs is Scalar (below)
 )

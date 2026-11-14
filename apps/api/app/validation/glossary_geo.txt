@@ -1,0 +1,4 @@
+# Suspicious Geography terms (VAL-08, WARNING). One per line, lower case. Extend with the Geography team's list.
+cơ cấu dân số vàng vĩnh viễn
+sông dài nhất thế giới là sông hồng
+việt nam không có biển
