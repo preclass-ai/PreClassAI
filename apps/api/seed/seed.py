@@ -8,7 +8,6 @@ Re-running is a no-op once seeded. Password for every seeded account: $SEED_PASS
 
 import asyncio
 import os
-import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -21,16 +20,12 @@ from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 from app.config import get_settings
 from app.db import models as m
 from app.hashing import content_hash, excerpt_hash, sha256_hex, source_hashes
+from app.ids import uid
 from app.snapshot import build_snapshot
 from app.sources.numbers import parse_numbers
 from seed.lessons import LESSONS, NOTE
 
-NS = uuid.UUID("6f1c0d6e-2b7a-4f57-9a55-5a1d0c0de001")
 DOMAIN = "preclass.local"
-
-
-def uid(name: str) -> uuid.UUID:
-    return uuid.uuid5(NS, name)
 
 
 def vn(d: Decimal) -> str:

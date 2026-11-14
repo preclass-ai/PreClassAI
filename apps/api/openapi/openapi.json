@@ -1,0 +1,6678 @@
+{
+  "components": {
+    "schemas": {
+      "AnchorList": {
+        "examples": [
+          {
+            "items": [
+              {
+                "code": "anc_d6ac3eb2_007",
+                "excerpt": "23,2",
+                "excerptHash": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+                "id": "6b61c1b1-1b84-5438-b7ee-ff5a2cb438bf",
+                "kind": "TABLE_CELL",
+                "locator": {
+                  "col": 1,
+                  "row": 1,
+                  "table": 0
+                },
+                "numbers": [
+                  23.2
+                ]
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AnchorOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AnchorList",
+        "type": "object"
+      },
+      "AnchorOut": {
+        "examples": [
+          {
+            "code": "anc_d6ac3eb2_007",
+            "excerpt": "23,2",
+            "excerptHash": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+            "id": "6b61c1b1-1b84-5438-b7ee-ff5a2cb438bf",
+            "kind": "TABLE_CELL",
+            "locator": {
+              "col": 1,
+              "row": 1,
+              "table": 0
+            },
+            "numbers": [
+              23.2
+            ]
+          }
+        ],
+        "properties": {
+          "code": {
+            "description": "Stable id like anc_<revision>_<seq>; shown in the Source Inspector.",
+            "title": "Code",
+            "type": "string"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "excerptHash": {
+            "title": "Excerpthash",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "PARAGRAPH",
+              "HEADING",
+              "TABLE_CELL",
+              "TABLE_ROW"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "locator": {
+            "additionalProperties": true,
+            "description": "{\"para_index\": n} or {\"table\": t, \"row\": r, \"col\": c}",
+            "title": "Locator",
+            "type": "object"
+          },
+          "numbers": {
+            "default": [],
+            "items": {
+              "type": "number"
+            },
+            "title": "Numbers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "kind",
+          "locator",
+          "excerpt",
+          "excerptHash"
+        ],
+        "title": "AnchorOut",
+        "type": "object"
+      },
+      "AnchorRef": {
+        "properties": {
+          "anchorId": {
+            "format": "uuid",
+            "title": "Anchorid",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "PARAGRAPH",
+              "HEADING",
+              "TABLE_CELL",
+              "TABLE_ROW"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "locator": {
+            "additionalProperties": true,
+            "title": "Locator",
+            "type": "object"
+          },
+          "sourceRevisionId": {
+            "format": "uuid",
+            "title": "Sourcerevisionid",
+            "type": "string"
+          },
+          "sourceTitle": {
+            "title": "Sourcetitle",
+            "type": "string"
+          },
+          "sourceVersion": {
+            "title": "Sourceversion",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "anchorId",
+          "code",
+          "kind",
+          "locator",
+          "excerpt",
+          "sourceRevisionId",
+          "sourceTitle",
+          "sourceVersion"
+        ],
+        "title": "AnchorRef",
+        "type": "object"
+      },
+      "AnswerIn": {
+        "properties": {
+          "choice": {
+            "anyOf": [
+              {
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choice"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "title": "AnswerIn",
+        "type": "object"
+      },
+      "AnswerKeyPayload": {
+        "description": "MCQ: `correct`. NUMERIC: `value`+`unit`+`tolerance` (+`derivation`). SHORT: `rubricPoints`.",
+        "properties": {
+          "correct": {
+            "anyOf": [
+              {
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correct"
+          },
+          "derivation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Derivation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rubricPoints": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rubricpoints"
+          },
+          "tolerance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tolerance"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "title": "AnswerKeyPayload",
+        "type": "object"
+      },
+      "AssignmentCreate": {
+        "examples": [
+          {
+            "classId": "d97fbc44-edb6-5333-b65d-1427e836354c",
+            "dueAt": "2026-11-30T23:59:00+07:00",
+            "openAt": "2026-11-15T09:00:00+07:00"
+          }
+        ],
+        "properties": {
+          "classId": {
+            "format": "uuid",
+            "title": "Classid",
+            "type": "string"
+          },
+          "dueAt": {
+            "format": "date-time",
+            "title": "Dueat",
+            "type": "string"
+          },
+          "openAt": {
+            "format": "date-time",
+            "title": "Openat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "classId",
+          "openAt",
+          "dueAt"
+        ],
+        "title": "AssignmentCreate",
+        "type": "object"
+      },
+      "AssignmentList": {
+        "examples": [
+          {
+            "items": [
+              {
+                "classCode": "10A1",
+                "classId": "d97fbc44-edb6-5333-b65d-1427e836354c",
+                "dueAt": "2026-11-30T23:59:00+07:00",
+                "id": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
+                "lessonTitle": "Phân bố dân cư theo vùng",
+                "openAt": "2026-11-15T09:00:00+07:00",
+                "publishedVersionId": "c3dc4c47-da3a-5734-89c4-261ab71ee0bf"
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AssignmentOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AssignmentList",
+        "type": "object"
+      },
+      "AssignmentOut": {
+        "examples": [
+          {
+            "classCode": "10A1",
+            "classId": "d97fbc44-edb6-5333-b65d-1427e836354c",
+            "dueAt": "2026-11-30T23:59:00+07:00",
+            "id": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
+            "lessonTitle": "Phân bố dân cư theo vùng",
+            "openAt": "2026-11-15T09:00:00+07:00",
+            "publishedVersionId": "c3dc4c47-da3a-5734-89c4-261ab71ee0bf"
+          }
+        ],
+        "properties": {
+          "classCode": {
+            "title": "Classcode",
+            "type": "string"
+          },
+          "classId": {
+            "format": "uuid",
+            "title": "Classid",
+            "type": "string"
+          },
+          "dueAt": {
+            "format": "date-time",
+            "title": "Dueat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lessonTitle": {
+            "title": "Lessontitle",
+            "type": "string"
+          },
+          "openAt": {
+            "format": "date-time",
+            "title": "Openat",
+            "type": "string"
+          },
+          "publishedVersionId": {
+            "format": "uuid",
+            "title": "Publishedversionid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "publishedVersionId",
+          "classId",
+          "classCode",
+          "lessonTitle",
+          "openAt",
+          "dueAt"
+        ],
+        "title": "AssignmentOut",
+        "type": "object"
+      },
+      "AttemptRequest": {
+        "examples": [
+          {
+            "answer": {
+              "choice": "A"
+            },
+            "itemId": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73",
+            "requestId": "395bd63b-62df-5c53-a2ef-0b46956092f7"
+          }
+        ],
+        "properties": {
+          "answer": {
+            "$ref": "#/components/schemas/AnswerIn"
+          },
+          "itemId": {
+            "format": "uuid",
+            "title": "Itemid",
+            "type": "string"
+          },
+          "requestId": {
+            "description": "Idempotency key (retry of the same submit). One attempt per item.",
+            "format": "uuid",
+            "title": "Requestid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemId",
+          "answer",
+          "requestId"
+        ],
+        "title": "AttemptRequest",
+        "type": "object"
+      },
+      "AttemptResult": {
+        "examples": [
+          {
+            "explanation": "Đồng bằng sông Hồng có số dân cao nhất (23,2 triệu người).",
+            "isCorrect": true,
+            "itemId": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73"
+          }
+        ],
+        "properties": {
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Approved explanation; only present after the attempt.",
+            "title": "Explanation"
+          },
+          "isCorrect": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null for SHORT / rubric items.",
+            "title": "Iscorrect"
+          },
+          "itemId": {
+            "format": "uuid",
+            "title": "Itemid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemId"
+        ],
+        "title": "AttemptResult",
+        "type": "object"
+      },
+      "AuditLogList": {
+        "examples": [
+          {
+            "items": [
+              {
+                "action": "INSPECT_PROVENANCE",
+                "actorId": "eb9a9e82-7954-5e82-a597-16c6123031ff",
+                "createdAt": "2026-11-14T09:00:00+07:00",
+                "id": "e6c6a1fd-65a0-5f3b-9657-cce4b6cd583c",
+                "metadata": {},
+                "resourceId": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73",
+                "resourceType": "content_block"
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditLogOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AuditLogList",
+        "type": "object"
+      },
+      "AuditLogOut": {
+        "examples": [
+          {
+            "action": "INSPECT_PROVENANCE",
+            "actorId": "eb9a9e82-7954-5e82-a597-16c6123031ff",
+            "createdAt": "2026-11-14T09:00:00+07:00",
+            "id": "e6c6a1fd-65a0-5f3b-9657-cce4b6cd583c",
+            "metadata": {},
+            "resourceId": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73",
+            "resourceType": "content_block"
+          }
+        ],
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actorId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actorid"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Metadata",
+            "type": "object"
+          },
+          "resourceId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resourceid"
+          },
+          "resourceType": {
+            "title": "Resourcetype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "actorId",
+          "action",
+          "resourceType",
+          "resourceId",
+          "createdAt"
+        ],
+        "title": "AuditLogOut",
+        "type": "object"
+      },
+      "BlockCounts": {
+        "properties": {
+          "approved": {
+            "default": 0,
+            "title": "Approved",
+            "type": "integer"
+          },
+          "autoChecked": {
+            "default": 0,
+            "title": "Autochecked",
+            "type": "integer"
+          },
+          "flagged": {
+            "default": 0,
+            "title": "Flagged",
+            "type": "integer"
+          },
+          "rejected": {
+            "default": 0,
+            "title": "Rejected",
+            "type": "integer"
+          },
+          "reviewAgain": {
+            "default": 0,
+            "title": "Reviewagain",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          },
+          "unreviewed": {
+            "default": 0,
+            "title": "Unreviewed",
+            "type": "integer"
+          }
+        },
+        "title": "BlockCounts",
+        "type": "object"
+      },
+      "BlockCreate": {
+        "description": "Adds a TEACHER_AUTHORED block. The server checks that `payload` matches `kind`.",
+        "examples": [
+          {
+            "isFactual": false,
+            "kind": "paragraph",
+            "payload": {
+              "text": "Nhận xét của giáo viên."
+            }
+          }
+        ],
+        "properties": {
+          "isFactual": {
+            "default": false,
+            "title": "Isfactual",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "heading",
+              "paragraph",
+              "data_fact",
+              "instruction",
+              "worksheet_item",
+              "option",
+              "answer_key",
+              "explanation",
+              "card_front",
+              "card_back"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "parentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parentid"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataFactPayload"
+              },
+              {
+                "$ref": "#/components/schemas/WorksheetItemPayload"
+              },
+              {
+                "$ref": "#/components/schemas/AnswerKeyPayload"
+              },
+              {
+                "$ref": "#/components/schemas/OptionPayload"
+              },
+              {
+                "$ref": "#/components/schemas/ExplanationPayload"
+              },
+              {
+                "$ref": "#/components/schemas/HeadingPayload"
+              },
+              {
+                "$ref": "#/components/schemas/ParagraphPayload"
+              },
+              {
+                "$ref": "#/components/schemas/InstructionPayload"
+              },
+              {
+                "$ref": "#/components/schemas/CardPayload"
+              }
+            ],
+            "title": "Payload"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Insert position; null appends.",
+            "title": "Position"
+          }
+        },
+        "required": [
+          "kind",
+          "payload"
+        ],
+        "title": "BlockCreate",
+        "type": "object"
+      },
+      "BlockList": {
+        "examples": [
+          {
+            "items": [
+              {
+                "blockerCount": 0,
+                "contentHash": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+                "id": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73",
+                "isFactual": false,
+                "kind": "worksheet_item",
+                "linkCount": 0,
+                "noSourceReason": "Nội dung sư phạm do AI đề xuất, không lấy trực tiếp từ nguồn.",
+                "payload": {
+                  "itemType": "MCQ",
+                  "skill": "COMPARE",
+                  "stem": "Theo bảng số liệu, vùng nào có số dân cao nhất?"
+                },
+                "position": 6,
+                "reviewStatus": "APPROVED",
+                "revisionId": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+                "transformation": "AI_PROPOSED",
+                "version": 1,
+                "warningCount": 0
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BlockOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "BlockList",
+        "type": "object"
+      },
+      "BlockOut": {
+        "description": "`payload` shape depends on `kind` (see DATA_MODEL.md). Blocks come as a flat list: use parentId/position.",
+        "examples": [
+          {
+            "blockerCount": 0,
+            "contentHash": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+            "id": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73",
+            "isFactual": false,
+            "kind": "worksheet_item",
+            "linkCount": 0,
+            "noSourceReason": "Nội dung sư phạm do AI đề xuất, không lấy trực tiếp từ nguồn.",
+            "payload": {
+              "itemType": "MCQ",
+              "skill": "COMPARE",
+              "stem": "Theo bảng số liệu, vùng nào có số dân cao nhất?"
+            },
+            "position": 6,
+            "reviewStatus": "APPROVED",
+            "revisionId": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+            "transformation": "AI_PROPOSED",
+            "version": 1,
+            "warningCount": 0
+          }
+        ],
+        "properties": {
+          "blockerCount": {
+            "default": 0,
+            "description": "Failed BLOCKER validations at the current hash.",
+            "title": "Blockercount",
+            "type": "integer"
+          },
+          "contentHash": {
+            "description": "Send back in POST /blocks/{id}/reviews (approval is bound to it).",
+            "title": "Contenthash",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "isFactual": {
+            "title": "Isfactual",
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "heading",
+              "paragraph",
+              "data_fact",
+              "instruction",
+              "worksheet_item",
+              "option",
+              "answer_key",
+              "explanation",
+              "card_front",
+              "card_back"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "linkCount": {
+            "default": 0,
+            "title": "Linkcount",
+            "type": "integer"
+          },
+          "noSourceReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nosourcereason"
+          },
+          "parentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parentid"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataFactPayload"
+              },
+              {
+                "$ref": "#/components/schemas/WorksheetItemPayload"
+              },
+              {
+                "$ref": "#/components/schemas/AnswerKeyPayload"
+              },
+              {
+                "$ref": "#/components/schemas/OptionPayload"
+              },
+              {
+                "$ref": "#/components/schemas/ExplanationPayload"
+              },
+              {
+                "$ref": "#/components/schemas/HeadingPayload"
+              },
+              {
+                "$ref": "#/components/schemas/ParagraphPayload"
+              },
+              {
+                "$ref": "#/components/schemas/InstructionPayload"
+              },
+              {
+                "$ref": "#/components/schemas/CardPayload"
+              }
+            ],
+            "title": "Payload"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "reviewStatus": {
+            "enum": [
+              "UNREVIEWED",
+              "AUTO_CHECKED",
+              "FLAGGED",
+              "APPROVED",
+              "REVIEW_AGAIN",
+              "REJECTED"
+            ],
+            "title": "Reviewstatus",
+            "type": "string"
+          },
+          "revisionId": {
+            "format": "uuid",
+            "title": "Revisionid",
+            "type": "string"
+          },
+          "transformation": {
+            "enum": [
+              "ORIGINAL",
+              "PARAPHRASED",
+              "SYNTHESISED",
+              "AI_PROPOSED",
+              "TEACHER_AUTHORED"
+            ],
+            "title": "Transformation",
+            "type": "string"
+          },
+          "version": {
+            "description": "Optimistic lock: send back in PATCH.",
+            "title": "Version",
+            "type": "integer"
+          },
+          "warningCount": {
+            "default": 0,
+            "title": "Warningcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "revisionId",
+          "kind",
+          "parentId",
+          "position",
+          "payload",
+          "contentHash",
+          "transformation",
+          "reviewStatus",
+          "noSourceReason",
+          "isFactual",
+          "version"
+        ],
+        "title": "BlockOut",
+        "type": "object"
+      },
+      "BlockPatch": {
+        "examples": [
+          {
+            "payload": {
+              "text": "Nhận xét đã chỉnh sửa."
+            },
+            "version": 1
+          }
+        ],
+        "properties": {
+          "payload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataFactPayload"
+              },
+              {
+                "$ref": "#/components/schemas/WorksheetItemPayload"
+              },
+              {
+                "$ref": "#/components/schemas/AnswerKeyPayload"
+              },
+              {
+                "$ref": "#/components/schemas/OptionPayload"
+              },
+              {
+                "$ref": "#/components/schemas/ExplanationPayload"
+              },
+              {
+                "$ref": "#/components/schemas/HeadingPayload"
+              },
+              {
+                "$ref": "#/components/schemas/ParagraphPayload"
+              },
+              {
+                "$ref": "#/components/schemas/InstructionPayload"
+              },
+              {
+                "$ref": "#/components/schemas/CardPayload"
+              }
+            ],
+            "title": "Payload"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "payload",
+          "version"
+        ],
+        "title": "BlockPatch",
+        "type": "object"
+      },
+      "BlockValidationSummary": {
+        "properties": {
+          "blockId": {
+            "format": "uuid",
+            "title": "Blockid",
+            "type": "string"
+          },
+          "failedRules": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Failedrules",
+            "type": "array"
+          },
+          "reviewStatus": {
+            "enum": [
+              "UNREVIEWED",
+              "AUTO_CHECKED",
+              "FLAGGED",
+              "APPROVED",
+              "REVIEW_AGAIN",
+              "REJECTED"
+            ],
+            "title": "Reviewstatus",
+            "type": "string"
+          }
+        },
+        "required": [
+          "blockId",
+          "reviewStatus",
+          "failedRules"
+        ],
+        "title": "BlockValidationSummary",
+        "type": "object"
+      },
+      "Body_createSourceFromDocx": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "licenseNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licensenote"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "visibility": {
+            "default": "PRIVATE",
+            "enum": [
+              "PRIVATE",
+              "SCHOOL"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "title"
+        ],
+        "title": "Body_createSourceFromDocx",
+        "type": "object"
+      },
+      "Body_createSourceRevisionFromDocx": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_createSourceRevisionFromDocx",
+        "type": "object"
+      },
+      "CardPayload": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "CardPayload",
+        "type": "object"
+      },
+      "ClassList": {
+        "examples": [
+          {
+            "items": [
+              {
+                "code": "10A1",
+                "grade": 10,
+                "id": "d97fbc44-edb6-5333-b65d-1427e836354c",
+                "studentCount": 15
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClassOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ClassList",
+        "type": "object"
+      },
+      "ClassOut": {
+        "examples": [
+          {
+            "code": "10A1",
+            "grade": 10,
+            "id": "d97fbc44-edb6-5333-b65d-1427e836354c",
+            "studentCount": 15
+          }
+        ],
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "grade": {
+            "enum": [
+              10,
+              11
+            ],
+            "title": "Grade",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "studentCount": {
+            "title": "Studentcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "grade",
+          "studentCount"
+        ],
+        "title": "ClassOut",
+        "type": "object"
+      },
+      "DataFactPayload": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "region": {
+            "title": "Region",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "label",
+          "value",
+          "unit",
+          "period",
+          "region"
+        ],
+        "title": "DataFactPayload",
+        "type": "object"
+      },
+      "Derivation": {
+        "description": "Computed number (PR-07): server recomputes with Decimal and compares. Operands: anchor code or number.",
+        "properties": {
+          "op": {
+            "enum": [
+              "sum",
+              "diff",
+              "ratio",
+              "percent"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "operands": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "title": "Operands",
+            "type": "array"
+          }
+        },
+        "required": [
+          "op",
+          "operands"
+        ],
+        "title": "Derivation",
+        "type": "object"
+      },
+      "DiffSummary": {
+        "properties": {
+          "added": {
+            "default": 0,
+            "title": "Added",
+            "type": "integer"
+          },
+          "changed": {
+            "default": 0,
+            "title": "Changed",
+            "type": "integer"
+          },
+          "removed": {
+            "default": 0,
+            "title": "Removed",
+            "type": "integer"
+          }
+        },
+        "title": "DiffSummary",
+        "type": "object"
+      },
+      "ExplanationPayload": {
+        "properties": {
+          "derivation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Derivation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ExplanationPayload",
+        "type": "object"
+      },
+      "GenerateRequest": {
+        "examples": [
+          {
+            "focusSkills": [
+              "READ_TABLE",
+              "COMPARE"
+            ],
+            "mode": "initial",
+            "nItems": 5,
+            "outputType": "WORKSHEET"
+          }
+        ],
+        "properties": {
+          "focusSkills": {
+            "default": [],
+            "items": {
+              "enum": [
+                "READ_TABLE",
+                "COMPARE",
+                "CALCULATE",
+                "EXPLAIN"
+              ],
+              "type": "string"
+            },
+            "title": "Focusskills",
+            "type": "array"
+          },
+          "mode": {
+            "default": "initial",
+            "description": "initial: only when the revision has no blocks. append: add to existing blocks.",
+            "enum": [
+              "initial",
+              "append"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "nItems": {
+            "default": 5,
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Nitems",
+            "type": "integer"
+          },
+          "outputType": {
+            "enum": [
+              "WORKSHEET",
+              "FLASHCARDS"
+            ],
+            "title": "Outputtype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outputType"
+        ],
+        "title": "GenerateRequest",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HeadingPayload": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "HeadingPayload",
+        "type": "object"
+      },
+      "HistoryEvent": {
+        "properties": {
+          "actorId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actorid"
+          },
+          "actorType": {
+            "enum": [
+              "AI",
+              "TEACHER",
+              "SYSTEM"
+            ],
+            "title": "Actortype",
+            "type": "string"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "blockId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blockid"
+          },
+          "operation": {
+            "anyOf": [
+              {
+                "enum": [
+                  "GENERATE",
+                  "EDIT",
+                  "REGENERATE",
+                  "SOURCE_REPLACED"
+                ],
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "REVIEW",
+                  "PUBLISH",
+                  "WITHDRAW"
+                ],
+                "type": "string"
+              }
+            ],
+            "title": "Operation"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "required": [
+          "at",
+          "actorType",
+          "operation"
+        ],
+        "title": "HistoryEvent",
+        "type": "object"
+      },
+      "HistoryRevision": {
+        "properties": {
+          "blockCount": {
+            "title": "Blockcount",
+            "type": "integer"
+          },
+          "diffSummary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DiffSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "vs previous revision; may be null in v1."
+          },
+          "publishedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedat"
+          },
+          "revisionId": {
+            "format": "uuid",
+            "title": "Revisionid",
+            "type": "string"
+          },
+          "revisionNo": {
+            "title": "Revisionno",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "DRAFT",
+              "IN_REVIEW",
+              "PUBLISHED",
+              "SUPERSEDED"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "revisionId",
+          "revisionNo",
+          "state",
+          "blockCount"
+        ],
+        "title": "HistoryRevision",
+        "type": "object"
+      },
+      "InstructionPayload": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "InstructionPayload",
+        "type": "object"
+      },
+      "JobAccepted": {
+        "examples": [
+          {
+            "jobId": "748edacd-4b1b-5e15-a559-436e7170fe32"
+          }
+        ],
+        "properties": {
+          "jobId": {
+            "format": "uuid",
+            "title": "Jobid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "jobId"
+        ],
+        "title": "JobAccepted",
+        "type": "object"
+      },
+      "JobOut": {
+        "examples": [
+          {
+            "blockCount": 14,
+            "createdAt": "2026-11-14T09:00:00+07:00",
+            "id": "748edacd-4b1b-5e15-a559-436e7170fe32",
+            "model": "mock-v1",
+            "outputType": "WORKSHEET",
+            "revisionId": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+            "status": "SUCCEEDED"
+          }
+        ],
+        "properties": {
+          "blockCount": {
+            "default": 0,
+            "title": "Blockcount",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "outputType": {
+            "enum": [
+              "WORKSHEET",
+              "FLASHCARDS"
+            ],
+            "title": "Outputtype",
+            "type": "string"
+          },
+          "revisionId": {
+            "format": "uuid",
+            "title": "Revisionid",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "revisionId",
+          "outputType",
+          "status",
+          "createdAt"
+        ],
+        "title": "JobOut",
+        "type": "object"
+      },
+      "LessonCreate": {
+        "examples": [
+          {
+            "goal": "Đọc và so sánh số dân giữa các vùng.",
+            "grade": 10,
+            "sourceRevisionIds": [
+              "d6ac3eb2-7d63-5dbd-ac1e-ff0041a32d64"
+            ],
+            "title": "Phân bố dân cư theo vùng"
+          }
+        ],
+        "properties": {
+          "goal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal"
+          },
+          "grade": {
+            "enum": [
+              10,
+              11
+            ],
+            "title": "Grade",
+            "type": "integer"
+          },
+          "sourceRevisionIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Sourcerevisionids",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "grade",
+          "sourceRevisionIds"
+        ],
+        "title": "LessonCreate",
+        "type": "object"
+      },
+      "LessonHistory": {
+        "examples": [
+          {
+            "events": [
+              {
+                "actorType": "AI",
+                "at": "2026-11-14T09:00:00+07:00",
+                "blockId": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73",
+                "operation": "GENERATE"
+              }
+            ],
+            "revisions": [
+              {
+                "blockCount": 14,
+                "publishedAt": "2026-11-15T09:00:00+07:00",
+                "revisionId": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+                "revisionNo": 1,
+                "state": "PUBLISHED"
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "revisions": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryRevision"
+            },
+            "title": "Revisions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "revisions",
+          "events"
+        ],
+        "title": "LessonHistory",
+        "type": "object"
+      },
+      "LessonList": {
+        "examples": [
+          {
+            "items": [
+              {
+                "authorId": "eb9a9e82-7954-5e82-a597-16c6123031ff",
+                "createdAt": "2026-11-14T09:00:00+07:00",
+                "currentRevision": {
+                  "counts": {
+                    "approved": 12,
+                    "autoChecked": 1,
+                    "flagged": 0,
+                    "rejected": 0,
+                    "reviewAgain": 1,
+                    "total": 14,
+                    "unreviewed": 0
+                  },
+                  "createdAt": "2026-11-14T09:00:00+07:00",
+                  "id": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+                  "lessonId": "712030dc-698a-5be5-9781-5d7a907b3628",
+                  "newerSourceAvailable": false,
+                  "revisionNo": 1,
+                  "sourceRevisionIds": [
+                    "d6ac3eb2-7d63-5dbd-ac1e-ff0041a32d64"
+                  ],
+                  "state": "DRAFT",
+                  "version": 3
+                },
+                "goal": "Đọc và so sánh số dân giữa các vùng từ bảng số liệu.",
+                "grade": 10,
+                "id": "712030dc-698a-5be5-9781-5d7a907b3628",
+                "subject": "GEOGRAPHY",
+                "title": "Phân bố dân cư theo vùng"
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LessonOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "LessonList",
+        "type": "object"
+      },
+      "LessonOut": {
+        "examples": [
+          {
+            "authorId": "eb9a9e82-7954-5e82-a597-16c6123031ff",
+            "createdAt": "2026-11-14T09:00:00+07:00",
+            "currentRevision": {
+              "counts": {
+                "approved": 12,
+                "autoChecked": 1,
+                "flagged": 0,
+                "rejected": 0,
+                "reviewAgain": 1,
+                "total": 14,
+                "unreviewed": 0
+              },
+              "createdAt": "2026-11-14T09:00:00+07:00",
+              "id": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+              "lessonId": "712030dc-698a-5be5-9781-5d7a907b3628",
+              "newerSourceAvailable": false,
+              "revisionNo": 1,
+              "sourceRevisionIds": [
+                "d6ac3eb2-7d63-5dbd-ac1e-ff0041a32d64"
+              ],
+              "state": "DRAFT",
+              "version": 3
+            },
+            "goal": "Đọc và so sánh số dân giữa các vùng từ bảng số liệu.",
+            "grade": 10,
+            "id": "712030dc-698a-5be5-9781-5d7a907b3628",
+            "subject": "GEOGRAPHY",
+            "title": "Phân bố dân cư theo vùng"
+          }
+        ],
+        "properties": {
+          "authorId": {
+            "format": "uuid",
+            "title": "Authorid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "currentRevision": {
+            "$ref": "#/components/schemas/RevisionOut"
+          },
+          "goal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal"
+          },
+          "grade": {
+            "enum": [
+              10,
+              11
+            ],
+            "title": "Grade",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "publishedVersionId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publishedversionid"
+          },
+          "subject": {
+            "const": "GEOGRAPHY",
+            "default": "GEOGRAPHY",
+            "title": "Subject",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "grade",
+          "goal",
+          "authorId",
+          "currentRevision",
+          "createdAt"
+        ],
+        "title": "LessonOut",
+        "type": "object"
+      },
+      "LinkIn": {
+        "properties": {
+          "anchorId": {
+            "format": "uuid",
+            "title": "Anchorid",
+            "type": "string"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "relation": {
+            "enum": [
+              "derived_from",
+              "quotes",
+              "supports"
+            ],
+            "title": "Relation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "anchorId",
+          "relation"
+        ],
+        "title": "LinkIn",
+        "type": "object"
+      },
+      "LoginRequest": {
+        "examples": [
+          {
+            "identifier": "gv.dia@preclass.local",
+            "password": "preclass-demo"
+          }
+        ],
+        "properties": {
+          "identifier": {
+            "description": "Teacher/admin email, or student login code (e.g. HS10-01).",
+            "title": "Identifier",
+            "type": "string"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "identifier",
+          "password"
+        ],
+        "title": "LoginRequest",
+        "type": "object"
+      },
+      "OptionPayload": {
+        "properties": {
+          "label": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "title": "Label",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "text"
+        ],
+        "title": "OptionPayload",
+        "type": "object"
+      },
+      "ParagraphPayload": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ParagraphPayload",
+        "type": "object"
+      },
+      "Problem": {
+        "description": "Every non-2xx response. Branch on `code`, never on `title`/`detail` (Vietnamese text may change).",
+        "examples": [
+          {
+            "code": "STALE_REVIEW",
+            "detail": "",
+            "status": 409,
+            "title": "Nội dung đã thay đổi sau khi bạn xem",
+            "type": "https://preclass.local/problems/stale_review"
+          }
+        ],
+        "properties": {
+          "code": {
+            "description": "Stable machine code, see API_GUIDE error table.",
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ProblemFieldError"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors"
+          },
+          "status": {
+            "title": "Status",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code"
+        ],
+        "title": "Problem",
+        "type": "object"
+      },
+      "ProblemFieldError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Loc",
+            "type": "array"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "type"
+        ],
+        "title": "ProblemFieldError",
+        "type": "object"
+      },
+      "ProgressItem": {
+        "properties": {
+          "answeredCount": {
+            "title": "Answeredcount",
+            "type": "integer"
+          },
+          "firstAttemptCorrectRate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0..1; null when nobody answered.",
+            "title": "Firstattemptcorrectrate"
+          },
+          "itemBlockId": {
+            "format": "uuid",
+            "title": "Itemblockid",
+            "type": "string"
+          },
+          "stem": {
+            "title": "Stem",
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemBlockId",
+          "stem",
+          "answeredCount"
+        ],
+        "title": "ProgressItem",
+        "type": "object"
+      },
+      "ProgressOut": {
+        "examples": [
+          {
+            "assignmentId": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
+            "items": [
+              {
+                "answeredCount": 12,
+                "firstAttemptCorrectRate": 0.75,
+                "itemBlockId": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73",
+                "stem": "Theo bảng số liệu, vùng nào có số dân cao nhất?"
+              }
+            ],
+            "studentCount": 15
+          }
+        ],
+        "properties": {
+          "assignmentId": {
+            "format": "uuid",
+            "title": "Assignmentid",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "studentCount": {
+            "title": "Studentcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "assignmentId",
+          "studentCount",
+          "items"
+        ],
+        "title": "ProgressOut",
+        "type": "object"
+      },
+      "ProvenanceLinkOut": {
+        "properties": {
+          "anchor": {
+            "$ref": "#/components/schemas/AnchorRef"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "relation": {
+            "enum": [
+              "derived_from",
+              "quotes",
+              "supports"
+            ],
+            "title": "Relation",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "VERIFIED",
+              "UNRESOLVED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "anchor",
+          "relation",
+          "status"
+        ],
+        "title": "ProvenanceLinkOut",
+        "type": "object"
+      },
+      "ProvenanceOut": {
+        "examples": [
+          {
+            "block": {
+              "blockerCount": 0,
+              "contentHash": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+              "id": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73",
+              "isFactual": false,
+              "kind": "worksheet_item",
+              "linkCount": 0,
+              "noSourceReason": "Nội dung sư phạm do AI đề xuất, không lấy trực tiếp từ nguồn.",
+              "payload": {
+                "itemType": "MCQ",
+                "skill": "COMPARE",
+                "stem": "Theo bảng số liệu, vùng nào có số dân cao nhất?"
+              },
+              "position": 6,
+              "reviewStatus": "APPROVED",
+              "revisionId": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+              "transformation": "AI_PROPOSED",
+              "version": 1,
+              "warningCount": 0
+            },
+            "events": [
+              {
+                "actorType": "AI",
+                "afterHash": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+                "createdAt": "2026-11-14T09:00:00+07:00",
+                "generatorVersion": "mock-v1",
+                "id": "e6c6a1fd-65a0-5f3b-9657-cce4b6cd583c",
+                "operation": "GENERATE"
+              }
+            ],
+            "links": [
+              {
+                "anchor": {
+                  "anchorId": "6b61c1b1-1b84-5438-b7ee-ff5a2cb438bf",
+                  "code": "anc_d6ac3eb2_007",
+                  "excerpt": "23,2",
+                  "kind": "TABLE_CELL",
+                  "locator": {
+                    "col": 1,
+                    "row": 1,
+                    "table": 0
+                  },
+                  "sourceRevisionId": "d6ac3eb2-7d63-5dbd-ac1e-ff0041a32d64",
+                  "sourceTitle": "Phân bố dân cư theo vùng (dan-so-vung)",
+                  "sourceVersion": 1
+                },
+                "id": "e6c6a1fd-65a0-5f3b-9657-cce4b6cd583c",
+                "rationale": "Dữ liệu minh họa",
+                "relation": "derived_from",
+                "status": "VERIFIED"
+              }
+            ],
+            "reviews": [
+              {
+                "action": "APPROVE",
+                "contentHash": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+                "createdAt": "2026-11-15T09:00:00+07:00",
+                "id": "e6c6a1fd-65a0-5f3b-9657-cce4b6cd583c",
+                "isValid": true,
+                "reviewerId": "eb9a9e82-7954-5e82-a597-16c6123031ff",
+                "reviewerName": "Cô Địa Lí (minh họa)",
+                "sourceHashes": [
+                  "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f809"
+                ]
+              }
+            ],
+            "validations": [
+              {
+                "contentHash": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+                "createdAt": "2026-11-14T09:00:00+07:00",
+                "evidence": {},
+                "id": "e6c6a1fd-65a0-5f3b-9657-cce4b6cd583c",
+                "isCurrent": true,
+                "method": "rule",
+                "outcome": "PASS",
+                "rule": "VAL-04",
+                "severity": "BLOCKER"
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "block": {
+            "$ref": "#/components/schemas/BlockOut"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/TransformationEventOut"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/ProvenanceLinkOut"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewEventOut"
+            },
+            "title": "Reviews",
+            "type": "array"
+          },
+          "validations": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationResultOut"
+            },
+            "title": "Validations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "block",
+          "links",
+          "events",
+          "validations",
+          "reviews"
+        ],
+        "title": "ProvenanceOut",
+        "type": "object"
+      },
+      "ProvenanceUpdate": {
+        "description": "Either `links` or `noSourceReason`. The server verifies every anchor belongs to the lesson's sources.",
+        "examples": [
+          {
+            "links": [
+              {
+                "anchorId": "6b61c1b1-1b84-5438-b7ee-ff5a2cb438bf",
+                "relation": "derived_from"
+              }
+            ],
+            "version": 1
+          }
+        ],
+        "properties": {
+          "links": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/LinkIn"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Links"
+          },
+          "noSourceReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nosourcereason"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "title": "ProvenanceUpdate",
+        "type": "object"
+      },
+      "PublishCheckItem": {
+        "properties": {
+          "blockIds": {
+            "default": [],
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Blockids",
+            "type": "array"
+          },
+          "code": {
+            "enum": [
+              "ALL_APPROVED",
+              "NO_BLOCKERS",
+              "SOURCES_VALID",
+              "HAS_ITEMS"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "ok",
+          "message"
+        ],
+        "title": "PublishCheckItem",
+        "type": "object"
+      },
+      "PublishCheckOut": {
+        "examples": [
+          {
+            "canPublish": false,
+            "items": [
+              {
+                "blockIds": [
+                  "852dddcb-96cc-5ee1-bb75-78b3c9f26eeb",
+                  "81dfceab-806b-5fc9-b131-7658bbab98a3"
+                ],
+                "code": "ALL_APPROVED",
+                "message": "Còn 2 khối chưa được duyệt.",
+                "ok": false
+              },
+              {
+                "blockIds": [],
+                "code": "NO_BLOCKERS",
+                "message": "Không còn cảnh báo chặn.",
+                "ok": true
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "canPublish": {
+            "title": "Canpublish",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublishCheckItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "canPublish",
+          "items"
+        ],
+        "title": "PublishCheckOut",
+        "type": "object"
+      },
+      "PublishRequest": {
+        "examples": [
+          {
+            "confirmChecked": true,
+            "version": 3
+          }
+        ],
+        "properties": {
+          "confirmChecked": {
+            "description": "Must be true: the teacher confirms they checked the content.",
+            "title": "Confirmchecked",
+            "type": "boolean"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "confirmChecked",
+          "version"
+        ],
+        "title": "PublishRequest",
+        "type": "object"
+      },
+      "PublishedOut": {
+        "examples": [
+          {
+            "id": "c3dc4c47-da3a-5734-89c4-261ab71ee0bf",
+            "lessonRevisionId": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+            "lessonTitle": "Phân bố dân cư theo vùng",
+            "publishedAt": "2026-11-15T09:00:00+07:00",
+            "publishedBy": "eb9a9e82-7954-5e82-a597-16c6123031ff",
+            "snapshotHash": "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f809",
+            "state": "ACTIVE"
+          }
+        ],
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lessonRevisionId": {
+            "format": "uuid",
+            "title": "Lessonrevisionid",
+            "type": "string"
+          },
+          "lessonTitle": {
+            "title": "Lessontitle",
+            "type": "string"
+          },
+          "publishedAt": {
+            "format": "date-time",
+            "title": "Publishedat",
+            "type": "string"
+          },
+          "publishedBy": {
+            "format": "uuid",
+            "title": "Publishedby",
+            "type": "string"
+          },
+          "snapshotHash": {
+            "title": "Snapshothash",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ACTIVE",
+              "WITHDRAWN"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "withdrawReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Withdrawreason"
+          }
+        },
+        "required": [
+          "id",
+          "lessonRevisionId",
+          "lessonTitle",
+          "state",
+          "snapshotHash",
+          "publishedBy",
+          "publishedAt"
+        ],
+        "title": "PublishedOut",
+        "type": "object"
+      },
+      "ReviewEventOut": {
+        "properties": {
+          "action": {
+            "enum": [
+              "APPROVE",
+              "REJECT",
+              "REQUEST_CHANGES"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "contentHash": {
+            "title": "Contenthash",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "isValid": {
+            "description": "APPROVE whose hashes still match the current block and sources.",
+            "title": "Isvalid",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reviewerId": {
+            "format": "uuid",
+            "title": "Reviewerid",
+            "type": "string"
+          },
+          "reviewerName": {
+            "title": "Reviewername",
+            "type": "string"
+          },
+          "sourceHashes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sourcehashes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "contentHash",
+          "sourceHashes",
+          "reviewerId",
+          "reviewerName",
+          "isValid",
+          "createdAt"
+        ],
+        "title": "ReviewEventOut",
+        "type": "object"
+      },
+      "ReviewOut": {
+        "examples": [
+          {
+            "block": {
+              "blockerCount": 0,
+              "contentHash": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+              "id": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73",
+              "isFactual": false,
+              "kind": "worksheet_item",
+              "linkCount": 0,
+              "noSourceReason": "Nội dung sư phạm do AI đề xuất, không lấy trực tiếp từ nguồn.",
+              "payload": {
+                "itemType": "MCQ",
+                "skill": "COMPARE",
+                "stem": "Theo bảng số liệu, vùng nào có số dân cao nhất?"
+              },
+              "position": 6,
+              "reviewStatus": "APPROVED",
+              "revisionId": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+              "transformation": "AI_PROPOSED",
+              "version": 1,
+              "warningCount": 0
+            },
+            "reviewEventId": "e6c6a1fd-65a0-5f3b-9657-cce4b6cd583c"
+          }
+        ],
+        "properties": {
+          "block": {
+            "$ref": "#/components/schemas/BlockOut"
+          },
+          "reviewEventId": {
+            "format": "uuid",
+            "title": "Revieweventid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "block",
+          "reviewEventId"
+        ],
+        "title": "ReviewOut",
+        "type": "object"
+      },
+      "ReviewQueue": {
+        "description": "Sorted FLAGGED, REVIEW_AGAIN, UNREVIEWED.",
+        "examples": [
+          {
+            "items": [
+              {
+                "blockerCount": 0,
+                "contentHash": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+                "id": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73",
+                "isFactual": false,
+                "kind": "worksheet_item",
+                "linkCount": 0,
+                "noSourceReason": "Nội dung sư phạm do AI đề xuất, không lấy trực tiếp từ nguồn.",
+                "payload": {
+                  "itemType": "MCQ",
+                  "skill": "COMPARE",
+                  "stem": "Theo bảng số liệu, vùng nào có số dân cao nhất?"
+                },
+                "position": 6,
+                "reviewStatus": "APPROVED",
+                "revisionId": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+                "transformation": "AI_PROPOSED",
+                "version": 1,
+                "warningCount": 0
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BlockOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ReviewQueue",
+        "type": "object"
+      },
+      "ReviewRequest": {
+        "examples": [
+          {
+            "action": "APPROVE",
+            "contentHash": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b"
+          }
+        ],
+        "properties": {
+          "action": {
+            "enum": [
+              "APPROVE",
+              "REJECT",
+              "REQUEST_CHANGES"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "contentHash": {
+            "description": "The hash the reviewer saw; stale → 409 STALE_REVIEW.",
+            "title": "Contenthash",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "action",
+          "contentHash"
+        ],
+        "title": "ReviewRequest",
+        "type": "object"
+      },
+      "RevisionOut": {
+        "examples": [
+          {
+            "counts": {
+              "approved": 12,
+              "autoChecked": 1,
+              "flagged": 0,
+              "rejected": 0,
+              "reviewAgain": 1,
+              "total": 14,
+              "unreviewed": 0
+            },
+            "createdAt": "2026-11-14T09:00:00+07:00",
+            "id": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+            "lessonId": "712030dc-698a-5be5-9781-5d7a907b3628",
+            "newerSourceAvailable": false,
+            "revisionNo": 1,
+            "sourceRevisionIds": [
+              "d6ac3eb2-7d63-5dbd-ac1e-ff0041a32d64"
+            ],
+            "state": "DRAFT",
+            "version": 3
+          }
+        ],
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/BlockCounts"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lessonId": {
+            "format": "uuid",
+            "title": "Lessonid",
+            "type": "string"
+          },
+          "newerSourceAvailable": {
+            "description": "A source of this revision has a newer version.",
+            "title": "Newersourceavailable",
+            "type": "boolean"
+          },
+          "revisionNo": {
+            "title": "Revisionno",
+            "type": "integer"
+          },
+          "sourceRevisionIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Sourcerevisionids",
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "DRAFT",
+              "IN_REVIEW",
+              "PUBLISHED",
+              "SUPERSEDED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "version": {
+            "description": "Optimistic lock: send back on publish / source change.",
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "lessonId",
+          "revisionNo",
+          "state",
+          "version",
+          "sourceRevisionIds",
+          "newerSourceAvailable",
+          "counts",
+          "createdAt"
+        ],
+        "title": "RevisionOut",
+        "type": "object"
+      },
+      "RevisionSourcesResult": {
+        "examples": [
+          {
+            "matchedLinks": 21,
+            "revision": {
+              "counts": {
+                "approved": 12,
+                "autoChecked": 1,
+                "flagged": 0,
+                "rejected": 0,
+                "reviewAgain": 1,
+                "total": 14,
+                "unreviewed": 0
+              },
+              "createdAt": "2026-11-14T09:00:00+07:00",
+              "id": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+              "lessonId": "712030dc-698a-5be5-9781-5d7a907b3628",
+              "newerSourceAvailable": false,
+              "revisionNo": 1,
+              "sourceRevisionIds": [
+                "d6ac3eb2-7d63-5dbd-ac1e-ff0041a32d64"
+              ],
+              "state": "DRAFT",
+              "version": 3
+            },
+            "unresolvedLinks": 0
+          }
+        ],
+        "properties": {
+          "matchedLinks": {
+            "title": "Matchedlinks",
+            "type": "integer"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/RevisionOut"
+          },
+          "unresolvedLinks": {
+            "description": "Links that could not be re-matched; blocks go to REVIEW_AGAIN.",
+            "title": "Unresolvedlinks",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "matchedLinks",
+          "unresolvedLinks"
+        ],
+        "title": "RevisionSourcesResult",
+        "type": "object"
+      },
+      "RevisionSourcesUpdate": {
+        "description": "PUT /revisions/{id}/sources — DRAFT only. Anchors are re-matched by excerpt_hash / locator.",
+        "examples": [
+          {
+            "sourceRevisionIds": [
+              "d6ac3eb2-7d63-5dbd-ac1e-ff0041a32d64"
+            ],
+            "version": 3
+          }
+        ],
+        "properties": {
+          "sourceRevisionIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Sourcerevisionids",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sourceRevisionIds",
+          "version"
+        ],
+        "title": "RevisionSourcesUpdate",
+        "type": "object"
+      },
+      "SourceCreateText": {
+        "description": "JSON body of POST /sources. For a DOCX use POST /sources/docx (multipart).",
+        "examples": [
+          {
+            "licenseNote": "DỮ LIỆU MINH HỌA",
+            "text": "Tiêu đề\n\nĐoạn một.\n\nĐoạn hai.",
+            "title": "Bài đọc mẫu",
+            "visibility": "PRIVATE"
+          }
+        ],
+        "properties": {
+          "licenseNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licensenote"
+          },
+          "text": {
+            "description": "Paragraphs separated by a blank line.",
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "visibility": {
+            "default": "PRIVATE",
+            "enum": [
+              "PRIVATE",
+              "SCHOOL"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "text"
+        ],
+        "title": "SourceCreateText",
+        "type": "object"
+      },
+      "SourceList": {
+        "examples": [
+          {
+            "items": [
+              {
+                "createdAt": "2026-11-14T09:00:00+07:00",
+                "id": "02c6f566-a144-5b37-8f44-a8b1e72097bd",
+                "latestRevision": {
+                  "anchorCount": 11,
+                  "assetId": "02c6f566-a144-5b37-8f44-a8b1e72097bd",
+                  "createdAt": "2026-11-14T09:00:00+07:00",
+                  "extractStatus": "OK",
+                  "id": "d6ac3eb2-7d63-5dbd-ac1e-ff0041a32d64",
+                  "mime": "text/plain",
+                  "sha256": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+                  "version": 1
+                },
+                "licenseNote": "DỮ LIỆU MINH HỌA: số liệu giả, không phải số liệu chính thức.",
+                "ownerId": "eb9a9e82-7954-5e82-a597-16c6123031ff",
+                "title": "Phân bố dân cư theo vùng (dan-so-vung)",
+                "visibility": "SCHOOL"
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SourceOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SourceList",
+        "type": "object"
+      },
+      "SourceOut": {
+        "examples": [
+          {
+            "createdAt": "2026-11-14T09:00:00+07:00",
+            "id": "02c6f566-a144-5b37-8f44-a8b1e72097bd",
+            "latestRevision": {
+              "anchorCount": 11,
+              "assetId": "02c6f566-a144-5b37-8f44-a8b1e72097bd",
+              "createdAt": "2026-11-14T09:00:00+07:00",
+              "extractStatus": "OK",
+              "id": "d6ac3eb2-7d63-5dbd-ac1e-ff0041a32d64",
+              "mime": "text/plain",
+              "sha256": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+              "version": 1
+            },
+            "licenseNote": "DỮ LIỆU MINH HỌA: số liệu giả, không phải số liệu chính thức.",
+            "ownerId": "eb9a9e82-7954-5e82-a597-16c6123031ff",
+            "title": "Phân bố dân cư theo vùng (dan-so-vung)",
+            "visibility": "SCHOOL"
+          }
+        ],
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latestRevision": {
+            "$ref": "#/components/schemas/SourceRevisionOut"
+          },
+          "licenseNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licensenote"
+          },
+          "ownerId": {
+            "format": "uuid",
+            "title": "Ownerid",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "visibility": {
+            "enum": [
+              "PRIVATE",
+              "SCHOOL"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "licenseNote",
+          "visibility",
+          "ownerId",
+          "latestRevision",
+          "createdAt"
+        ],
+        "title": "SourceOut",
+        "type": "object"
+      },
+      "SourceRevisionCreateText": {
+        "examples": [
+          {
+            "text": "Tiêu đề\n\nĐoạn một (đã sửa).\n\nĐoạn hai."
+          }
+        ],
+        "properties": {
+          "text": {
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SourceRevisionCreateText",
+        "type": "object"
+      },
+      "SourceRevisionOut": {
+        "examples": [
+          {
+            "anchorCount": 11,
+            "assetId": "02c6f566-a144-5b37-8f44-a8b1e72097bd",
+            "createdAt": "2026-11-14T09:00:00+07:00",
+            "extractStatus": "OK",
+            "id": "d6ac3eb2-7d63-5dbd-ac1e-ff0041a32d64",
+            "mime": "text/plain",
+            "sha256": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
+            "version": 1
+          }
+        ],
+        "properties": {
+          "anchorCount": {
+            "title": "Anchorcount",
+            "type": "integer"
+          },
+          "assetId": {
+            "format": "uuid",
+            "title": "Assetid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "extractStatus": {
+            "enum": [
+              "PENDING",
+              "OK",
+              "FAILED"
+            ],
+            "title": "Extractstatus",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mime": {
+            "title": "Mime",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "assetId",
+          "version",
+          "sha256",
+          "mime",
+          "extractStatus",
+          "anchorCount",
+          "createdAt"
+        ],
+        "title": "SourceRevisionOut",
+        "type": "object"
+      },
+      "StudentAssignmentList": {
+        "examples": [
+          {
+            "items": [
+              {
+                "answeredCount": 0,
+                "classCode": "10A1",
+                "dueAt": "2026-11-30T23:59:00+07:00",
+                "id": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
+                "itemCount": 2,
+                "openAt": "2026-11-15T09:00:00+07:00",
+                "status": "NOT_STARTED",
+                "title": "Phân bố dân cư theo vùng"
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StudentAssignmentSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "StudentAssignmentList",
+        "type": "object"
+      },
+      "StudentAssignmentOut": {
+        "examples": [
+          {
+            "blocks": [
+              {
+                "id": "81dfceab-806b-5fc9-b131-7658bbab98a3",
+                "kind": "paragraph",
+                "payload": {
+                  "text": "Dân cư nước ta phân bố không đều giữa các vùng kinh tế."
+                },
+                "position": 2
+              }
+            ],
+            "dueAt": "2026-11-30T23:59:00+07:00",
+            "id": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
+            "items": [
+              {
+                "id": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73",
+                "itemType": "MCQ",
+                "options": [
+                  {
+                    "label": "A",
+                    "text": "Đồng bằng sông Hồng"
+                  }
+                ],
+                "position": 6,
+                "skill": "COMPARE",
+                "stem": "Theo bảng số liệu, vùng nào có số dân cao nhất?"
+              }
+            ],
+            "openAt": "2026-11-15T09:00:00+07:00",
+            "title": "Phân bố dân cư theo vùng"
+          }
+        ],
+        "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/StudentContentBlock"
+            },
+            "title": "Blocks",
+            "type": "array"
+          },
+          "dueAt": {
+            "format": "date-time",
+            "title": "Dueat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StudentItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "openAt": {
+            "format": "date-time",
+            "title": "Openat",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "openAt",
+          "dueAt",
+          "blocks",
+          "items"
+        ],
+        "title": "StudentAssignmentOut",
+        "type": "object"
+      },
+      "StudentAssignmentSummary": {
+        "examples": [
+          {
+            "answeredCount": 0,
+            "classCode": "10A1",
+            "dueAt": "2026-11-30T23:59:00+07:00",
+            "id": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
+            "itemCount": 2,
+            "openAt": "2026-11-15T09:00:00+07:00",
+            "status": "NOT_STARTED",
+            "title": "Phân bố dân cư theo vùng"
+          }
+        ],
+        "properties": {
+          "answeredCount": {
+            "title": "Answeredcount",
+            "type": "integer"
+          },
+          "classCode": {
+            "title": "Classcode",
+            "type": "string"
+          },
+          "dueAt": {
+            "format": "date-time",
+            "title": "Dueat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "itemCount": {
+            "title": "Itemcount",
+            "type": "integer"
+          },
+          "openAt": {
+            "format": "date-time",
+            "title": "Openat",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "NOT_STARTED",
+              "IN_PROGRESS",
+              "DONE",
+              "CLOSED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "classCode",
+          "openAt",
+          "dueAt",
+          "status",
+          "answeredCount",
+          "itemCount"
+        ],
+        "title": "StudentAssignmentSummary",
+        "type": "object"
+      },
+      "StudentContentBlock": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "heading",
+              "paragraph",
+              "data_fact",
+              "instruction",
+              "card_front",
+              "card_back"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeadingPayload"
+              },
+              {
+                "$ref": "#/components/schemas/ParagraphPayload"
+              },
+              {
+                "$ref": "#/components/schemas/InstructionPayload"
+              },
+              {
+                "$ref": "#/components/schemas/DataFactPayload"
+              },
+              {
+                "$ref": "#/components/schemas/CardPayload"
+              }
+            ],
+            "title": "Payload"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "position",
+          "payload"
+        ],
+        "title": "StudentContentBlock",
+        "type": "object"
+      },
+      "StudentItem": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "itemType": {
+            "enum": [
+              "MCQ",
+              "SHORT",
+              "NUMERIC"
+            ],
+            "title": "Itemtype",
+            "type": "string"
+          },
+          "options": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/StudentOption"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttemptResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present only after this student answered."
+          },
+          "skill": {
+            "enum": [
+              "READ_TABLE",
+              "COMPARE",
+              "CALCULATE",
+              "EXPLAIN"
+            ],
+            "title": "Skill",
+            "type": "string"
+          },
+          "stem": {
+            "title": "Stem",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "itemType",
+          "skill",
+          "stem"
+        ],
+        "title": "StudentItem",
+        "type": "object"
+      },
+      "StudentOption": {
+        "properties": {
+          "label": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "title": "Label",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "text"
+        ],
+        "title": "StudentOption",
+        "type": "object"
+      },
+      "TransformationEventOut": {
+        "properties": {
+          "actorId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actorid"
+          },
+          "actorType": {
+            "enum": [
+              "AI",
+              "TEACHER",
+              "SYSTEM"
+            ],
+            "title": "Actortype",
+            "type": "string"
+          },
+          "afterHash": {
+            "title": "Afterhash",
+            "type": "string"
+          },
+          "beforeHash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Beforehash"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "generatorVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatorversion"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "GENERATE",
+              "EDIT",
+              "REGENERATE",
+              "SOURCE_REPLACED"
+            ],
+            "title": "Operation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "actorType",
+          "operation",
+          "afterHash",
+          "createdAt"
+        ],
+        "title": "TransformationEventOut",
+        "type": "object"
+      },
+      "UserOut": {
+        "examples": [
+          {
+            "classIds": [
+              "d97fbc44-edb6-5333-b65d-1427e836354c"
+            ],
+            "displayName": "Cô Địa Lí (minh họa)",
+            "email": "gv.dia@preclass.local",
+            "id": "eb9a9e82-7954-5e82-a597-16c6123031ff",
+            "role": "TEACHER"
+          }
+        ],
+        "properties": {
+          "classIds": {
+            "default": [],
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Classids",
+            "type": "array"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "loginCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logincode"
+          },
+          "role": {
+            "enum": [
+              "TEACHER",
+              "REVIEWER",
+              "STUDENT",
+              "ADMIN"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "displayName"
+        ],
+        "title": "UserOut",
+        "type": "object"
+      },
+      "ValidateOut": {
+        "examples": [
+          {
+            "blockerCount": 1,
+            "blocks": [
+              {
+                "blockId": "852dddcb-96cc-5ee1-bb75-78b3c9f26eeb",
+                "failedRules": [
+                  "VAL-03"
+                ],
+                "reviewStatus": "FLAGGED"
+              }
+            ],
+            "revisionId": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+            "warningCount": 0
+          }
+        ],
+        "properties": {
+          "blockerCount": {
+            "title": "Blockercount",
+            "type": "integer"
+          },
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/BlockValidationSummary"
+            },
+            "title": "Blocks",
+            "type": "array"
+          },
+          "revisionId": {
+            "format": "uuid",
+            "title": "Revisionid",
+            "type": "string"
+          },
+          "warningCount": {
+            "title": "Warningcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revisionId",
+          "blockerCount",
+          "warningCount",
+          "blocks"
+        ],
+        "title": "ValidateOut",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "ValidationResultOut": {
+        "properties": {
+          "contentHash": {
+            "title": "Contenthash",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Evidence",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "isCurrent": {
+            "description": "True when content_hash equals the block's current hash.",
+            "title": "Iscurrent",
+            "type": "boolean"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "PASS",
+              "FAIL"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "rule": {
+            "description": "VAL-01 … VAL-09",
+            "title": "Rule",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "BLOCKER",
+              "WARNING"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "rule",
+          "severity",
+          "outcome",
+          "method",
+          "contentHash",
+          "isCurrent",
+          "createdAt"
+        ],
+        "title": "ValidationResultOut",
+        "type": "object"
+      },
+      "WithdrawRequest": {
+        "examples": [
+          {
+            "reason": "Phát hiện sai số liệu ở câu 2."
+          }
+        ],
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "WithdrawRequest",
+        "type": "object"
+      },
+      "WorksheetItemPayload": {
+        "properties": {
+          "itemType": {
+            "enum": [
+              "MCQ",
+              "SHORT",
+              "NUMERIC"
+            ],
+            "title": "Itemtype",
+            "type": "string"
+          },
+          "skill": {
+            "enum": [
+              "READ_TABLE",
+              "COMPARE",
+              "CALCULATE",
+              "EXPLAIN"
+            ],
+            "title": "Skill",
+            "type": "string"
+          },
+          "stem": {
+            "title": "Stem",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stem",
+          "itemType",
+          "skill"
+        ],
+        "title": "WorksheetItemPayload",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "in": "cookie",
+        "name": "preclass_session",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "description": "PreClass AI backend: teachers import sources, AI drafts a Worksheet/Flashcards, the system links every block to its source and flags problems, the teacher approves block by block and publishes an immutable snapshot; students answer first, then see the approved explanation.\n\n**Contract status: v0 (draft) — frozen as v1.0.0 on 16/11 morning.** After the freeze fields are only added.\n\n**Conventions**\n- Base path `/v1`. JSON is camelCase. Ids are UUIDs. Times are ISO-8601 with offset.\n- Auth: server-side session cookie `preclass_session` (HttpOnly). Use `credentials: \"include\"` and send header `X-PreClass-CSRF: 1` on every non-GET request (missing → 403 `CSRF`). Same origin in production (Caddy); in dev use Next.js `rewrites` to `/v1`.\n- Errors: RFC 9457 `application/problem+json` with a stable `code`. Wrong role → 403 `FORBIDDEN_ROLE`; someone else's resource (or another class) → 404.\n- Edits carry `version` (optimistic lock) → 409 `VERSION_CONFLICT`. Approvals carry `contentHash` → 409 `STALE_REVIEW`.\n- Lists are `{items, nextCursor}`; `nextCursor` is always null in v1.\n- Handlers currently answer 501 `NOT_IMPLEMENTED`: use the examples (Prism mock) until phases 4-9 land.\n",
+    "title": "PreClass AI API",
+    "version": "0.1.0-v0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/v1/admin/audit-logs": {
+      "get": {
+        "operationId": "listAuditLogs",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audit log, newest first (ADMIN, read-only; never contains content)",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "description": "Sets `preclass_session` (HttpOnly, SameSite=Lax). Rate limited: repeated failures → 429 `RATE_LIMITED`. Wrong credentials → 401 `INVALID_CREDENTIALS` (same answer for unknown user).",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Quá nhiều lần thử (RATE_LIMITED)."
+          }
+        },
+        "security": [],
+        "summary": "Log in (sets the session cookie)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          }
+        },
+        "summary": "Log out (revokes the session server-side)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/blocks/{block_id}": {
+      "delete": {
+        "operationId": "deleteBlock",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "block_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Block Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "VERSION_CONFLICT (version cũ) hoặc REVISION_LOCKED (bản đã xuất bản không sửa được)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Soft-delete a block (author, unpublished revisions only)",
+        "tags": [
+          "blocks"
+        ]
+      },
+      "patch": {
+        "description": "Writes a transformation event, recomputes the hash, sets the block and its dependents (and direct parent) to REVIEW_AGAIN if they were APPROVED, and re-runs validation.",
+        "operationId": "patchBlock",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "block_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Block Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlockOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "VERSION_CONFLICT (version cũ) hoặc REVISION_LOCKED (bản đã xuất bản không sửa được)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Edit a block (author)",
+        "tags": [
+          "blocks"
+        ]
+      }
+    },
+    "/v1/blocks/{block_id}/provenance": {
+      "get": {
+        "description": "Writes an `INSPECT_PROVENANCE` audit entry (no content). Students get 404.",
+        "operationId": "getProvenance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "block_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Block Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvenanceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Source Inspector data for a block (author / reviewer)",
+        "tags": [
+          "provenance"
+        ]
+      },
+      "put": {
+        "description": "Send `links` or `noSourceReason`. The server verifies each anchor belongs to the lesson's sources; it never trusts anchor ids from the LLM.",
+        "operationId": "putProvenance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "block_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Block Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProvenanceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvenanceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "VERSION_CONFLICT (version cũ) hoặc REVISION_LOCKED (bản đã xuất bản không sửa được)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Set links or a no-source reason (author)",
+        "tags": [
+          "provenance"
+        ]
+      }
+    },
+    "/v1/blocks/{block_id}/reviews": {
+      "post": {
+        "description": "One block per call; there is no bulk approve (PR-02). `contentHash` must equal the current block hash.",
+        "operationId": "reviewBlock",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "block_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Block Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "STALE_REVIEW (hash cũ) hoặc REVISION_LOCKED."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve / reject / request changes on one block (author or reviewer)",
+        "tags": [
+          "review"
+        ]
+      }
+    },
+    "/v1/classes": {
+      "get": {
+        "operationId": "listClasses",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClassList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          }
+        },
+        "summary": "Classes the teacher belongs to (TEACHER)",
+        "tags": [
+          "classes"
+        ]
+      }
+    },
+    "/v1/classes/{class_id}/assignments": {
+      "get": {
+        "operationId": "listClassAssignments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "class_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Class Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Assignments of a class (TEACHER of that class)",
+        "tags": [
+          "classes"
+        ]
+      }
+    },
+    "/v1/classes/{class_id}/assignments/{assignment_id}/progress": {
+      "get": {
+        "operationId": "getAssignmentProgress",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "class_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Class Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "First-attempt correct rate per item (TEACHER of that class)",
+        "tags": [
+          "classes"
+        ]
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Gethealth",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [],
+        "summary": "Health",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/v1/jobs/{job_id}": {
+      "get": {
+        "operationId": "getJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generation job status (author)",
+        "tags": [
+          "generation"
+        ]
+      }
+    },
+    "/v1/lessons": {
+      "get": {
+        "operationId": "listLessons",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          }
+        },
+        "summary": "Own lessons (TEACHER) or assigned ones (REVIEWER)",
+        "tags": [
+          "lessons"
+        ]
+      },
+      "post": {
+        "operationId": "createLesson",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Create a lesson with its first DRAFT revision (TEACHER)",
+        "tags": [
+          "lessons"
+        ]
+      }
+    },
+    "/v1/lessons/{lesson_id}": {
+      "get": {
+        "operationId": "getLesson",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Lesson Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One lesson with its current revision",
+        "tags": [
+          "lessons"
+        ]
+      }
+    },
+    "/v1/lessons/{lesson_id}/generate": {
+      "post": {
+        "description": "Only the teacher's explicit action triggers AI (PR-09). Poll GET /jobs/{id}.",
+        "operationId": "generateDraft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Lesson Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "JOB_ALREADY_RUNNING, REVISION_NOT_EMPTY (use mode=append)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "AI đang tắt (AI_DISABLED)."
+          }
+        },
+        "summary": "Start AI draft generation (author)",
+        "tags": [
+          "generation"
+        ]
+      }
+    },
+    "/v1/lessons/{lesson_id}/history": {
+      "get": {
+        "operationId": "getLessonHistory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Lesson Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revisions, summary diff and events (screen S06)",
+        "tags": [
+          "lessons"
+        ]
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          }
+        },
+        "summary": "Current user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/v1/published/{published_id}/assignments": {
+      "post": {
+        "operationId": "createAssignment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "published_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Published Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "WITHDRAWN: bản đã thu hồi."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Assign a published version to a class (author)",
+        "tags": [
+          "publish"
+        ]
+      }
+    },
+    "/v1/published/{published_id}/withdraw": {
+      "post": {
+        "description": "Students then get 410 `WITHDRAWN`. The reason is logged.",
+        "operationId": "withdrawPublished",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "published_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Published Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Withdraw a published version (author)",
+        "tags": [
+          "publish"
+        ]
+      }
+    },
+    "/v1/revisions/{revision_id}/blocks": {
+      "get": {
+        "operationId": "listBlocks",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlockList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "All blocks of a revision, flat, ordered by position (author / assigned reviewer)",
+        "tags": [
+          "blocks"
+        ]
+      },
+      "post": {
+        "operationId": "createBlock",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlockOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "VERSION_CONFLICT (version cũ) hoặc REVISION_LOCKED (bản đã xuất bản không sửa được)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Add a TEACHER_AUTHORED block (author)",
+        "tags": [
+          "blocks"
+        ]
+      }
+    },
+    "/v1/revisions/{revision_id}/new-revision": {
+      "post": {
+        "description": "Approvals are not carried over; the published snapshot stays untouched.",
+        "operationId": "createNewRevision",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "NOT_PUBLISHED, DRAFT_EXISTS."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Copy a published revision into a new DRAFT (author)",
+        "tags": [
+          "publish"
+        ]
+      }
+    },
+    "/v1/revisions/{revision_id}/publish": {
+      "post": {
+        "operationId": "publishRevision",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "PUBLISH_BLOCKED (kèm blockIds), VERSION_CONFLICT, REVISION_LOCKED."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Publish an immutable snapshot (author)",
+        "tags": [
+          "publish"
+        ]
+      }
+    },
+    "/v1/revisions/{revision_id}/publish-check": {
+      "get": {
+        "operationId": "getPublishCheck",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Publish gate checklist, read-only (screen S05)",
+        "tags": [
+          "publish"
+        ]
+      }
+    },
+    "/v1/revisions/{revision_id}/review-queue": {
+      "get": {
+        "operationId": "getReviewQueue",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": [
+                "FLAGGED",
+                "REVIEW_AGAIN",
+                "UNREVIEWED"
+              ],
+              "items": {
+                "enum": [
+                  "UNREVIEWED",
+                  "AUTO_CHECKED",
+                  "FLAGGED",
+                  "APPROVED",
+                  "REVIEW_AGAIN",
+                  "REJECTED"
+                ],
+                "type": "string"
+              },
+              "title": "Status",
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewQueue"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Blocks needing review, FLAGGED first (screen S04)",
+        "tags": [
+          "review"
+        ]
+      }
+    },
+    "/v1/revisions/{revision_id}/sources": {
+      "put": {
+        "description": "Re-matches anchors by excerptHash / locator; unmatched links become UNRESOLVED and their blocks go to REVIEW_AGAIN. Published lessons are never affected.",
+        "operationId": "replaceRevisionSources",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisionSourcesUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionSourcesResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "VERSION_CONFLICT (version cũ) hoặc REVISION_LOCKED (bản đã xuất bản không sửa được)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Attach other source revisions (DRAFT only, author)",
+        "tags": [
+          "lessons"
+        ]
+      }
+    },
+    "/v1/revisions/{revision_id}/validate": {
+      "post": {
+        "operationId": "validateRevision",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run all validation rules (author)",
+        "tags": [
+          "validation"
+        ]
+      }
+    },
+    "/v1/source-revisions/{source_revision_id}/anchors": {
+      "get": {
+        "operationId": "listAnchors",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnchorList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anchors of a source revision (owner / SCHOOL)",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/v1/sources": {
+      "get": {
+        "operationId": "listSources",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          }
+        },
+        "summary": "Own sources plus SCHOOL-visible ones",
+        "tags": [
+          "sources"
+        ]
+      },
+      "post": {
+        "description": "Creates the asset and revision 1; paragraphs (blank-line separated) become anchors.",
+        "operationId": "createSourceFromText",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceCreateText"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Create a source from pasted text (TEACHER)",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/v1/sources/docx": {
+      "post": {
+        "description": "Upload limits: DOCX only (`PK` magic + content types), ≤ 10 MB, macros rejected → 422. Parsing is synchronous: the response already has `extractStatus` and `anchorCount`.",
+        "operationId": "createSourceFromDocx",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_createSourceFromDocx"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Create a source from a DOCX file (TEACHER, multipart)",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/v1/sources/{source_id}": {
+      "get": {
+        "operationId": "getSource",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One source",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/v1/sources/{source_id}/revisions": {
+      "post": {
+        "description": "Creates revision N+1 with new hashes. Lessons are NOT changed automatically: they get `newerSourceAvailable=true`; attach it with PUT /revisions/{id}/sources.",
+        "operationId": "createSourceRevisionFromText",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceRevisionCreateText"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "New source revision from text (owner)",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/v1/sources/{source_id}/revisions/docx": {
+      "post": {
+        "description": "Upload limits: DOCX only (`PK` magic + content types), ≤ 10 MB, macros rejected → 422. Parsing is synchronous: the response already has `extractStatus` and `anchorCount`.",
+        "operationId": "createSourceRevisionFromDocx",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_createSourceRevisionFromDocx"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "New source revision from a DOCX file (owner, multipart)",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/v1/student/assignments": {
+      "get": {
+        "operationId": "listStudentAssignments",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentAssignmentList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          }
+        },
+        "summary": "Open assignments of the student's classes (STUDENT)",
+        "tags": [
+          "student"
+        ]
+      }
+    },
+    "/v1/student/assignments/{assignment_id}": {
+      "get": {
+        "description": "Whitelist DTO: no provenance, review, validation, answer key or explanation before the student answers an item. Before `openAt` → 404. Withdrawn → 410.",
+        "operationId": "getStudentAssignment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentAssignmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Đã thu hồi (WITHDRAWN)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Assignment content from the published snapshot (screen S07)",
+        "tags": [
+          "student"
+        ]
+      }
+    },
+    "/v1/student/assignments/{assignment_id}/attempts": {
+      "post": {
+        "description": "One attempt per item. Repeating the same `requestId` returns the stored result.",
+        "operationId": "submitAttempt",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttemptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttemptResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "ASSIGNMENT_CLOSED (sau hạn) hoặc ALREADY_ANSWERED (câu này đã trả lời)."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Đã thu hồi (WITHDRAWN)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Answer one item; the result and explanation come back now",
+        "tags": [
+          "student"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "description": "Login, logout, current user.",
+      "name": "auth"
+    },
+    {
+      "description": "Teacher's classes, assignments and progress.",
+      "name": "classes"
+    },
+    {
+      "description": "S01 Source Library: text/DOCX → anchors.",
+      "name": "sources"
+    },
+    {
+      "description": "Lessons and revisions.",
+      "name": "lessons"
+    },
+    {
+      "description": "S02 Generate: async AI draft job.",
+      "name": "generation"
+    },
+    {
+      "description": "S03 Editor: content blocks.",
+      "name": "blocks"
+    },
+    {
+      "description": "S03 Source Inspector: block ↔ source links, history, validation.",
+      "name": "provenance"
+    },
+    {
+      "description": "Validation rules VAL-01..09.",
+      "name": "validation"
+    },
+    {
+      "description": "S04 Review Queue and hash-bound approvals.",
+      "name": "review"
+    },
+    {
+      "description": "S05 Publish Gate, new revision, withdraw, assignments.",
+      "name": "publish"
+    },
+    {
+      "description": "S07 Student view and attempts (whitelist DTOs).",
+      "name": "student"
+    },
+    {
+      "description": "Audit log (read-only).",
+      "name": "admin"
+    },
+    {
+      "description": "Health.",
+      "name": "system"
+    }
+  ]
+}
