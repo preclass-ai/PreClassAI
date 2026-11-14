@@ -57,6 +57,40 @@ jobs:
       - run: uv run ruff check .
       - run: uv run mypy --strict app
       - run: uv run pytest
+      - name: OpenAPI file matches the code
+        run: uv run python -m scripts.export_openapi && git diff --exit-code openapi/openapi.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Spectral lint
+        run: npx --yes @stoplight/spectral-cli@6.14.2 lint openapi/openapi.json --ruleset .spectral.yaml --fail-severity=error
+  api-client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/api-client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Generated client is up to date
+        run: npm run gen:api && git diff --exit-code src/schema.d.ts
+      - run: npm run typecheck
+  console:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/console
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
   app:
     # Enable after the application scaffold and lockfile are committed.
     # `hashFiles()` is not available in this job-level expression context.
