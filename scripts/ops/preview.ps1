@@ -34,6 +34,8 @@ Push-Location $api
 uv run alembic upgrade head
 uv run python -m seed.seed
 Pop-Location
+$n = (docker exec infra-postgres-1 psql -U preclass -d preclass -tAc "select count(*) from app_user") -join ""
+if ([int]$n -lt 1) { throw "Migration/seed did not populate the preclass database (app_user is empty)." }
 
 # 3. Console build (static)
 $dist = Join-Path $root "apps\console\dist"
