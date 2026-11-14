@@ -1,0 +1,17 @@
+:root { font-family: system-ui, sans-serif; color: #1a1a1a; background: #fafafa; }
+body { margin: 0; padding-top: 38px; }
+.banner { position: fixed; top: 0; left: 0; right: 0; z-index: 9; background: #b45309; color: #fff; padding: 8px 16px; font-weight: 600; font-size: 14px; }
+main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+button { padding: 6px 12px; border: 1px solid #888; border-radius: 6px; background: #fff; cursor: pointer; }
+button.on { background: #1a1a1a; color: #fff; }
+.row { display: flex; gap: 16px; flex-wrap: wrap; }
+.col { flex: 1 1 420px; min-width: 0; }
+pre { background: #111; color: #d4f; color: #cfe; padding: 10px; border-radius: 6px; overflow: auto; max-height: 340px; font-size: 12px; }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; margin-left: 6px; background: #ddd; }
+.tag.mock { background: #f59e0b; color: #000; font-weight: 700; }
+.tag.APPROVED { background: #bbf7d0; } .tag.FLAGGED, .tag.REJECTED { background: #fecaca; }
+.tag.REVIEW_AGAIN { background: #fed7aa; } .tag.AUTO_CHECKED { background: #dbeafe; }
+ul.tree { list-style: none; padding-left: 18px; } ul.tree li { margin: 4px 0; }
+.link { cursor: pointer; text-decoration: underline; }
+h2 { margin: 8px 0; font-size: 18px; } .err { color: #b91c1c; }

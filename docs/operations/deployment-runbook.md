@@ -28,3 +28,7 @@ Prefer application image rollback. If a migration is not backward-compatible, st
 - Docker restart policy and documented power/network recovery.
 - Cloudflare Tunnel credentials stored outside the repository.
 - Host owner and on-call person documented before enabling real data.
+
+## API workers (bắt buộc `--workers 1`)
+
+Rate limit đăng nhập (`app/auth`) giữ bộ đếm trong bộ nhớ tiến trình (quyết định P0, review Khải 14/11). Chạy `uvicorn app.main:app --workers 1`; nhiều worker làm giới hạn lỏng đi theo số worker. Nếu cần scale ngang, chuyển bộ đếm sang DB/Redis trước.

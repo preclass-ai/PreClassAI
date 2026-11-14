@@ -5,6 +5,8 @@ status: "Draft v0.2 — cập nhật đội (Khải, Khôi, Thiện; cố vấn 
 last_reviewed: 2026-11-06
 related: [01, 02, 03, 04, 06-master-plan-mvp, 07-recruitment-plan]
 ---
+> **Superseded by [ADR-0010](adr/ADR-0010-fastapi-backend.md) / D-001 (2026-11-14).** Tài liệu này mô tả thiết kế cũ (Next.js full-stack, H.A.B.I.T, Ngữ văn). Giữ để tham khảo; không làm theo phần kiến trúc/API/phạm vi. Hướng hiện hành: `docs/v2/`.
+
 
 # 05 — Phân công vai trò, RACI và thứ tự ưu tiên
 

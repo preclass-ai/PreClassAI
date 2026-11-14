@@ -1,0 +1,27 @@
+# Temporary preview on a laptop (scripts/ops/preview.ps1). One origin:
+#   /v1/*  -> uvicorn :8000     /docs -> API     /mock/* -> Prism :4010 (prefix stripped)     / -> console build
+# Basic auth protects everything; credentials are generated per run (never committed).
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	basic_auth {
+		{$PREVIEW_USER} {$PREVIEW_HASH}
+	}
+	handle /v1/* {
+		reverse_proxy 127.0.0.1:8000
+	}
+	handle /docs {
+		reverse_proxy 127.0.0.1:8000
+	}
+	handle_path /mock/* {
+		reverse_proxy 127.0.0.1:4010
+	}
+	handle {
+		root * {$CONSOLE_DIST}
+		try_files {path} /index.html
+		file_server
+	}
+}

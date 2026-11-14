@@ -11,6 +11,7 @@ test-results/
 .env
 .env.*
 !.env.example
+!.env.*.example
 *.pem
 *.key
 
@@ -24,3 +25,15 @@ worktrees/
 .DS_Store
 .vscode/
 .idea/
+
+# Python / backend
+__pycache__/
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+apps/api/data/
+*.age
+
+# Preview (local only)
+.agents/PREVIEW_URL.md
