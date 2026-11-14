@@ -6,9 +6,21 @@ from sqlalchemy import delete, func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import CurrentUser
+from app.blocks import _readable
 from app.db import models as m
 from app.errors import ApiError
-from app.schemas import BlockCounts, RevisionOut, RevisionSourcesResult, RevisionSourcesUpdate
+from app.schemas import (
+    BlockCounts,
+    HistoryEvent,
+    HistoryRevision,
+    LessonCreate,
+    LessonHistory,
+    LessonList,
+    LessonOut,
+    RevisionOut,
+    RevisionSourcesResult,
+    RevisionSourcesUpdate,
+)
 
 _STATUS_FIELD = {
     "APPROVED": "approved", "FLAGGED": "flagged", "REVIEW_AGAIN": "review_again", "UNREVIEWED": "unreviewed",
@@ -147,3 +159,82 @@ async def replace_sources(
     await db.refresh(rev)
     return RevisionSourcesResult(revision=await revision_out(db, rev), matched_links=matched,
                                  unresolved_links=unresolved)
+
+
+async def _lesson_out(db: AsyncSession, lesson: m.Lesson) -> LessonOut:
+    rev = await db.scalar(select(m.LessonRevision).where(m.LessonRevision.lesson_id == lesson.id)
+                          .order_by(m.LessonRevision.revision_no.desc()).limit(1))
+    if rev is None:
+        raise ApiError(404, "NOT_FOUND", "Không tìm thấy")
+    pub = await db.scalar(
+        select(m.PublishedVersion.id).join(m.LessonRevision, m.LessonRevision.id == m.PublishedVersion.lesson_revision_id)
+        .where(m.LessonRevision.lesson_id == lesson.id, m.PublishedVersion.state == "ACTIVE")
+        .order_by(m.PublishedVersion.created_at.desc()).limit(1))
+    return LessonOut(id=lesson.id, title=lesson.title, grade=lesson.grade, goal=lesson.goal, author_id=lesson.author_id,
+                     current_revision=await revision_out(db, rev), published_version_id=pub,
+                     created_at=lesson.created_at)
+
+
+async def _readable_lesson(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -> m.Lesson:
+    lesson = await db.scalar(select(m.Lesson).where(m.Lesson.id == lesson_id, _readable(user)))
+    if lesson is None:
+        raise ApiError(404, "NOT_FOUND", "Không tìm thấy")
+    return lesson
+
+
+async def create_lesson(db: AsyncSession, user: CurrentUser, body: LessonCreate) -> LessonOut:
+    wanted = set(body.source_revision_ids)
+    visible = set(await db.scalars(
+        select(m.SourceRevision.id).join(m.SourceAsset, m.SourceAsset.id == m.SourceRevision.asset_id)
+        .where(m.SourceRevision.id.in_(wanted), or_(m.SourceAsset.owner_id == user.id,
+                                                    m.SourceAsset.visibility == "SCHOOL"))))
+    if visible != wanted:
+        raise ApiError(404, "NOT_FOUND", "Không tìm thấy nguồn")
+    lesson = m.Lesson(author_id=user.id, grade=body.grade, title=body.title.strip(), goal=body.goal)
+    db.add(lesson)
+    await db.flush()
+    rev = m.LessonRevision(lesson_id=lesson.id, revision_no=1, state="DRAFT")
+    db.add(rev)
+    await db.flush()
+    await db.execute(insert(m.LessonSource), [{"lesson_revision_id": rev.id, "source_revision_id": s} for s in wanted])
+    await db.commit()
+    return await _lesson_out(db, lesson)
+
+
+async def list_lessons(db: AsyncSession, user: CurrentUser) -> LessonList:
+    lessons = (await db.scalars(select(m.Lesson).where(_readable(user)).order_by(
+        m.Lesson.created_at.desc(), m.Lesson.title))).all()
+    return LessonList(items=[await _lesson_out(db, x) for x in lessons])
+
+
+async def get_lesson(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -> LessonOut:
+    return await _lesson_out(db, await _readable_lesson(db, user, lesson_id))
+
+
+async def lesson_history(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -> LessonHistory:
+    await _readable_lesson(db, user, lesson_id)
+    revs = (await db.execute(
+        select(m.LessonRevision, func.count(m.ContentBlock.id).filter(m.ContentBlock.deleted_at.is_(None)),
+               m.PublishedVersion.created_at)
+        .outerjoin(m.ContentBlock, m.ContentBlock.revision_id == m.LessonRevision.id)
+        .outerjoin(m.PublishedVersion, m.PublishedVersion.lesson_revision_id == m.LessonRevision.id)
+        .where(m.LessonRevision.lesson_id == lesson_id)
+        .group_by(m.LessonRevision.id, m.PublishedVersion.created_at).order_by(m.LessonRevision.revision_no))).all()
+    t = (await db.execute(
+        select(m.TransformationEvent, m.ContentBlock.revision_id)
+        .join(m.ContentBlock, m.ContentBlock.id == m.TransformationEvent.block_id)
+        .join(m.LessonRevision, m.LessonRevision.id == m.ContentBlock.revision_id)
+        .where(m.LessonRevision.lesson_id == lesson_id).order_by(m.TransformationEvent.created_at.desc()).limit(200))).all()
+    r = (await db.execute(
+        select(m.ReviewEvent).join(m.ContentBlock, m.ContentBlock.id == m.ReviewEvent.block_id)
+        .join(m.LessonRevision, m.LessonRevision.id == m.ContentBlock.revision_id)
+        .where(m.LessonRevision.lesson_id == lesson_id).order_by(m.ReviewEvent.created_at.desc()).limit(200))).scalars().all()
+    events = [HistoryEvent(at=e.created_at, actor_type=e.actor_type, actor_id=e.actor_id, operation=e.operation,
+                           block_id=e.block_id) for e, _ in t]
+    events += [HistoryEvent(at=x.created_at, actor_type="TEACHER", actor_id=x.reviewer_id, operation="REVIEW",
+                            block_id=x.block_id, summary=x.action) for x in r]
+    events.sort(key=lambda e: e.at, reverse=True)
+    return LessonHistory(
+        revisions=[HistoryRevision(revision_id=v.id, revision_no=v.revision_no, state=v.state, published_at=pub,
+                                   block_count=n) for v, n, pub in revs],
+        events=events[:200])

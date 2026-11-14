@@ -35,7 +35,7 @@ testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.ruff]
-line-length = 120
+line-length = 130
 target-version = "py312"
 
 [tool.ruff.lint]
@@ -45,6 +45,7 @@ select = ["E", "F", "I", "B", "UP", "S"]
 "tests/**" = ["S101", "S608", "S603", "E501"]
 "seed/**" = ["E731", "E501", "S105", "B023"]
 "alembic/**" = ["S608"]
+"app/routers/**" = ["E501"]  # one-line dependency signatures
 
 [tool.mypy]
 strict = true

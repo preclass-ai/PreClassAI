@@ -18,3 +18,4 @@
 - **Rate limit đăng nhập trong bộ nhớ:** chấp nhận cho P0; bắt buộc chạy uvicorn `--workers 1` (ghi ở RUNBOOK).
 - **Seed từ chối chạy khi `APP_ENV=production`;** mật khẩu `preclass-demo` chỉ có trong seed dev.
 - **Test DB:** 127.0.0.1 thay `localhost` (resolve IPv6 trên Windows mất ~2 s mỗi kết nối); migrate+seed 1 lần mỗi session, mỗi test chạy trong transaction + SAVEPOINT rồi rollback. Full pytest ~23 s.
+- **GĐ6 sửa block:** AUTO_CHECKED/FLAGGED sau khi sửa → UNREVIEWED (kết quả cũ thuộc hash cũ; GĐ7 chạy lại validation). Thêm block con vào cha đã APPROVED → cha REVIEW_AGAIN. Xóa block = xóa mềm kèm con, block phụ thuộc/cha đã APPROVED → REVIEW_AGAIN. Payload nhận lại cả khóa null (client gửi lại nguyên response) và từ chối khóa lạ.
