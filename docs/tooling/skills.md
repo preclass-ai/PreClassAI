@@ -18,7 +18,9 @@ This project uses existing skills from the curated catalog; it does not define a
 | `figma-generate-design` | Generate new design explorations | `.agents/skills/figma-generate-design/` | Treat generated designs as proposals until approved |
 | `screenshot` | Visual QA and screenshot capture | `.agents/skills/screenshot/` | Store only approved, non-sensitive screenshots |
 | `playwright-interactive` | Interactive browser investigation | `.agents/skills/playwright-interactive/` | Use shared test IDs and viewport matrix |
+| `vercel-react-best-practices` | React/Next.js performance review for `apps/web` | `.agents/skills/vercel-react-best-practices/` | Same package; Claude Code discovers it via the `.claude/skills/` symlink |
+| `web-design-guidelines` | UI/accessibility review against Web Interface Guidelines | `.agents/skills/web-design-guidelines/` | Same package; Claude Code discovers it via the `.claude/skills/` symlink |
 
-Installation source: the OpenAI curated skills catalog, queried and installed 2026-11-07. The same packages are also installed globally for Codex at `~/.codex/skills/`; the repo-local copy is the collaboration source of truth.
+Installation source: the OpenAI curated skills catalog, queried and installed 2026-11-07. `vercel-react-best-practices` and `web-design-guidelines` come from `vercel-labs/agent-skills`, added 2026-11-14 and pinned by hash in `skills-lock.json`. The same packages are also installed globally for Codex at `~/.codex/skills/`; the repo-local copy is the collaboration source of truth.
 
 Harnesses must share repository artifacts, not copied skill bodies. `AGENTS.md` is canonical; `CLAUDE.md` and `GEMINI.md` are adapters.
