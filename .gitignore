@@ -34,3 +34,6 @@ __pycache__/
 .ruff_cache/
 apps/api/data/
 *.age
+
+# Preview (local only)
+.agents/PREVIEW_URL.md
