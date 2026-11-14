@@ -2,6 +2,7 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 
 from app.auth import csrf_middleware
 from app.config import get_settings
@@ -44,7 +45,10 @@ TAGS = [
     {"name": "system", "description": "Health."},
 ]
 
-app = FastAPI(title="PreClass AI API", version="0.1.0-v0", description=DESCRIPTION, openapi_tags=TAGS)
+app = FastAPI(
+    title="PreClass AI API", version="0.1.0-v0", description=DESCRIPTION, openapi_tags=TAGS,
+    docs_url=None, redoc_url=None, openapi_url="/v1/openapi.json",  # /docs is Scalar (below)
+)
 install_error_handlers(app)
 app.middleware("http")(csrf_middleware)
 
@@ -80,3 +84,17 @@ def custom_openapi() -> dict[str, Any]:
 
 
 app.openapi = custom_openapi  # type: ignore[method-assign]
+
+
+SCALAR_VERSION = "1.28.33"  # pinned CDN version
+_DOCS_HTML = (
+    '<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>PreClass API</title>'
+    '<meta name="viewport" content="width=device-width, initial-scale=1"></head><body>'
+    '<script id="api-reference" data-url="/v1/openapi.json"></script>'
+    f'<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@{SCALAR_VERSION}"></script></body></html>'
+)
+
+
+@app.get("/docs", include_in_schema=False)
+async def docs() -> HTMLResponse:
+    return HTMLResponse(_DOCS_HTML)

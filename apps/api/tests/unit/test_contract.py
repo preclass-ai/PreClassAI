@@ -60,3 +60,16 @@ def test_json_is_camel_case_and_no_snake_case_keys() -> None:
     spec = json.dumps(app.openapi()["components"]["schemas"])
     for bad in ('"block_id"', '"review_status"', '"content_hash"', '"source_revision_ids"'):
         assert bad not in spec
+
+
+def test_docs_page_and_spec_are_served() -> None:
+    import asyncio
+
+    async def get(path: str) -> httpx.Response:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
+            return await c.get(path)
+
+    docs = asyncio.run(get("/docs"))
+    assert docs.status_code == 200 and "@scalar/api-reference@1.28.33" in docs.text
+    spec = asyncio.run(get("/v1/openapi.json"))
+    assert spec.status_code == 200 and spec.json()["openapi"].startswith("3.")
