@@ -20,7 +20,7 @@ from app.db import models as m
 from app.db.session import get_db
 from app.errors import ApiError
 from app.publish import list_class_assignments as list_class_assignments_service
-from app.routers._base import errs, todo
+from app.routers._base import errs
 from app.schemas import (
     AssignmentList,
     AuditLogList,
@@ -31,6 +31,7 @@ from app.schemas import (
     ProgressOut,
     UserOut,
 )
+from app.student import progress as student_progress
 
 router = APIRouter()
 
@@ -126,8 +127,8 @@ async def list_class_assignments(class_id: UUID, cu: Annotated[CurrentUser, Depe
             operation_id="getAssignmentProgress", response_model=ProgressOut,
             summary="First-attempt correct rate per item (TEACHER of that class)",
             responses=errs(401, 403, 404))
-async def assignment_progress(class_id: UUID, assignment_id: UUID) -> ProgressOut:
-    todo()
+async def assignment_progress(class_id: UUID, assignment_id: UUID, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> ProgressOut:
+    return await student_progress(db, cu, class_id, assignment_id)
 
 
 @router.get("/admin/audit-logs", tags=["admin"], operation_id="listAuditLogs", response_model=AuditLogList,

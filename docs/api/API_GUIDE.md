@@ -2,7 +2,7 @@
 
 Hợp đồng chính thức: [`apps/api/openapi/openapi.json`](../../apps/api/openapi/openapi.json) (sinh từ code, CI chặn lệch). Tài liệu này là hướng dẫn đọc nhanh. Mô hình dữ liệu: [`DATA_MODEL.md`](DATA_MODEL.md).
 
-> **Trạng thái:** mọi endpoint đã có schema + ví dụ. **Đã chạy thật (tới GĐ8):** auth, nguồn (text/DOCX), lesson, block, provenance, generate (MockProvider), validate, review, publish gate, new-revision, withdraw, giao bài, danh sách bài giao của lớp. **Còn 501:** `GET /classes/{id}/assignments/{aid}/progress` và toàn bộ `/student/*` (GĐ9). **Hãy dựng FE trên Prism mock** (bên dưới). Sau freeze v1 chỉ *thêm* field, không đổi tên/xóa field. Mọi thay đổi hợp đồng báo Khải trước.
+> **Trạng thái:** mọi endpoint đã có schema + ví dụ. **Đã chạy thật (tới GĐ8):** auth, nguồn (text/DOCX), lesson, block, provenance, generate (MockProvider), validate, review, publish gate, new-revision, withdraw, giao bài, danh sách bài giao của lớp. **Không còn endpoint 501** (GĐ9 đã xong). **Hãy dựng FE trên Prism mock** (bên dưới). Sau freeze v1 chỉ *thêm* field, không đổi tên/xóa field. Mọi thay đổi hợp đồng báo Khải trước.
 
 ## 1. Chạy mock và sinh client
 
@@ -148,3 +148,17 @@ Quy tắc hành vi:
 - Sửa sau khi xuất bản: `POST /revisions/{id}/new-revision` sao chép block, nguồn, link và phụ thuộc sang bản DRAFT mới; **duyệt không mang theo** (các khối về `AUTO_CHECKED`/`FLAGGED` sau khi chạy validation). Mỗi bài chỉ có một bản nháp (`DRAFT_EXISTS`).
 - Thu hồi lưu lý do cùng bản xuất bản và ghi audit `WITHDRAW` (audit không chứa lý do). Học sinh mở bản đã thu hồi sẽ nhận 410 (GĐ9).
 - AI sinh nội dung: `POST /lessons/{id}/generate` → 202 `{jobId}` rồi poll `GET /jobs/{id}`. Khối do AI sinh không bao giờ `APPROVED`. `AI_ENABLED=false` hoặc hết ngân sách token ngày → 503 `AI_DISABLED`.
+
+## 9. Học sinh và tiến độ (GĐ9)
+
+| code | HTTP | Khi nào |
+|---|---|---|
+| `WITHDRAWN` | 410 | Học sinh mở / nộp vào bài đã bị thu hồi (AT-12) |
+| `ASSIGNMENT_CLOSED` | 409 | Nộp sau `dueAt` (vẫn đọc được bài) |
+| `ALREADY_ANSWERED` | 409 | Câu này đã trả lời bằng `requestId` khác |
+
+- Chỉ nội dung từ **snapshot đã xuất bản**; DTO whitelist: không có đáp án, rubric, derivation, provenance, review, validation. `card_back` không bao giờ nằm trong danh sách khối.
+- Trước `openAt`, hoặc học sinh không thuộc lớp → **404** (không lộ tồn tại). Sai vai trò → 403 `FORBIDDEN_ROLE`.
+- `POST .../attempts`: mỗi (bài giao, học sinh, câu) một lần; trùng `requestId` trả lại kết quả đã lưu (idempotent). MCQ so `choice`, NUMERIC so `value` theo `tolerance`, SHORT không chấm (`isCorrect: null`). Lời giải chỉ trả sau khi trả lời.
+- `GET /classes/{id}/assignments/{aid}/progress`: chỉ giáo viên của lớp đó, chỉ số tổng hợp (không có tên/đáp án từng học sinh).
+- Chưa làm: thẻ ghi nhớ (flashcard) chưa có luồng trả lời riêng.
