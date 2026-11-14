@@ -5,6 +5,13 @@ services:
       POSTGRES_DB: preclass
       POSTGRES_USER: preclass
       POSTGRES_PASSWORD: preclass
+    command: ["postgres", "-c", "shared_buffers=128MB", "-c", "max_connections=30"]
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -29,3 +36,5 @@ services:
 
 volumes:
   postgres-dev:
+    labels:
+      keep: "true"
