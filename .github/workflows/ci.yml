@@ -88,6 +88,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install api-client (the console imports its source)
+        run: npm ci
+        working-directory: packages/api-client
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
