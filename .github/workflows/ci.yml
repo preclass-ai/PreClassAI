@@ -113,3 +113,22 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+  stack:
+    # GĐ10 gate: clean-machine `compose up` (builds api + web), demo seed, then the full flow via scripts/smoke.py.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Env (throwaway values, CI only)
+        working-directory: infra
+        run: |
+          cp .env.staging.example .env.staging
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-pass/; s#preclass:change-me@#preclass:ci-pass@#; s/^SESSION_SECRET=.*/SESSION_SECRET=ci-secret-0123456789abcdef/; s/^SEED_PASSWORD=.*/SEED_PASSWORD=ci-seed-pass/' .env.staging
+      - name: Build and start
+        working-directory: infra
+        run: IMAGE_TAG=ci docker compose -f compose.staging.yml up -d --build --wait --wait-timeout 300
+      - name: Smoke
+        run: python3 scripts/smoke.py --base https://localhost --insecure --password ci-seed-pass
+      - name: Logs on failure
+        if: failure()
+        working-directory: infra
+        run: IMAGE_TAG=ci docker compose -f compose.staging.yml logs --tail=100

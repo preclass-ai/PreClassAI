@@ -1,3 +1,4 @@
+name: preclass-staging
 services:
   postgres:
     image: postgres:16-alpine
@@ -11,22 +12,57 @@ services:
       timeout: 5s
       retries: 10
   api:
+    build: ../apps/api
     image: ghcr.io/preclass-ai/preclass-api:${IMAGE_TAG:?set IMAGE_TAG}
     env_file: .env.staging
     depends_on:
       postgres:
         condition: service_healthy
     networks: [internal, edge]  # edge gives outbound access to the LLM provider
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/v1/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     restart: unless-stopped
   web:
+    build: {context: .., dockerfile: apps/web/Dockerfile}
     image: ghcr.io/preclass-ai/preclass-web:${IMAGE_TAG:?set IMAGE_TAG}
     env_file: .env.staging
     networks: [edge]
     restart: unless-stopped
+  backup:  # opt-in: docker compose --profile backup up -d (needs infra/backup-recipients.txt, age public keys)
+    profiles: [backup]
+    image: postgres:16-alpine
+    env_file: .env.staging
+    environment:
+      BACKUP_DIR: /backups
+      BACKUP_ENCRYPTION_KEY_FILE: /run/backup-recipients.txt
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache age >/dev/null
+        while true; do
+          DATABASE_URL="postgresql://$$POSTGRES_USER:$$POSTGRES_PASSWORD@postgres:5432/$$POSTGRES_DB" sh /backup.sh
+          sleep 86400
+        done
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal, edge]  # edge only for `apk add age`
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - ./backup-recipients.txt:/run/backup-recipients.txt:ro
+      - backups-staging:/backups
+    restart: unless-stopped
   caddy:
     image: caddy:2-alpine
     env_file: .env.staging
-    depends_on: [api, web]
+    depends_on:
+      api: {condition: service_healthy}
+      web: {condition: service_started}
     ports:
       - "80:80"
       - "443:443"
@@ -43,6 +79,7 @@ networks:
   edge:
 
 volumes:
+  backups-staging:
   postgres-staging:
   caddy-data:
   caddy-config:
