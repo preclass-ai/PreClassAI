@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     db_null_pool: bool = False  # tests: asyncpg connections must not outlive the per-test event loop
     upload_dir: str = "./data/uploads"
     llm_provider: str = "mock"  # mock | openai_compatible
+    llm_base_url: str = ""  # openai_compatible: e.g. https://host/v1 (no trailing /chat/completions)
+    llm_api_key: str = ""
+    llm_model: str = ""
     ai_enabled: bool = True
     reviewer_enabled: bool = False  # second-person review (REVIEWER role); off by default
     mock_inject: str = ""  # fake_anchor,changed_quote,new_number,two_keys (tests)
