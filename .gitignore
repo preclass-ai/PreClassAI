@@ -38,3 +38,4 @@ apps/api/data/
 # Preview (local only)
 .agents/PREVIEW_URL.md
 *.tsbuildinfo
+infra/backup-recipients.txt
