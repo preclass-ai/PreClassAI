@@ -14,7 +14,10 @@ Compose staging/prod build được api+web tại chỗ, api tự migrate/seed k
 
 ## Verification evidence
 - `docker compose ... --profile backup config -q` sạch (staging); `py_compile` smoke.py, `sh -n` entrypoint sạch.
-- **Chưa chạy:** `docker compose up` và `smoke.py` (Docker daemon không chạy trên máy này lúc làm), chưa build image api/web.
+- 15/11: `pytest` đầy đủ với Postgres dev: 162 passed (AT-01..14, PR-08, IDOR); ruff + mypy --strict sạch.
+- 15/11: `scripts/smoke.py` → `SMOKE OK` với API chạy native (uvicorn) trên Postgres dev. Phát hiện và sửa: nguồn dán text không có bảng nên không sinh câu hỏi → `parse_text` nay nhận khối `|`/tab ≥2 dòng là bảng (TABLE_CELL).
+- Thêm `OpenAICompatibleProvider` (`LLM_PROVIDER=openai_compatible` + `LLM_BASE_URL/API_KEY/MODEL`), test bằng server giả. **Chưa gọi LLM thật.** Nội dung nguồn của GV sẽ gửi tới nhà cung cấp đó; cần xác nhận trước khi bật.
+- **Chưa chạy:** `docker compose up` đầy đủ (build web bị dừng vì thiếu RAM; giao cho job CI `stack`), chưa build image web.
 
 ## Còn nợ / rủi ro
 - Cổng GĐ10 chỉ đạt khi `up --build` + `smoke.py` ra `SMOKE OK` trên máy sạch/CI.

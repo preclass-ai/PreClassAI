@@ -44,13 +44,29 @@ def _limit(anchors: list[ParsedAnchor]) -> list[ParsedAnchor]:
     return anchors
 
 
+def _table_rows(block: str) -> list[list[str]] | None:
+    """A block of >= 2 lines where every line has `|` or a tab is a table (markdown separator lines are skipped)."""
+    lines = [ln.strip() for ln in block.split("\n") if ln.strip()]
+    if len(lines) < 2 or not all("|" in ln or "\t" in ln for ln in lines):
+        return None
+    rows = [[" ".join(c.split()) for c in ln.strip("|").replace("\t", "|").split("|")] for ln in lines
+            if set(ln) - set("|-: \t")]
+    return rows if len(rows) >= 2 and all(len(r) >= 2 for r in rows) else None
+
+
 def parse_text(text: str) -> list[ParsedAnchor]:
-    """Blank-line separated paragraphs; the first one is the heading."""
-    paras = [" ".join(p.split()) for p in text.replace("\r\n", "\n").split("\n\n")]
-    paras = [p for p in paras if p]
-    return _limit([
-        ParsedAnchor("HEADING" if i == 0 else "PARAGRAPH", {"para_index": i}, p) for i, p in enumerate(paras)
-    ])
+    """Blank-line separated blocks; the first is the heading. A `|`/tab-separated block is a table (TABLE_CELL anchors)."""
+    out: list[ParsedAnchor] = []
+    table_i = 0
+    for i, block in enumerate(b for b in text.replace("\r\n", "\n").split("\n\n") if b.strip()):
+        rows = _table_rows(block) if i else None
+        if rows is None:
+            out.append(ParsedAnchor("HEADING" if i == 0 else "PARAGRAPH", {"para_index": i}, " ".join(block.split())))
+            continue
+        out += [ParsedAnchor("TABLE_CELL", {"table": table_i, "row": r, "col": c}, cell)
+                for r, row in enumerate(rows) for c, cell in enumerate(row) if cell]
+        table_i += 1
+    return _limit(out)
 
 
 def check_docx_container(data: bytes) -> None:

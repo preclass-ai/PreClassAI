@@ -19,3 +19,12 @@ from app.sources.numbers import parse_numbers
 )
 def test_parse_numbers(text: str, expected: list[D]) -> None:
     assert parse_numbers(text) == expected
+
+
+def test_text_table_becomes_cell_anchors() -> None:
+    from app.sources.parse import parse_text
+    a = parse_text("Bảng\n\nGhi chú.\n\n| Vùng | Dân số |\n|---|---|\n| A | 23,2 |\n| B | 5,9 |")
+    cells = [x for x in a if x.kind == "TABLE_CELL"]
+    assert [x.kind for x in a[:2]] == ["HEADING", "PARAGRAPH"] and len(cells) == 6
+    assert cells[3].locator == {"table": 0, "row": 1, "col": 1} and cells[3].numbers == [D("23.2")]
+    assert [x.kind for x in parse_text("a\n\nb | c")] == ["HEADING", "PARAGRAPH"]  # one line is not a table

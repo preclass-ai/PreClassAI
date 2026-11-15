@@ -16,7 +16,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 HEADERS = {"Content-Type": "application/json", "X-PreClass-CSRF": "1"}
 LEAK = {"provenance", "anchor", "review", "validation", "answerKey", "answer_key", "contentHash", "withdrawReason"}
@@ -69,7 +69,9 @@ def main() -> None:
 
     step("health", t, "GET", "/v1/health")
     step("teacher login", t, "POST", "/v1/auth/login", {"identifier": "gv.dia@preclass.local", "password": a.password})
-    text = "Tiêu đề\n\nDân số vùng A là 23,2 triệu người (DỮ LIỆU MINH HỌA).\n\nVùng B có 5,9 triệu người."
+    text = ("Số dân các vùng (DỮ LIỆU MINH HỌA)\n\nDân cư phân bố không đều giữa các vùng.\n\n"
+            "| Vùng | Số dân (triệu người) |\n|---|---|\n| Đồng bằng sông Hồng | 23,2 |\n| Tây Nguyên | 5,9 |\n"
+            "| Đông Nam Bộ | 17,8 |\n| Duyên hải miền Trung | 9,4 |")
     src = step("source", t, "POST", "/v1/sources", {"title": f"Smoke {uuid.uuid4().hex[:6]}", "text": text}, 201)
     lesson = step("lesson", t, "POST", "/v1/lessons", {"title": "Smoke", "grade": 10,
                   "sourceRevisionIds": [src["latestRevision"]["id"]]}, 201)
@@ -88,7 +90,7 @@ def main() -> None:
     version = step("lesson", t, "GET", f"/v1/lessons/{lesson['id']}")["currentRevision"]["version"]
     pub = step("publish", t, "POST", f"/v1/revisions/{rev}/publish", {"confirmChecked": True, "version": version}, 201)
     cls = next(x for x in step("classes", t, "GET", "/v1/classes")["items"] if x["code"] == "10A1")
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     asg = step("assign", t, "POST", f"/v1/published/{pub['id']}/assignments", {
         "classId": cls["id"], "openAt": (now - timedelta(hours=1)).isoformat(), "dueAt": (now + timedelta(days=1)).isoformat()}, 201)
 
