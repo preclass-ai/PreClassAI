@@ -32,6 +32,7 @@ python ../scripts/smoke.py --base https://localhost --insecure --password "<SEED
 | Cookie không giữ trên http | `COOKIE_SECURE=true` cần https; chỉ đặt `false` cho dev |
 | Generate trả 503 `AI_DISABLED` | `AI_ENABLED=false`; phần còn lại vẫn chạy |
 | Job generate kẹt | restart `api`: job RUNNING chuyển FAILED, tạo lại |
+| Giới hạn đăng nhập sai (rate limit) lệch/mất | chạy API với `--workers 1`: bộ đếm nằm trong bộ nhớ từng tiến trình; không tăng worker khi chưa chuyển sang kho dùng chung |
 | Chạy `up` lỗi cổng 80/443 | cổng bị chiếm; dừng dịch vụ đang dùng |
 
 ## Rollback
