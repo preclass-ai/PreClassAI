@@ -9,12 +9,12 @@ $set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnB
   -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
 $prin = New-ScheduledTaskPrincipal -UserId $me -LogonType Interactive -RunLevel Limited
 
-Register-ScheduledTask -TaskName "PreClass Preview" -Force -Settings $set -Principal $prin `
+Register-ScheduledTask -TaskName "PreClass Preview" -Force -Description "At logon: waits for Docker, then runs scripts/ops/preview.ps1." -Settings $set -Principal $prin `
   -Action (New-ScheduledTaskAction -Execute $ps -Argument (Arg "preview-start.ps1")) `
   -Trigger (New-ScheduledTaskTrigger -AtLogOn -User $me) | Out-Null
 
 $every10 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(10) -RepetitionInterval (New-TimeSpan -Minutes 10)
-Register-ScheduledTask -TaskName "PreClass Preview Health" -Force -Settings $set -Principal $prin `
+Register-ScheduledTask -TaskName "PreClass Preview Health" -Force -Description "Every 10 min: checks API, Caddy and tunnel; restarts what is down and writes the new URL to .agents/PREVIEW_URL.md. Does not commit or push." -Settings $set -Principal $prin `
   -Action (New-ScheduledTaskAction -Execute $ps -Argument (Arg "preview-health.ps1")) -Trigger $every10 | Out-Null
 
 Get-ScheduledTask -TaskName "PreClass Preview*" | Select-Object TaskName, State | Format-Table -AutoSize

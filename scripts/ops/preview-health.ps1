@@ -1,6 +1,6 @@
 # Every 10 min: check API (:8000), Caddy (:8080, basic auth) and the public tunnel URL.
 # Local service down -> full restart (stop + start). Only the tunnel down -> restart just the tunnel.
-# A new tunnel URL is written to .agents/PREVIEW_URL.md and pushed as its own commit (that file only).
+# A new tunnel URL is only written to .agents/PREVIEW_URL.md (git-ignored) and logged; nothing is committed or pushed.
 # Does nothing when the preview was never started (no PID file), so it cannot race preview-start.ps1.
 $root = Resolve-Path "$PSScriptRoot\..\.."
 $data = Join-Path $root "apps\api\data"; $logs = Join-Path $data "logs"
@@ -42,14 +42,4 @@ if (-not ($api -and $caddy)) {
 }
 
 $new = Get-Url $urlFile
-if ($new -and $new -ne $url) {
-  Log "new URL $new"
-  Push-Location $root
-  if ((git branch --show-current) -eq "feat/backend-v2") {   # never push from another branch
-    git add -f .agents/PREVIEW_URL.md
-    git commit -m "Update preview URL" -- .agents/PREVIEW_URL.md *> $null
-    git push origin feat/backend-v2 *> $null
-    Log "push exit=$LASTEXITCODE"
-  } else { Log "not on feat/backend-v2, URL not pushed" }
-  Pop-Location
-}
+if ($new -and $new -ne $url) { Log "new URL $new (written to .agents/PREVIEW_URL.md, not committed)" }
