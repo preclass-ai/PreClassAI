@@ -1,5 +1,5 @@
 # Temporary preview on a laptop (scripts/ops/preview.ps1). One origin:
-#   /v1/*  -> uvicorn :8000     /docs -> API     /mock/* -> Prism :4010 (prefix stripped)     / -> console build
+#   /v1/*  -> uvicorn :8000     /docs -> API     /mock/* -> Prism :4010 (prefix stripped)     / -> Next web :3000
 # Basic auth protects everything; credentials are generated per run (never committed).
 {
 	admin off
@@ -20,8 +20,6 @@
 		reverse_proxy 127.0.0.1:4010
 	}
 	handle {
-		root * {$CONSOLE_DIST}
-		try_files {path} /index.html
-		file_server
+		reverse_proxy 127.0.0.1:3000
 	}
 }
