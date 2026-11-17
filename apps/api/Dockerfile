@@ -4,12 +4,17 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY app ./app
+COPY alembic.ini ./
+COPY alembic ./alembic
+COPY seed ./seed
+COPY docker-entrypoint.sh ./
 
 FROM python:3.12-slim
 RUN useradd --system --uid 10001 app
 WORKDIR /app
 COPY --from=build /app /app
-ENV PATH="/app/.venv/bin:$PATH" PYTHONUTF8=1
+ENV PATH="/app/.venv/bin:$PATH" PYTHONUTF8=1 PYTHONPATH=/app
 USER app
 EXPOSE 8000
+ENTRYPOINT ["sh", "/app/docker-entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

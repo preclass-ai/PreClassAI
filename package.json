@@ -1,0 +1,11 @@
+{
+  "name": "preclass",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @preclass/web dev",
+    "lint": "pnpm --filter @preclass/web lint",
+    "typecheck": "pnpm --filter @preclass/web typecheck",
+    "test": "pnpm --filter @preclass/web test",
+    "build": "pnpm --filter @preclass/web build"
+  }
+}

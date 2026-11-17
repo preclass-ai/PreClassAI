@@ -25,7 +25,16 @@ uv run pytest
 docker compose -f ../../infra/compose.dev.yml up -d
 ```
 
-Frontend (`apps/web/`) commands are documented by its owner once the scaffold exists (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`). CI runs the Python job and repository policy checks; the pnpm job stays off until `APP_CI_ENABLED=true`.
+Frontend (pnpm workspace at the repo root: `apps/web` + `packages/api-client`; use `corepack pnpm@10` if `pnpm` is not installed). See `apps/web/README.md`.
+
+```text
+pnpm install
+pnpm --filter @preclass/web dev          # :3000, proxies /v1 to API_ORIGIN (default http://localhost:8000)
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
+pnpm --filter @preclass/web test:e2e     # Playwright at 390/768/1280 px against a running, seeded stack
+```
+
+CI runs the Python job and repository policy checks; the pnpm job (`app`) runs when the repository variable `APP_CI_ENABLED=true`.
 
 ## Coding Style & Naming Conventions
 
@@ -52,6 +61,8 @@ Before editing, read `.agents/README.md` and the task record. Before claiming co
 When a task matches a listed workflow, read the corresponding project-local skill at `.agents/skills/<skill-name>/SKILL.md`. `docs/tooling/skills.md` is an inventory, not the executable skill content.
 
 Architecture, security, data-processing, deployment, and budget changes require an ADR or an update to the relevant operations document. Do not silently resolve an open Q-/A- decision.
+
+Branches after the first full merge: frontend work (`apps/web`) goes on `feat/web-*` (Thiện), backend work (`apps/api`, `infra`, `openapi`) on `feat/api-*`. Branch from the latest `main`, open a PR into `main`, and never push to `main` directly. A PR that changes `openapi/openapi.json` must also regenerate `packages/api-client/src/schema.d.ts`; the owner of the other side reviews it.
 
 ## Operational Entry Points
 

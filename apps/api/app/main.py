@@ -29,7 +29,7 @@ else's resource (or another class) → 404.
 - Edits carry `version` (optimistic lock) → 409 `VERSION_CONFLICT`. Approvals carry `contentHash` → 409 \
 `STALE_REVIEW`.
 - Lists are `{items, nextCursor}`; `nextCursor` is always null in v1.
-- Handlers currently answer 501 `NOT_IMPLEMENTED`: use the examples (Prism mock) until phases 4-9 land.
+- All routes are implemented; Prism (`openapi/openapi.json`) is only for frontend work without a running API.
 """
 
 TAGS = [

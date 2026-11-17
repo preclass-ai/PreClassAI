@@ -1,11 +1,15 @@
 """LLM provider interface, prompt (v1) and the deterministic MockProvider (PR-10: no API key needed).
 
 The model only ever sees anchor ALIASES (A1..An); the server maps them back and verifies everything (PR-06).
-shortcut: OpenAICompatibleProvider (GreenNode/FPT) is deferred to P0.5 (D-001 #1); selecting it answers AI_DISABLED.
+OpenAICompatibleProvider (LLM_PROVIDER=openai_compatible) talks to any /chat/completions endpoint with stdlib urllib
+(httpx is a dev-only dependency). Anything it returns is untrusted until the server-side validation passes.
 """
 
+import asyncio
 import json
+import re
 import unicodedata
+import urllib.request
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Protocol
@@ -205,5 +209,47 @@ class MockProvider:
         return out
 
 
+FORMAT = (
+    '\nĐịnh dạng: {"blocks":[{"key":"s0","kind":...,"parentKey":null|key,"payload":{...},"transformation":"ORIGINAL|PARAPHRASED|'
+    'SYNTHESISED|AI_PROPOSED","anchorAliases":["A1"],"noSourceReason":null|"...","isFactual":true|false}]}. kind: heading/paragraph/'
+    'instruction/data_fact{label,value,unit,period,region}/worksheet_item{stem,itemType MCQ|NUMERIC|SHORT,skill}/option{label,text}/'
+    'answer_key{correct}|{value,unit,tolerance,derivation}/explanation{text}/card_front{text}/card_back{text}. option, answer_key, '
+    "explanation có parentKey là key của worksheet_item. Chỉ trả đúng một đối tượng JSON, không văn bản khác."
+)
+
+
+class OpenAICompatibleProvider:
+    def __init__(self, base_url: str, api_key: str, model: str, timeout: float = 90) -> None:
+        self.url, self.key, self.model, self.timeout = base_url.rstrip("/") + "/chat/completions", api_key, model, timeout
+
+    def _post(self, body: dict[str, Any]) -> dict[str, Any]:
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.key}"}
+        req = urllib.request.Request(self.url, json.dumps(body).encode(), headers, method="POST")  # noqa: S310 operator-set URL
+        with urllib.request.urlopen(req, timeout=self.timeout) as r:  # noqa: S310
+            out: dict[str, Any] = json.loads(r.read())
+        return out
+
+    async def generate(self, req: GenRequest) -> ProviderResult:
+        system, user = build_prompt(req)
+        body = {"model": self.model, "temperature": 0, "response_format": {"type": "json_object"},
+                "messages": [{"role": "system", "content": system + FORMAT}, {"role": "user", "content": user}]}
+        data = await asyncio.to_thread(self._post, body)
+        try:
+            text = data["choices"][0]["message"]["content"].strip()
+            text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text)  # some models fence the JSON
+            draft = Draft.model_validate(json.loads(text))
+            usage = data.get("usage") or {}
+            return ProviderResult(draft, int(usage.get("prompt_tokens", 0)), int(usage.get("completion_tokens", 0)),
+                                  str(data.get("model") or self.model))
+        except (KeyError, IndexError, TypeError, ValueError) as e:  # ValueError covers JSON + pydantic errors
+            raise ProviderFormatError(type(e).__name__) from None  # never echo model output
+
+
 def get_provider(name: str, inject: str) -> LLMProvider | None:
-    return MockProvider(inject) if name == "mock" else None
+    if name == "mock":
+        return MockProvider(inject)
+    from app.config import get_settings  # local: keep the provider module import-light
+    c = get_settings()
+    if name == "openai_compatible" and c.llm_base_url and c.llm_api_key and c.llm_model:
+        return OpenAICompatibleProvider(c.llm_base_url, c.llm_api_key, c.llm_model)
+    return None

@@ -56,6 +56,11 @@ Start-Bg "$api\.venv\Scripts\python.exe" "-m uvicorn app.main:app --host 127.0.0
 # 5. Prism mock for routes still answering 501
 Start-Bg (Find-Exe "npx.cmd") "--yes @stoplight/prism-cli@5.14.2 mock -p 4010 -h 127.0.0.1 $api\openapi\openapi.json" "prism" $root
 
+# 5b. Web (apps/web, Next). Needs apps/web/.next from `pnpm build`; on Windows the build exits with EPERM at the
+# `standalone` symlink step but .next is complete, so `next start` works.
+if (-not (Test-Path "$root\apps\web\.next\BUILD_ID")) { throw "apps/web/.next missing: run pnpm build first." }
+Start-Bg (Find-Exe "node") "$root\apps\web\node_modules\next\dist\bin\next start -p 3000 -H 127.0.0.1" "web" "$root\apps\web"
+
 # 6. Caddy with basic auth
 if ($env:PREVIEW_BASIC_AUTH) { $user, $pass = $env:PREVIEW_BASIC_AUTH -split ":", 2 }
 else {
