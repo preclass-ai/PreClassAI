@@ -62,6 +62,8 @@ When a task matches a listed workflow, read the corresponding project-local skil
 
 Architecture, security, data-processing, deployment, and budget changes require an ADR or an update to the relevant operations document. Do not silently resolve an open Q-/A- decision.
 
+Branches after the first full merge: frontend work (`apps/web`) goes on `feat/web-*` (Thiện), backend work (`apps/api`, `infra`, `openapi`) on `feat/api-*`. Branch from the latest `main`, open a PR into `main`, and never push to `main` directly. A PR that changes `openapi/openapi.json` must also regenerate `packages/api-client/src/schema.d.ts`; the owner of the other side reviews it.
+
 ## Operational Entry Points
 
 - Engineering and deployment plan: `docs/07-engineering-operations-plan.md`
