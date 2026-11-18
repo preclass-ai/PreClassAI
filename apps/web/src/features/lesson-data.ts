@@ -60,12 +60,13 @@ export function useLessonAnchors(sourceRevisionIds: readonly string[]) {
 }
 
 /** Anything that changes a block can change counts, the queue, the gate and the history: refresh them together. */
-export function invalidateLesson(qc: QueryClient, lessonId: string) {
+export function invalidateLesson(qc: QueryClient, lessonId: string, onlyProvenanceOf?: string) {
   return Promise.all([
     qc.invalidateQueries({ queryKey: ["lesson", lessonId] }),
     qc.invalidateQueries({ queryKey: ["lessons"] }),
     qc.invalidateQueries({ queryKey: ["blocks"] }),
-    qc.invalidateQueries({ queryKey: ["provenance"] }),
+    // A review decision only changes its own block: refetching every card's provenance made N^2 requests (429/500).
+    qc.invalidateQueries({ queryKey: onlyProvenanceOf ? keys.provenance(onlyProvenanceOf) : ["provenance"] }),
     qc.invalidateQueries({ queryKey: ["review-queue"] }),
     qc.invalidateQueries({ queryKey: ["publish-check"] }),
     qc.invalidateQueries({ queryKey: ["history", lessonId] }),

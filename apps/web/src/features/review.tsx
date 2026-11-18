@@ -9,7 +9,7 @@ import { errorCode } from "@/lib/errors";
 import { KIND, REVIEW_STATUS, type ReviewStatus } from "@/lib/labels";
 import { BlockCard } from "./block-view";
 import { EvidenceList, ValidationList } from "./inspector";
-import { keys, useBlocks, useProvenance, useRefreshLesson } from "./lesson-data";
+import { invalidateLesson, keys, useBlocks, useProvenance, useRefreshLesson } from "./lesson-data";
 
 const FILTERS: ReviewStatus[] = ["FLAGGED", "REVIEW_AGAIN", "UNREVIEWED", "AUTO_CHECKED", "APPROVED", "REJECTED"];
 const DEFAULT: ReviewStatus[] = ["FLAGGED", "REVIEW_AGAIN", "UNREVIEWED", "AUTO_CHECKED"];
@@ -133,7 +133,7 @@ export function ReviewActions({ block, lessonId }: { block: Block; lessonId: str
         }),
       );
       setNote("");
-      await refresh();
+      await invalidateLesson(qc, lessonId, block.id);
     } catch (err) {
       setError(err);
       if (errorCode(err) === "STALE_REVIEW") await refresh();
