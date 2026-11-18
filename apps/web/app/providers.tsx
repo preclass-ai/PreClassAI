@@ -12,7 +12,7 @@ export function Providers({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             // 4xx answers are final (404 hides foreign resources, 403 is a role problem): never retry them.
-            retry: (count, err) => !(err instanceof ApiError && err.status >= 400 && err.status < 500) && count < 2,
+            retry: (count, err) => !(err instanceof ApiError && err.status >= 400 && err.status < 500) && count < 1,
             refetchOnWindowFocus: false,
           },
         },
