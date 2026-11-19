@@ -29,9 +29,9 @@ for ($i = 0; $i -lt 60; $i++) {
 
 # 2. Environment for the API (dev data only, mock LLM, Secure cookie because the tunnel is HTTPS)
 $env:DATABASE_URL = "postgresql+asyncpg://preclass:preclass@127.0.0.1:5432/preclass"
-$env:APP_ENV = "development"; $env:LLM_PROVIDER = "mock"; $env:COOKIE_SECURE = "true"; $env:PYTHONUTF8 = "1"
+$env:APP_ENV = "development"; $env:LLM_PROVIDER = "mock"; $env:COOKIE_SECURE = "true"; $env:PYTHONUTF8 = "1"; $env:PYTHONPATH = $api
 Push-Location $api
-uv run alembic upgrade head
+uv run python -m alembic upgrade head
 uv run python -m seed.seed
 Pop-Location
 $n = (docker exec infra-postgres-1 psql -U preclass -d preclass -tAc "select count(*) from app_user") -join ""

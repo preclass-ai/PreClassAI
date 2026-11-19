@@ -46,7 +46,7 @@ Prism trả ví dụ của schema (id trùng id seed). Muốn thử mã lỗi: `
 Quy tắc UI quan trọng:
 1. **Có nguồn ≠ đúng.** Hiển thị `reviewStatus` (đã kiểm/duyệt chưa) **tách biệt** với số nguồn (`linkCount`) / `transformation`.
 2. Block `AI_PROPOSED` không nguồn phải hiện `noSourceReason`.
-3. Học sinh **không bao giờ** thấy provenance/review/validation/đáp án/giải thích trước khi nộp câu đó (server đã lọc, FE đừng cố gọi).
+3. Học sinh **không bao giờ** thấy provenance/review/validation/đáp án/giải thích trước khi nộp câu đó (server đã lọc, FE đừng cố gọi). `GET /blocks/{id}/provenance` với vai HS trả **404 NOT_FOUND** (PR-08), không phải 403.
 4. Trước khi gọi `reviewBlock` luôn gửi `contentHash` của đúng bản đang hiển thị.
 
 ## 4. Bảng mã lỗi (`code`)
