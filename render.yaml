@@ -1,0 +1,27 @@
+# Render Blueprint: API only (web is on Vercel, DB on Neon). Secrets/URLs are entered in the dashboard (sync: false).
+services:
+  - type: web
+    name: preclass-api
+    runtime: python
+    rootDir: apps/api
+    region: singapore
+    plan: free
+    healthCheckPath: /v1/health
+    buildCommand: pip install uv && uv sync --frozen --no-dev
+    # alembic needs the project root on the path; seed is a no-op when the demo accounts already exist.
+    startCommand: >-
+      export PYTHONPATH=. &&
+      .venv/bin/python -m alembic upgrade head &&
+      .venv/bin/python -m seed.seed --if-empty &&
+      .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+      --proxy-headers --forwarded-allow-ips='*'
+    envVars:
+      - { key: PYTHON_VERSION, value: 3.12.8 }
+      - { key: APP_ENV, value: demo }
+      - { key: LLM_PROVIDER, value: mock }
+      - { key: DB_POOL_SIZE, value: "5" }
+      - { key: DB_MAX_OVERFLOW, value: "0" }
+      - { key: DB_POOL_RECYCLE, value: "300" }
+      - { key: DATABASE_URL, sync: false }   # Neon direct string; scheme/sslmode are normalized by the app
+      - { key: FRONTEND_ORIGIN, sync: false } # https://preclass-ai.vercel.app
+      - { key: SESSION_SECRET, generateValue: true }

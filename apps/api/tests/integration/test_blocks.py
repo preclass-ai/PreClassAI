@@ -74,12 +74,17 @@ async def test_lessons_list_get_history_and_idor(client: httpx.AsyncClient) -> N
 async def test_students_cannot_touch_lessons_or_blocks(client: httpx.AsyncClient) -> None:
     await login(client, "HS10-01")
     calls = [client.get("/v1/lessons"), client.get(f"/v1/revisions/{LREV}/blocks"),
-             client.get(f"/v1/blocks/{B('q1')}/provenance"), patch(client, "q1", {"text": "x"}),
+             patch(client, "q1", {"text": "x"}),
              client.delete(f"/v1/blocks/{B('q1')}"),
              client.post("/v1/lessons", json={"title": "x", "grade": 10, "sourceRevisionIds": [str(uid(f'{L}:srcrev'))]})]
     for coro in calls:
         r = await coro
         assert r.status_code == 403 and r.json()["code"] == "FORBIDDEN_ROLE"
+
+
+async def test_student_gets_404_on_provenance(client: httpx.AsyncClient) -> None:
+    await login(client, "HS10-01")
+    assert (await client.get(f"/v1/blocks/{B('q1')}/provenance")).status_code == 404  # PR-08
 
 
 async def test_reviewer_reads_only_assigned_lessons_and_never_edits(client: httpx.AsyncClient, db: AsyncSession) -> None:

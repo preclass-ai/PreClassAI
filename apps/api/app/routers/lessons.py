@@ -6,8 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import blocks as blocks_service
 from app import lessons as lessons_service
-from app.auth import CurrentUser, require_role
+from app.auth import CurrentUser, current_user, require_role
 from app.db.session import get_db
+from app.errors import ApiError
 from app.generation import JobRunner, background_runner, create_job
 from app.generation import get_job as get_job_service
 from app.lessons import replace_sources as replace_sources_service
@@ -137,7 +138,11 @@ async def delete_block(block_id: UUID, cu: Annotated[CurrentUser, Depends(requir
             response_model=ProvenanceOut, summary="Source Inspector data for a block (author / reviewer)",
             description="Writes an `INSPECT_PROVENANCE` audit entry (no content). Students get 404.",
             responses=errs(401, 404))
-async def get_provenance(block_id: UUID, cu: Annotated[CurrentUser, Depends(require_role("TEACHER", "REVIEWER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> ProvenanceOut:
+async def get_provenance(block_id: UUID, cu: Annotated[CurrentUser, Depends(current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> ProvenanceOut:
+    if cu.role == "STUDENT":  # PR-08: students must not learn that provenance exists
+        raise blocks_service.NOT_FOUND
+    if cu.role not in ("TEACHER", "REVIEWER"):
+        raise ApiError(403, "FORBIDDEN_ROLE", "Bạn không có quyền thực hiện thao tác này")
     return await blocks_service.get_provenance(db, cu, block_id)
 
 

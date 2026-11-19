@@ -38,3 +38,10 @@ python ../scripts/smoke.py --base https://localhost --insecure --password "<SEED
 ## Rollback
 
 `IMAGE_TAG=<tag cũ> docker compose -f compose.prod.yml up -d`. Migration chỉ tiến (`alembic upgrade head` lúc khởi động); lùi schema cần `alembic downgrade` thủ công **sau khi backup**.
+
+## Demo preview trên laptop (19/11)
+- Khởi động: bật Docker Desktop → `PYTHONPATH=. uv run python -m alembic upgrade head && uv run python -m seed.seed` (trong `apps/api`, nếu DB trống) → `cd apps/web && corepack pnpm@10 build` (EPERM ở bước standalone là chấp nhận được) → `powershell -File scripts\ops\preview.ps1`. URL mới ở `.agents/PREVIEW_URL.md`, basic auth ở `apps/api/data/preview-credentials.txt`. Tắt: `scripts\ops\preview-stop.ps1`.
+- Khởi động lại sau khi tunnel chết: `preview-stop.ps1` rồi `preview.ps1` (URL đổi). Không build lại web nếu mã không đổi.
+- Quay lui: `git checkout pre-merge-2026-11-19` (hoặc revert merge PR #8), build lại web, khởi động lại preview.
+- Khôi phục DB từ backup: `docker exec -i infra-postgres-1 psql -U preclass -d preclass -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"` rồi `docker exec -i infra-postgres-1 psql -U preclass -d preclass < apps/api/data/backup/predeploy-1911.sql`. Thử khôi phục vào DB tạm `preclass_restore_check` trước. Chỉ đụng database `preclass`, không xoá volume.
+- Reset về seed sạch: `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` trên `preclass`, rồi migrate + seed như trên.

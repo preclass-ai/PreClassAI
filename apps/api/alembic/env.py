@@ -1,5 +1,4 @@
 import asyncio
-import os
 
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -8,7 +7,7 @@ from app.config import get_settings
 from app.db.models import Base
 
 target_metadata = Base.metadata
-url = os.environ.get("DATABASE_URL") or get_settings().database_url
+url = get_settings().database_url  # env DATABASE_URL is read (and normalized) by Settings
 
 
 def _run(connection) -> None:  # type: ignore[no-untyped-def]
