@@ -34,6 +34,7 @@ function GateCheck({ lesson }: { lesson: Lesson }) {
   const refresh = useRefreshLesson(lesson.id);
   const check = useQuery({
     queryKey: keys.publishCheck(rev.id),
+    gcTime: 0, // never show a cached gate from before the last approval/edit: always load it fresh on opening the tab
     queryFn: () =>
       unwrap(api.GET("/v1/revisions/{revision_id}/publish-check", { params: { path: { revision_id: rev.id } } })),
   });

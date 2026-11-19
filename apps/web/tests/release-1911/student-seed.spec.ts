@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 // Student flow on the SEEDED published lesson (no publish/assign). Env: STUDENT_<vp> ids, BLOCK_ID.
 const DIR = "test-results/release-1911";
 const PASSWORD = process.env.SEED_PASSWORD ?? "preclass-demo";
-const STUDENT: Record<string, string> = { "390": "HS10-12", "768": "HS10-14", "1280": "HS10-13" };
+const STUDENT: Record<string, string> = { "390": "HS10-12", "768": "HS10-14", "1280": "HS10-13", webkit: "HS10-15" };
 
 function rec(o: object) {
   mkdirSync(DIR, { recursive: true });
@@ -50,9 +50,9 @@ test("seeded: student answers 2 questions, sees explanation, provenance blocked"
     await page.screenshot({ path: `${DIR}/seed-${vp}-02-answered.png`, fullPage: true });
 
     step = "provenance";
-    const r = await page.request.get(`/v1/blocks/${process.env.BLOCK_ID}/provenance`);
+    const r = await page.request.get(`/v1/blocks/${process.env.BLOCK_ID ?? "00000000-0000-0000-0000-000000000000"}/provenance`);
     rec({ vp, check: "student-provenance-status", status: r.status() });
-    expect([403, 404]).toContain(r.status());
+    expect(r.status()).toBe(404); // PR-08
     rec({ vp, step: "seeded-student-flow", student: STUDENT[vp], ok: true, consoleErrors: errs.length, sample: errs.slice(0, 2) });
   } catch (e) {
     await page.screenshot({ path: `${DIR}/FAIL-seed-${vp}.png`, fullPage: true }).catch(() => undefined);

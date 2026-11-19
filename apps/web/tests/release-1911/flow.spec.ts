@@ -55,7 +55,14 @@ async function approveAll(page: Page) {
   await page.getByRole("tab", { name: "Duyệt" }).click();
   const approve = page.getByRole("button", { name: "Duyệt khối này" });
   await expect(approve.first()).toBeVisible({ timeout: 30_000 });
-  for (let i = 0; i < 60 && (await approve.count()) > 0; i++) {
+  for (let i = 0, idle = 0; i < 80 && idle < 2; i++) {
+    if ((await approve.count()) === 0) {
+      // A refetch can briefly empty the list: only stop after it stays empty once the network is quiet.
+      await page.waitForLoadState("networkidle");
+      idle++;
+      continue;
+    }
+    idle = 0;
     const before = await approve.count();
     await approve.first().click();
     await expect(approve).toHaveCount(before - 1);
@@ -66,6 +73,7 @@ async function publishAssign(page: Page, vp: string) {
   await page.getByRole("tab", { name: /Xuất bản/ }).click();
   await expect(page.locator(".checklist li").first()).toBeVisible({ timeout: 30_000 });
   if (await page.locator(".checklist li.fail").count()) {
+    // Kept as a detector: with gcTime 0 on the gate query this should no longer happen.
     // Observed: gate shown stale right after the last approval (API says canPublish=true). Reload and carry on.
     rec({ vp, check: "stale-gate-after-last-approval", stale: true });
     await page.reload();
