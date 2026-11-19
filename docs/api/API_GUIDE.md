@@ -162,3 +162,17 @@ Quy tắc hành vi:
 - `POST .../attempts`: mỗi (bài giao, học sinh, câu) một lần; trùng `requestId` trả lại kết quả đã lưu (idempotent). MCQ so `choice`, NUMERIC so `value` theo `tolerance`, SHORT không chấm (`isCorrect: null`). Lời giải chỉ trả sau khi trả lời.
 - `GET /classes/{id}/assignments/{aid}/progress`: chỉ giáo viên của lớp đó, chỉ số tổng hợp (không có tên/đáp án từng học sinh).
 - Chưa làm: thẻ ghi nhớ (flashcard) chưa có luồng trả lời riêng.
+
+## 10. Khách khảo sát (ẩn danh) — Pha 0
+
+Bật bằng env `GUEST_ACCESS_ENABLED=true` (mặc định tắt → mọi endpoint khách trả **404**). Lớp khảo sát `GUEST_CLASS_CODE` (mặc định `KS`) do `python -m seed.survey` tạo và giao sẵn mọi bài đã xuất bản.
+
+| Endpoint | Ghi chú |
+|---|---|
+| `GET /v1/auth/config` → `{guestEnabled}` | Công khai; FE dùng để hiện nút "Vào làm thử" |
+| `POST /v1/auth/guest` `{lessonKey?}` → 201 `{user, surveyCode, assignmentId?}` | Tạo tài khoản STUDENT ẩn danh (không tên/email/mật khẩu/IP), set cookie phiên **14 ngày**. `lessonKey` là slug bài (vd `dan-so-vung`): trả `assignmentId` để mở thẳng bài. 429 `RATE_LIMITED` theo IP thật (`GUEST_CREATE_PER_HOUR`, mặc định 60: một lớp dùng chung Wi-Fi chỉ có một IP), 503 `GUEST_CAPACITY` (`GUEST_MAX_ACTIVE`, mặc định 500) / `GUEST_NOT_CONFIGURED` |
+| `POST /v1/auth/guest/resume` `{surveyCode}` | Mất cookie / đổi máy; 5 mã sai / 15 phút / IP → 429 |
+| `GET /v1/admin/survey/export.csv` (ADMIN, TEACHER) | `survey_code, lesson, item, first_attempt_is_correct, answered_at_utc`; không cột định danh nào khác |
+
+- `UserOut` có thêm `isGuest`, `surveyCode`. Khách là STUDENT: route giáo viên/admin trả 403, PR-08 giữ nguyên (provenance của khách → 404). Mã khách không đăng nhập được bằng `/auth/login`.
+- Dọn dẹp thủ công: `scripts/ops/purge_guests.py --dry-run`. Khách đã có bài làm không xóa được (bảng attempt chỉ-thêm), nên chỉ bị vô hiệu hóa.

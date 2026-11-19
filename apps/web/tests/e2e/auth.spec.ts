@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { login, PASSWORD } from "./helpers";
+import { login, openAccountForm, PASSWORD } from "./helpers";
 
 test("wrong password shows a message by error code", async ({ page }) => {
   await page.goto("/login");
+  await openAccountForm(page);
   await page.getByLabel("Email hoặc mã học sinh").fill("gv.dia@preclass.local");
   await page.getByLabel("Mật khẩu").fill(`${PASSWORD}-wrong`);
   await page.getByRole("button", { name: "Đăng nhập" }).click();

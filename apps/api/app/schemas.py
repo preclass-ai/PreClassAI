@@ -105,6 +105,23 @@ class LoginRequest(ApiModel):
     model_config = ex({"identifier": "gv.dia@preclass.local", "password": "preclass-demo"})
 
 
+class AuthConfig(ApiModel):
+    guest_enabled: bool = Field(description="True when anonymous guest access is switched on (GUEST_ACCESS_ENABLED).")
+    model_config = ex({"guestEnabled": True})
+
+
+class GuestRequest(ApiModel):
+    lesson_key: str | None = Field(default=None, max_length=80, description="Optional lesson slug (e.g. dan-so-vung): "
+                                   "the response then carries the matching assignmentId so the client can open it.")
+    model_config = ex({"lessonKey": "dan-so-vung"})
+
+
+class GuestResumeRequest(ApiModel):
+    survey_code: str = Field(max_length=20, description="Code shown to the guest, e.g. KS-7H4P (case-insensitive).")
+    lesson_key: str | None = Field(default=None, max_length=80, description="Same as on POST /auth/guest.")
+    model_config = ex({"surveyCode": "KS-7H4P", "lessonKey": "dan-so-vung"})
+
+
 class UserOut(ApiModel):
     id: UUID
     role: Role
@@ -112,9 +129,20 @@ class UserOut(ApiModel):
     email: str | None = None
     login_code: str | None = None
     class_ids: list[UUID] = []
+    is_guest: bool = False
+    survey_code: str | None = Field(default=None, description="Anonymous survey code (guests only), e.g. KS-7H4P.")
     model_config = ex({
         "id": I["teacher"], "role": "TEACHER", "displayName": "Cô Địa Lí (minh họa)",
         "email": "gv.dia@preclass.local", "loginCode": None, "classIds": [I["class"]]})
+
+
+class GuestOut(ApiModel):
+    user: UserOut
+    survey_code: str
+    assignment_id: UUID | None = Field(default=None, description="Assignment of the requested lesson in the survey class.")
+    model_config = ex({"user": {"id": I["student"], "role": "STUDENT",
+                                "displayName": "Khách 7H4P", "loginCode": "KS-7H4P", "classIds": [I["class"]],
+                                "isGuest": True, "surveyCode": "KS-7H4P"}, "surveyCode": "KS-7H4P", "assignmentId": None})
 
 
 class ClassOut(ApiModel):

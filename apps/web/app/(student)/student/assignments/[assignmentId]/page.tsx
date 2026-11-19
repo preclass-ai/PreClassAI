@@ -1,5 +1,6 @@
 "use client";
 
+import { GuestSurveyCard } from "@/features/guest";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { use, useRef, useState, type FormEvent } from "react";
@@ -82,6 +83,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
           />
         ) : null,
       )}
+      <GuestSurveyCard />
     </article>
   );
 }

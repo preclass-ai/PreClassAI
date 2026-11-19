@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     reviewer_enabled: bool = False  # second-person review (REVIEWER role); off by default
     mock_inject: str = ""  # fake_anchor,changed_quote,new_number,two_keys (tests)
     generation_daily_token_budget: int = 300_000
+    guest_access_enabled: bool = False  # anonymous survey access (POST /v1/auth/guest); 404 when off
+    guest_class_code: str = "KS"  # survey class guests join; its assignments are created by `python -m seed.survey`
+    guest_max_active: int = 500  # guests seen in the last 14 days; beyond it new guests get 503
+    guest_create_per_hour: int = 60  # per real client IP; a classroom shares one Wi-Fi (NAT), so keep it generous
+    guest_session_days: int = 14
 
     @model_validator(mode="after")
     def _public_origin_when_deployed(self) -> "Settings":

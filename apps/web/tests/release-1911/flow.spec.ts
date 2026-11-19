@@ -1,5 +1,6 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
+import { openAccountForm } from "../e2e/helpers";
 
 const DIR = "test-results/release-1911";
 const PASSWORD = process.env.SEED_PASSWORD ?? "preclass-demo";
@@ -36,6 +37,7 @@ async function S(page: Page, vp: string, name: string, fn: () => Promise<unknown
 
 async function login(page: Page, id: string) {
   await page.goto("/login");
+  await openAccountForm(page);
   await page.getByLabel("Email hoặc mã học sinh").fill(id);
   await page.getByLabel("Mật khẩu").fill(PASSWORD);
   await page.getByRole("button", { name: "Đăng nhập" }).click();

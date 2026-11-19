@@ -1,9 +1,10 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
-import { Button, ErrorBox, Field } from "@/components/ui";
+import { Button, ErrorBox, Field, Loading } from "@/components/ui";
+import { GUEST_NOTICE } from "@/features/guest";
 import { api, unwrap } from "@/lib/api";
 import { homeFor, ME_KEY, useAuth } from "@/lib/auth";
 import { safeNext } from "@/lib/redirect";
@@ -17,6 +18,10 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [guestBusy, setGuestBusy] = useState(false);
+  const [code, setCode] = useState("");
+  const cfg = useQuery({ queryKey: ["auth-config"], queryFn: () => unwrap(api.GET("/v1/auth/config")), retry: false });
+  const guest = cfg.data?.guestEnabled === true;
 
   useEffect(() => {
     if (!loading && user) router.replace(next ?? homeFor(user.role));
@@ -38,14 +43,23 @@ function LoginForm() {
     }
   }
 
-  // method="post": if JS has not loaded yet, a native submit must never put the password in the URL.
-  return (
-    <form className="card login-card" method="post" onSubmit={submit}>
-      <p className="login-brand">◉ <span>PreClass AI</span></p>
-      <p className="eyebrow">MỖI CÂU HỎI LÀ MỘT KHÁM PHÁ</p>
-      <h1>Chào mừng trở lại!</h1>
-      <p className="muted">Đăng nhập để tiếp tục hành trình Địa lí của em.</p>
-      <ErrorBox error={error} />
+  async function enterAsGuest() {
+    setGuestBusy(true);
+    setError(null);
+    try {
+      const g = code.trim()
+        ? await unwrap(api.POST("/v1/auth/guest/resume", { body: { surveyCode: code.trim() } }))
+        : await unwrap(api.POST("/v1/auth/guest", { body: {} }));
+      qc.setQueryData(ME_KEY, g.user);
+      router.replace("/student");
+    } catch (err) {
+      setError(err);
+      setGuestBusy(false);
+    }
+  }
+
+  const accountFields = (
+    <>
       <Field label="Email hoặc mã học sinh">
         <input
           name="identifier"
@@ -69,6 +83,46 @@ function LoginForm() {
       <Button type="submit" variant="primary" busy={busy}>
         Đăng nhập
       </Button>
+    </>
+  );
+
+  // method="post": if JS has not loaded yet, a native submit must never put the password in the URL.
+  return (
+    <form className="card login-card" method="post" onSubmit={submit}>
+      <p className="login-brand">◉ <span>PreClass AI</span></p>
+      <p className="eyebrow">MỖI CÂU HỎI LÀ MỘT KHÁM PHÁ</p>
+      <h1>Chào mừng trở lại!</h1>
+      <p className="muted">Đăng nhập để tiếp tục hành trình Địa lí của em.</p>
+      <ErrorBox error={error} />
+      {cfg.isPending ? (
+        <Loading /> // do not flash the account form and then collapse it when guest access turns out to be on
+      ) : guest ? (
+        <>
+          <div className="stack">
+            <Button type="button" variant="primary" className="btn-lg" busy={guestBusy} onClick={() => void enterAsGuest()}>
+              Vào làm thử (không cần tài khoản)
+            </Button>
+            <p className="muted small">{GUEST_NOTICE}</p>
+          </div>
+          <details className="login-more">
+            <summary>Giáo viên / có tài khoản</summary>
+            <div className="stack">{accountFields}</div>
+          </details>
+          <details className="login-more">
+            <summary>Đã có mã khảo sát?</summary>
+            <div className="stack">
+              <Field label="Mã khảo sát" hint="Dạng KS-XXXX, hiện ở đầu trang bài làm.">
+                <input name="surveyCode" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value)} placeholder="KS-7H4P" />
+              </Field>
+              <Button type="button" busy={guestBusy} disabled={!code.trim()} onClick={() => void enterAsGuest()}>
+                Vào lại bằng mã
+              </Button>
+            </div>
+          </details>
+        </>
+      ) : (
+        accountFields
+      )}
       <p className="login-footnote">Bài học có nguồn kiểm chứng · Lời giải được thầy cô duyệt</p>
     </form>
   );

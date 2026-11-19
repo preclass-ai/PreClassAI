@@ -45,6 +45,7 @@ def main() -> None:
     subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], check=True, env=env)  # noqa: S603
     subprocess.run([sys.executable, "-m", "seed.seed"], check=True, env=env)  # noqa: S603
     subprocess.run([sys.executable, "-m", "seed.accounts"], check=True, env=env)  # noqa: S603
+    subprocess.run([sys.executable, "-m", "seed.survey"], check=True, env=env)  # noqa: S603
     print("Demo database reset.")
 
 

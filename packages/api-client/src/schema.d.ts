@@ -21,6 +21,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/survey/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Survey data export (CSV)
+         * @description One row per guest answer: `survey_code, lesson, item, first_attempt_is_correct, answered_at_utc`. No other identifying column.
+         */
+        get: operations["exportSurveyCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public sign-in options (is anonymous guest access on?) */
+        get: operations["getAuthConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/guest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start as an anonymous guest (survey)
+         * @description Creates a STUDENT account with no name/e-mail/password, joins the survey class, sets the session cookie (14 days). Returns the survey code to write on the questionnaire. 404 when guest access is off; 429 `RATE_LIMITED` per client IP; 503 when the survey class is missing or `GUEST_MAX_ACTIVE` is reached.
+         */
+        post: operations["createGuest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/guest/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Come back as the same guest with the survey code
+         * @description For a lost cookie / another device. 5 wrong codes per IP per 15 minutes → 429 `RATE_LIMITED`.
+         */
+        post: operations["resumeGuest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/login": {
         parameters: {
             query?: never;
@@ -971,6 +1048,19 @@ export interface components {
             /** Resourcetype */
             resourceType: string;
         };
+        /**
+         * AuthConfig
+         * @example {
+         *       "guestEnabled": true
+         *     }
+         */
+        AuthConfig: {
+            /**
+             * Guestenabled
+             * @description True when anonymous guest access is switched on (GUEST_ACCESS_ENABLED).
+             */
+            guestEnabled: boolean;
+        };
         /** BlockCounts */
         BlockCounts: {
             /**
@@ -1347,6 +1437,65 @@ export interface components {
              * @enum {string}
              */
             outputType: "WORKSHEET" | "FLASHCARDS";
+        };
+        /**
+         * GuestOut
+         * @example {
+         *       "surveyCode": "KS-7H4P",
+         *       "user": {
+         *         "classIds": [
+         *           "d97fbc44-edb6-5333-b65d-1427e836354c"
+         *         ],
+         *         "displayName": "Khách 7H4P",
+         *         "id": "11fa90e0-de42-548f-8dfd-20477bbef0a0",
+         *         "isGuest": true,
+         *         "loginCode": "KS-7H4P",
+         *         "role": "STUDENT",
+         *         "surveyCode": "KS-7H4P"
+         *       }
+         *     }
+         */
+        GuestOut: {
+            /**
+             * Assignmentid
+             * @description Assignment of the requested lesson in the survey class.
+             */
+            assignmentId?: string | null;
+            /** Surveycode */
+            surveyCode: string;
+            user: components["schemas"]["UserOut"];
+        };
+        /**
+         * GuestRequest
+         * @example {
+         *       "lessonKey": "dan-so-vung"
+         *     }
+         */
+        GuestRequest: {
+            /**
+             * Lessonkey
+             * @description Optional lesson slug (e.g. dan-so-vung): the response then carries the matching assignmentId so the client can open it.
+             */
+            lessonKey?: string | null;
+        };
+        /**
+         * GuestResumeRequest
+         * @example {
+         *       "lessonKey": "dan-so-vung",
+         *       "surveyCode": "KS-7H4P"
+         *     }
+         */
+        GuestResumeRequest: {
+            /**
+             * Lessonkey
+             * @description Same as on POST /auth/guest.
+             */
+            lessonKey?: string | null;
+            /**
+             * Surveycode
+             * @description Code shown to the guest, e.g. KS-7H4P (case-insensitive).
+             */
+            surveyCode: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2641,6 +2790,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Isguest
+             * @default false
+             */
+            isGuest: boolean;
             /** Logincode */
             loginCode?: string | null;
             /**
@@ -2648,6 +2802,11 @@ export interface components {
              * @enum {string}
              */
             role: "TEACHER" | "REVIEWER" | "STUDENT" | "ADMIN";
+            /**
+             * Surveycode
+             * @description Anonymous survey code (guests only), e.g. KS-7H4P.
+             */
+            surveyCode?: string | null;
         };
         /**
          * ValidateOut
@@ -2816,6 +2975,176 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exportSurveyCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "text/csv": string;
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAuthConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthConfig"];
+                };
+            };
+        };
+    };
+    createGuest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestOut"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description RATE_LIMITED. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description GUEST_NOT_CONFIGURED / GUEST_CAPACITY. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resumeGuest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuestResumeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestOut"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description RATE_LIMITED. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };
