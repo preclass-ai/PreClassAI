@@ -11,6 +11,11 @@ const TEXT =
   "| Đông Nam Bộ | 17,8 |\n| Duyên hải miền Trung | 9,4 |";
 
 test.describe.configure({ mode: "serial" });
+
+// Render Free sleeps after 15 idle minutes: the first request can take ~60 s. Wake it before the test clock matters.
+test.beforeEach(async ({ request }) => {
+  await request.get("/v1/health", { timeout: 120_000 });
+});
 const st = { title: "", lessonUrl: "", assignmentUrl: "", blockId: "" };
 let n = 0;
 
@@ -57,7 +62,7 @@ async function approveAll(page: Page) {
   await page.getByRole("tab", { name: "Duyệt" }).click();
   // Only the review queue's own buttons: at 1280 the editor inspector also has one and is still in the DOM.
   const list = page.locator(".review-list");
-  const approve = list.getByRole("button", { name: "Duyệt khối này" });
+  const approve = list.getByRole("button", { name: "Duyệt khối này", disabled: false }); // a block with blockers has it disabled
   const empty = page.getByText("Không còn khối nào trong danh sách này.");
   // Either there is something to approve, or the queue is already empty (e.g. a fresh revision with carried-over approvals).
   await expect(approve.first().or(empty)).toBeVisible({ timeout: 30_000 });
@@ -229,6 +234,7 @@ test("T3 teacher: withdraw (and republish on 1280)", async ({ page }, info) => {
       await expect(newRev).toBeVisible({ timeout: 30_000 });
       page.once("dialog", (d) => void d.accept()); // the button asks window.confirm first
       await newRev.click();
+      await expect(page.getByText("Bản nháp").first()).toBeVisible({ timeout: 30_000 }); // page switched to revision #2 before reviewing
       await approveAll(page);
       await publishAssign(page, vp);
     });

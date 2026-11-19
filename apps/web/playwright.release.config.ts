@@ -4,7 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "tests/release-1911",
   outputDir: "test-results/pw-output-1911",
-  timeout: 180_000,
+  timeout: 300_000,
   workers: 1,
   fullyParallel: false,
   reporter: [["list"]],
