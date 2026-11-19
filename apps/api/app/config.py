@@ -1,6 +1,17 @@
 from functools import lru_cache
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def normalize_db_url(url: str) -> str:
+    """Accept a provider URL (Neon/Render: postgres://…?sslmode=require&channel_binding=…) and make it asyncpg-ready."""
+    parts = urlsplit(url)
+    scheme = "postgresql+asyncpg" if parts.scheme in ("postgres", "postgresql") else parts.scheme
+    q = [(k, v) for k, v in parse_qsl(parts.query) if k != "channel_binding"]
+    q = [("ssl", v) if k == "sslmode" else (k, v) for k, v in q]  # asyncpg spells it `ssl`
+    return urlunsplit((scheme, parts.netloc, parts.path, urlencode(q), parts.fragment))
 
 
 class Settings(BaseSettings):
@@ -12,6 +23,9 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:3000"
     cookie_secure: bool = True  # set COOKIE_SECURE=false for plain-http local dev
     session_ttl_hours: int = 8
+    db_pool_size: int = 10  # Neon free demo: 5 (render.yaml)
+    db_max_overflow: int = 5  # Neon free demo: 0
+    db_pool_recycle: int = 1800  # Neon free demo: 300 (idle connections are closed server-side)
     db_null_pool: bool = False  # tests: asyncpg connections must not outlive the per-test event loop
     upload_dir: str = "./data/uploads"
     llm_provider: str = "mock"  # mock | openai_compatible
@@ -22,6 +36,11 @@ class Settings(BaseSettings):
     reviewer_enabled: bool = False  # second-person review (REVIEWER role); off by default
     mock_inject: str = ""  # fake_anchor,changed_quote,new_number,two_keys (tests)
     generation_daily_token_budget: int = 300_000
+
+    @field_validator("database_url")
+    @classmethod
+    def _db_url(cls, v: str) -> str:
+        return normalize_db_url(v)
 
 
 @lru_cache
