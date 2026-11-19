@@ -55,6 +55,7 @@ async def login(
         select(m.AppUser).where(
             or_(func.lower(m.AppUser.email) == ident, func.lower(m.AppUser.login_code) == ident),
             m.AppUser.is_active.is_(True),
+            m.AppUser.is_guest.is_(False),  # guests have no password: they use /auth/guest[/resume]
         )
     )
     # Same answer and similar timing for unknown user and wrong password.
@@ -152,4 +153,5 @@ async def audit_logs(
 async def _user_out(db: AsyncSession, user: m.AppUser) -> UserOut:
     class_ids = (await db.scalars(select(m.ClassMember.class_id).where(m.ClassMember.user_id == user.id))).all()
     return UserOut(id=user.id, role=user.role, display_name=user.display_name, email=user.email,
-                   login_code=user.login_code, class_ids=list(class_ids))
+                   login_code=user.login_code, class_ids=list(class_ids), is_guest=user.is_guest,
+                   survey_code=user.survey_code)

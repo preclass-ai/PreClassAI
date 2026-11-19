@@ -1,4 +1,5 @@
 import { appendFileSync, mkdirSync } from "node:fs";
+import { openAccountForm } from "../e2e/helpers";
 import { expect, test, type Page } from "@playwright/test";
 
 // Student flow on the SEEDED published lesson (no publish/assign). Env: STUDENT_<vp> ids, BLOCK_ID.
@@ -24,6 +25,7 @@ test("seeded: student answers 2 questions, sees explanation, provenance blocked"
   let step = "login";
   try {
     await page.goto("/login");
+    await openAccountForm(page);
     await page.getByLabel("Email hoặc mã học sinh").fill(STUDENT[vp]!);
     await page.getByLabel("Mật khẩu").fill(PASSWORD);
     await page.getByRole("button", { name: "Đăng nhập" }).click();

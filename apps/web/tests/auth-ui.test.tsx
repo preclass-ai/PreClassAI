@@ -48,6 +48,7 @@ it("keeps the user signed in and shows an error when logout cannot reach the ser
 it("offers a keyboard shortcut past the main navigation", () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   client.setQueryData(ME_KEY, null);
+  client.setQueryData(["auth-config"], { guestEnabled: false });
   render(
     <QueryClientProvider client={client}>
       <AuthProvider><AppShell>Lesson</AppShell></AuthProvider>
@@ -60,6 +61,7 @@ it("offers a keyboard shortcut past the main navigation", () => {
 it("names both login controls for browser form handling", () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   client.setQueryData(ME_KEY, null);
+  client.setQueryData(["auth-config"], { guestEnabled: false });
   render(
     <QueryClientProvider client={client}>
       <AuthProvider><LoginPage /></AuthProvider>
@@ -72,10 +74,27 @@ it("names both login controls for browser form handling", () => {
 it("login form never falls back to GET (the password must not end up in the URL)", () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   client.setQueryData(ME_KEY, null);
+  client.setQueryData(["auth-config"], { guestEnabled: false });
   const { container } = render(
     <QueryClientProvider client={client}>
       <AuthProvider><LoginPage /></AuthProvider>
     </QueryClientProvider>,
   );
   expect(container.querySelector("form")).toHaveAttribute("method", "post");
+});
+
+it("with guest access on: a big guest button first, the account form collapsed below", () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client.setQueryData(ME_KEY, null);
+  client.setQueryData(["auth-config"], { guestEnabled: true });
+  const { container } = render(
+    <QueryClientProvider client={client}>
+      <AuthProvider><LoginPage /></AuthProvider>
+    </QueryClientProvider>,
+  );
+  expect(screen.getByRole("button", { name: "Vào làm thử (không cần tài khoản)" })).toBeTruthy();
+  expect(screen.getByText(/Không thu tên hay email/)).toBeTruthy();
+  const details = container.querySelectorAll("details.login-more");
+  expect(details.length).toBe(2);
+  details.forEach((d) => expect(d.hasAttribute("open")).toBe(false));
 });

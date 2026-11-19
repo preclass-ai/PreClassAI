@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from uuid import UUID
 
 from argon2 import PasswordHasher
-from argon2.exceptions import VerificationError
+from argon2.exceptions import InvalidHashError, VerificationError
 from fastapi import Depends, Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,7 +31,7 @@ _DUMMY_HASH = _hasher.hash("not-a-real-password")  # equalises timing for unknow
 def verify_password(password_hash: str | None, password: str) -> bool:
     try:
         return _hasher.verify(password_hash or _DUMMY_HASH, password) and password_hash is not None
-    except VerificationError:
+    except (VerificationError, InvalidHashError):
         return False
 
 
@@ -39,9 +39,9 @@ def token_hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-async def create_session(db: AsyncSession, user_id: UUID) -> str:
+async def create_session(db: AsyncSession, user_id: UUID, ttl_hours: int | None = None) -> str:
     token = secrets.token_urlsafe(32)
-    expires = datetime.now(UTC) + timedelta(hours=get_settings().session_ttl_hours)
+    expires = datetime.now(UTC) + timedelta(hours=ttl_hours or get_settings().session_ttl_hours)
     db.add(m.Session(token_hash=token_hash(token), user_id=user_id, expires_at=expires))
     return token
 
@@ -59,8 +59,8 @@ class LoginLimiter:
             q.popleft()
         return q
 
-    def check(self, key: str) -> None:
-        if len(self._prune(key)) >= self.max:
+    def check(self, key: str, limit: int | None = None) -> None:
+        if len(self._prune(key)) >= (limit or self.max):
             raise ApiError(429, "RATE_LIMITED", "Quá nhiều lần thử, vui lòng đợi ít phút")
 
     def fail(self, key: str) -> None:
@@ -105,7 +105,12 @@ async def current_user(request: Request, db: Annotated[AsyncSession, Depends(get
             )
         ).first()
         if row:
-            return CurrentUser(row[1], row[0])
+            user = row[1]
+            now = datetime.now(UTC)
+            if user.is_guest and (user.last_seen_at is None or now - user.last_seen_at > timedelta(hours=1)):
+                user.last_seen_at = now  # hourly: enough for "inactive for N days" purging
+                await db.commit()
+            return CurrentUser(user, row[0])
     raise ApiError(401, "UNAUTHENTICATED", "Bạn chưa đăng nhập hoặc phiên đã hết hạn")
 
 

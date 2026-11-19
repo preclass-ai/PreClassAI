@@ -1,0 +1,125 @@
+"""Anonymous survey guests: one throw-away STUDENT account per person, identified only by a survey code (KS-XXXX).
+
+No name, e-mail or IP is stored. Guests are STUDENT accounts in the survey class, so every teacher/admin route already
+answers them 403 and the student whitelist (PR-08) applies unchanged.
+"""
+
+import csv
+import io
+import secrets
+from datetime import UTC, datetime, timedelta
+from typing import Any
+from uuid import UUID
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth import LoginLimiter
+from app.config import get_settings
+from app.db import models as m
+from app.errors import ApiError
+from app.ids import uid
+
+ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O/1/I: codes are copied by hand from a screen
+PREFIX = "KS-"
+UNUSABLE_HASH = "!guest"  # not an argon2 hash: password login can never succeed
+NOT_ENABLED = ApiError(404, "NOT_FOUND", "Không tìm thấy")
+
+create_limiter = LoginLimiter(window_s=3600)  # counts every guest created from an IP in the last hour
+resume_limiter = LoginLimiter(max_failures=5, window_s=900)  # wrong codes per IP per 15 minutes
+
+
+def require_enabled() -> None:
+    if not get_settings().guest_access_enabled:
+        raise NOT_ENABLED
+
+
+def new_code() -> str:
+    return PREFIX + "".join(secrets.choice(ALPHABET) for _ in range(4))
+
+
+def normalize_code(raw: str) -> str:
+    return raw.strip().upper().replace(" ", "")
+
+
+async def survey_class(db: AsyncSession) -> m.Class:
+    cls = await db.scalar(select(m.Class).where(m.Class.code == get_settings().guest_class_code))
+    if cls is None:
+        raise ApiError(503, "GUEST_NOT_CONFIGURED", "Lớp khảo sát chưa được cấu hình")
+    return cls
+
+
+async def create_guest(db: AsyncSession, ip: str) -> m.AppUser:
+    cfg = get_settings()
+    create_limiter.check(ip, cfg.guest_create_per_hour)
+    cls = await survey_class(db)
+    active = await db.scalar(select(func.count()).select_from(m.AppUser).where(
+        m.AppUser.is_guest.is_(True),
+        func.coalesce(m.AppUser.last_seen_at, m.AppUser.created_at) > datetime.now(UTC) - timedelta(days=14)))
+    if (active or 0) >= cfg.guest_max_active:
+        raise ApiError(503, "GUEST_CAPACITY", "Hệ thống khảo sát đang quá tải, vui lòng thử lại sau")
+    for _ in range(20):
+        code = new_code()
+        if await db.scalar(select(m.AppUser.id).where(m.AppUser.survey_code == code)) is None:
+            break
+    else:  # pragma: no cover - 32^4 codes: practically unreachable below GUEST_MAX_ACTIVE
+        raise ApiError(503, "GUEST_CAPACITY", "Không tạo được mã khảo sát, vui lòng thử lại")
+    user = m.AppUser(login_code=code, survey_code=code, display_name=f"Khách {code[len(PREFIX):]}", role="STUDENT",
+                     password_hash=UNUSABLE_HASH, is_guest=True, last_seen_at=datetime.now(UTC))
+    db.add(user)
+    await db.flush()
+    db.add(m.ClassMember(class_id=cls.id, user_id=user.id, role_in_class="STUDENT"))
+    create_limiter.fail(ip)
+    return user
+
+
+async def find_guest(db: AsyncSession, raw_code: str, ip: str) -> m.AppUser:
+    resume_limiter.check(ip)
+    user = await db.scalar(select(m.AppUser).where(
+        m.AppUser.survey_code == normalize_code(raw_code), m.AppUser.is_guest.is_(True), m.AppUser.is_active.is_(True)))
+    if user is None:
+        resume_limiter.fail(ip)
+        raise ApiError(404, "NOT_FOUND", "Không tìm thấy mã khảo sát này")
+    resume_limiter.reset(ip)
+    user.last_seen_at = datetime.now(UTC)
+    return user
+
+
+async def assignment_for_lesson(db: AsyncSession, lesson_key: str | None) -> UUID | None:
+    """Assignment (in the survey class) of the lesson whose seed slug is `lesson_key`, e.g. dan-so-vung."""
+    if not lesson_key:
+        return None
+    return await db.scalar(
+        select(m.Assignment.id)
+        .join(m.PublishedVersion, m.PublishedVersion.id == m.Assignment.published_version_id)
+        .join(m.LessonRevision, m.LessonRevision.id == m.PublishedVersion.lesson_revision_id)
+        .join(m.Class, m.Class.id == m.Assignment.class_id)
+        .where(m.LessonRevision.lesson_id == uid(f"{lesson_key}:lesson"), m.PublishedVersion.state == "ACTIVE",
+               m.Class.code == get_settings().guest_class_code)
+        .limit(1))
+
+
+def _safe(cell: str) -> str:
+    return "'" + cell if cell[:1] in ("=", "+", "-", "@") else cell  # CSV formula injection
+
+
+async def export_csv(db: AsyncSession) -> str:
+    """One row per guest answer: survey_code, lesson, item, is_correct, answered_at. Attempts are write-once, so each row
+    is the FIRST (and only) attempt. Nothing else identifies the person."""
+    rows = (await db.execute(
+        select(m.AppUser.survey_code, m.PublishedVersion.snapshot, m.StudentAttempt.item_block_id,
+               m.StudentAttempt.is_correct, m.StudentAttempt.created_at)
+        .join(m.AppUser, m.AppUser.id == m.StudentAttempt.student_id)
+        .join(m.Assignment, m.Assignment.id == m.StudentAttempt.assignment_id)
+        .join(m.PublishedVersion, m.PublishedVersion.id == m.Assignment.published_version_id)
+        .where(m.AppUser.is_guest.is_(True))
+        .order_by(m.AppUser.survey_code, m.StudentAttempt.created_at))).all()
+    out = io.StringIO()
+    w = csv.writer(out, lineterminator="\n")
+    w.writerow(["survey_code", "lesson", "item", "first_attempt_is_correct", "answered_at_utc"])
+    for code, snap, item_id, ok, at in rows:
+        items: list[dict[str, Any]] = [b for b in snap["blocks"] if b["kind"] == "worksheet_item"]
+        n = next((i for i, b in enumerate(items, start=1) if b["id"] == str(item_id)), 0)
+        w.writerow([code, _safe(str(snap["title"])), f"Câu {n}", "" if ok is None else str(ok).lower(),
+                    at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")])
+    return out.getvalue()

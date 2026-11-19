@@ -52,6 +52,7 @@ class AppUser(Base):
     __table_args__ = (
         _in("role", "TEACHER", "REVIEWER", "STUDENT", "ADMIN"),
         CheckConstraint("email IS NOT NULL OR login_code IS NOT NULL", name="ck_user_identity"),
+        CheckConstraint("NOT is_guest OR survey_code IS NOT NULL", name="ck_guest_has_code"),
     )
     id: Mapped[uuid.UUID] = pk()
     email: Mapped[str | None] = mapped_column(Text, unique=True)
@@ -60,6 +61,9 @@ class AppUser(Base):
     role: Mapped[str] = mapped_column(Text)
     password_hash: Mapped[str] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
+    is_guest: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    survey_code: Mapped[str | None] = mapped_column(Text, unique=True)  # anonymous guests: "KS-XXXX"
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = ts()
 
 

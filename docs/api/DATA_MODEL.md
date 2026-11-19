@@ -34,7 +34,7 @@ erDiagram
 
 | Bảng | Cột chính | Ghi chú |
 |---|---|---|
-| `app_user` | `email` hoặc `login_code`, `display_name`, `role` TEACHER/REVIEWER/STUDENT/ADMIN, `password_hash` (argon2), `is_active` | Học sinh chỉ có `login_code`, không lưu email/SĐT. |
+| `app_user` | `email` hoặc `login_code`, `display_name`, `role` TEACHER/REVIEWER/STUDENT/ADMIN, `password_hash` (argon2), `is_active` | Học sinh chỉ có `login_code`, không lưu email/SĐT. Khách khảo sát (migration 0002): `is_guest`, `survey_code` (unique, dạng `KS-XXXX`, trùng `login_code`), `last_seen_at`; `password_hash` là giá trị không dùng được; không lưu IP. |
 | `session` | `token_hash`, `user_id`, `expires_at`, `revoked_at` | Cookie session phía server; logout thu hồi thật. |
 | `class`, `class_member` | `code`, `grade` 10/11; `role_in_class` TEACHER/STUDENT | `UNIQUE(class_id, user_id)`. |
 | `source_asset` | `owner_id`, `title`, `license_note`, `visibility` PRIVATE/SCHOOL | SCHOOL cần `license_note` (VAL-09). |
