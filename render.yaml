@@ -23,5 +23,5 @@ services:
       - { key: DB_MAX_OVERFLOW, value: "0" }
       - { key: DB_POOL_RECYCLE, value: "300" }
       - { key: DATABASE_URL, sync: false }   # Neon direct string; scheme/sslmode are normalized by the app
-      - { key: FRONTEND_ORIGIN, sync: false } # https://preclass-ai.vercel.app
+      - { key: FRONTEND_ORIGIN, sync: false } # https://pre-class-ai.vercel.app
       - { key: SESSION_SECRET, generateValue: true }

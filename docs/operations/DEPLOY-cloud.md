@@ -5,9 +5,9 @@ Quyết định và giới hạn: `docs/adr/ADR-0011-cloud-demo-deploy.md`. Ch�
 ## Thứ tự
 
 1. **Neon:** project `preclass`, AWS Singapore, Postgres 16. Lấy chuỗi **Direct** (host không có `-pooler`) dạng `postgresql://…?sslmode=require`. App tự đổi scheme sang asyncpg và `sslmode` → `ssl`.
-2. **Render:** New → Blueprint → repo, nhánh `main` (đọc `render.yaml`). Nhập `DATABASE_URL` (chuỗi Neon) và `FRONTEND_ORIGIN` (`https://preclass-ai.vercel.app`). Start command tự `alembic upgrade head`, seed nếu DB trống, rồi chạy uvicorn.
+2. **Render:** New → Blueprint → repo, nhánh `main` (đọc `render.yaml`). Nhập `DATABASE_URL` (chuỗi Neon) và `FRONTEND_ORIGIN` (`https://pre-class-ai.vercel.app`). Start command tự `alembic upgrade head`, seed nếu DB trống, rồi chạy uvicorn.
 3. **Vercel:** import repo, tên project `preclass-ai`, Root Directory `apps/web`, biến **Environment `API_ORIGIN`** = URL Render (vd `https://preclass-api.onrender.com`, không có `/` cuối). Vercel tự dùng `pnpm-lock.yaml` ở gốc repo (workspace `@preclass/api-client`). Build không dùng `standalone` khi `VERCEL=1`.
-4. Nếu URL Vercel khác `preclass-ai.vercel.app`: sửa `FRONTEND_ORIGIN` trên Render và redeploy.
+4. Nếu URL Vercel khác `pre-class-ai.vercel.app`: sửa `FRONTEND_ORIGIN` trên Render và redeploy.
 5. UptimeRobot: HTTP monitor 5 phút tới `https://<vercel>/v1/health`.
 
 ## Biến môi trường API (Render)
@@ -34,3 +34,9 @@ Nếu bắt buộc dùng chuỗi pooled (`-pooler`), app tự tắt prepared-sta
 ## Kiểm tra sau deploy
 
 `curl https://<vercel>/v1/health`, mở `/docs`, đăng nhập GV/HS demo. Cookie phải `Secure; HttpOnly; SameSite=Lax`. Chạy `scripts/smoke.py` trỏ URL cloud.
+
+## Chẩn đoán nhanh
+
+- Vercel trả `X-Vercel-Error: DNS_HOSTNAME_RESOLVED_PRIVATE` ở `/v1/*`: `API_ORIGIN` thiếu hoặc là localhost khi build. Từ nay build fail rõ ràng; sửa biến rồi Redeploy **không dùng build cache**.
+- Đăng nhập 403 `CSRF`: `FRONTEND_ORIGIN` trên Render phải đúng `https://pre-class-ai.vercel.app`. Log Render có dòng `CSRF rejected: … origin=… expected=…` (không có cookie/token).
+- API với `APP_ENV=demo|production` từ chối khởi động nếu `FRONTEND_ORIGIN` không phải https công khai.

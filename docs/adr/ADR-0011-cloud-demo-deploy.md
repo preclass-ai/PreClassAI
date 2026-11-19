@@ -8,7 +8,7 @@ Cần một URL công khai ổn định cho buổi nghiệm thu/thi, không tố
 
 ## Decision
 
-- **Web** `apps/web` trên Vercel (`https://preclass-ai.vercel.app`); **API** `apps/api` trên Render Free (Singapore); **DB** Neon Free Postgres 16 (Singapore). Chỉ seed "DỮ LIỆU MINH HỌA", `LLM_PROVIDER=mock`, `APP_ENV=demo`.
+- **Web** `apps/web` trên Vercel (`https://pre-class-ai.vercel.app`); **API** `apps/api` trên Render Free (Singapore); **DB** Neon Free Postgres 16 (Singapore). Chỉ seed "DỮ LIỆU MINH HỌA", `LLM_PROVIDER=mock`, `APP_ENV=demo`.
 - **Một origin:** Next rewrite `/v1/*`, `/docs`, `/openapi.json` sang `API_ORIGIN` (biến build trên Vercel). Trình duyệt không gọi `onrender.com`; cookie giữ `Secure`, `HttpOnly`, `SameSite=Lax`; CSRF chấp nhận `FRONTEND_ORIGIN`.
 - API chạy `uvicorn --proxy-headers --forwarded-allow-ips='*'` với 1 worker, nên giới hạn đăng nhập dùng IP thật từ `X-Forwarded-For` (Vercel đặt giá trị này), không gộp mọi người vào IP của Vercel/Render.
 - DB dùng chuỗi **direct** của Neon (migration và asyncpg không qua PgBouncer); pool 5, không overflow, `pool_pre_ping`, `pool_recycle=300`.

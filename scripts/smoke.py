@@ -2,7 +2,7 @@
 """End-to-end smoke of the whole flow against a running stack (GĐ10 gate). Stdlib only.
 
     python scripts/smoke.py --base https://localhost --insecure [--password "$SEED_PASSWORD"] [--basic-auth user:pass]
-    python scripts/smoke.py --base https://preclass-ai.vercel.app          # cloud demo
+    python scripts/smoke.py --base https://pre-class-ai.vercel.app          # cloud demo
 
 teacher: source -> lesson -> generate (mock) -> review each block -> publish -> assign
 student: list/open assignment (no answers leak) -> attempt -> explanation after answering
