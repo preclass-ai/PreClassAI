@@ -7,6 +7,7 @@ import { useState, type FormEvent } from "react";
 import { Button, Empty, ErrorBox, Field, Loading, PageHeader } from "@/components/ui";
 import { api, unwrap } from "@/lib/api";
 import { RequireRole } from "@/lib/auth";
+import { refresh } from "@/lib/query";
 
 const TEACHER = ["TEACHER"] as const;
 
@@ -40,7 +41,7 @@ function NewLessonForm() {
           body: { title: title.trim(), grade, goal: goal.trim() || null, sourceRevisionIds: [...picked] },
         }),
       );
-      await qc.invalidateQueries({ queryKey: ["lessons"] });
+      await refresh(qc, { queryKey: ["lessons"] });
       router.push(`/lessons/${lesson.id}?tab=editor`);
     } catch (err) {
       setError(err);
