@@ -113,6 +113,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+        env:
+          API_ORIGIN: https://api.example.com # production builds require a public API_ORIGIN; unused here
   stack:
     # GĐ10 gate: clean-machine `compose up` (builds api + web), demo seed, then the full flow via scripts/smoke.py.
     runs-on: ubuntu-latest

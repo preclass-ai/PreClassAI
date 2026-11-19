@@ -1,7 +1,7 @@
 from functools import lru_cache
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,6 +36,14 @@ class Settings(BaseSettings):
     reviewer_enabled: bool = False  # second-person review (REVIEWER role); off by default
     mock_inject: str = ""  # fake_anchor,changed_quote,new_number,two_keys (tests)
     generation_daily_token_budget: int = 300_000
+
+    @model_validator(mode="after")
+    def _public_origin_when_deployed(self) -> "Settings":
+        if self.app_env.lower() in ("demo", "production", "prod"):
+            u = urlsplit(self.frontend_origin)
+            if u.scheme != "https" or u.hostname in (None, "localhost", "127.0.0.1", "::1"):
+                raise ValueError(f"FRONTEND_ORIGIN must be public https when APP_ENV={self.app_env}: {self.frontend_origin!r}")
+        return self
 
     @field_validator("database_url")
     @classmethod

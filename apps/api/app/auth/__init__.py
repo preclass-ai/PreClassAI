@@ -1,6 +1,7 @@
 """Server-side cookie sessions (D-001 #4): random token in an HttpOnly cookie, only its sha256 stored."""
 
 import hashlib
+import logging
 import secrets
 import time
 from collections import defaultdict, deque
@@ -129,5 +130,9 @@ async def csrf_middleware(request: Request, call_next: Callable[[Request], Await
             or urlparse(origin).netloc == request.headers.get("host")
         )
         if request.headers.get(CSRF_HEADER) != "1" or not origin_ok:
+            # No cookies/tokens: only what is needed to see why (usually FRONTEND_ORIGIN mismatch).
+            logging.getLogger("preclass.csrf").warning(
+                "CSRF rejected: %s %s origin=%r host=%r header=%r expected=%r", request.method, request.url.path,
+                origin, request.headers.get("host"), request.headers.get(CSRF_HEADER), get_settings().frontend_origin)
             return problem(403, "CSRF", "Yêu cầu bị từ chối (CSRF)")
     return await call_next(request)
