@@ -66,9 +66,9 @@ Các số liệu dưới đây lấy từ lần chạy thực tế trên bản c
 | Lỗi máy chủ 5xx / giới hạn 429 / thiếu CSRF trong luồng e2e (project 390 và WebKit) | 0 / 0 / 0 |
 | Lỗi console ngoài 401 `/v1/me` trước khi đăng nhập (390, WebKit) | 0 |
 | Thời gian tải trang danh sách bài (1280 px, lần đo) | 476 ms |
-| Bộ e2e (Playwright): 390, 768, 1280 px và WebKit (mô phỏng Safari iPhone) | GV S01→S06 đạt trên 390, 768 và WebKit; ở 1280 bước S01 chập chờn do lỗi hiển thị cũ ở mục dưới (đã sửa gốc, chờ chạy lại sau khi triển khai) |
+| Bộ e2e (Playwright) trên bản cloud: GV S01→S06, thu hồi, HS thấy đã rút (T1–T4) | **Đạt ở cả 4 môi trường**: 390, 768, 1280 px và WebKit (mô phỏng Safari iPhone); 1280 gồm cả bước tạo bản sửa mới và xuất bản lại |
 
-Hai lỗi thật tìm thấy **chỉ nhờ chạy trên môi trường triển khai thật** (và đã được sửa):
+Hai lỗi thật tìm thấy **chỉ nhờ chạy trên môi trường triển khai thật** (đã sửa và kiểm chứng lại bằng bộ e2e ở trên):
 1. *Hiển thị cũ:* danh sách nguồn không có dòng mới sau khi lưu nếu lần tải đầu còn đang chạy khi thao tác ghi hoàn tất (React Query gộp lần làm mới vào yêu cầu cũ). Sửa gốc bằng "hủy rồi làm mới", có test tái hiện cả lỗi lẫn bản sửa.
 2. *Cấu hình:* biến `API_ORIGIN` thiếu khi build làm Vercel trỏ vào địa chỉ nội bộ. Nay build **thất bại có thông báo rõ** thay vì triển khai hỏng, và API từ chối khởi động nếu `FRONTEND_ORIGIN` không phải https công khai.
 
