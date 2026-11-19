@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """End-to-end smoke of the whole flow against a running stack (GĐ10 gate). Stdlib only.
 
-    python scripts/smoke.py --base https://localhost --insecure [--password "$SEED_PASSWORD"]
+    python scripts/smoke.py --base https://localhost --insecure [--password "$SEED_PASSWORD"] [--basic-auth user:pass]
+    python scripts/smoke.py --base https://preclass-ai.vercel.app          # cloud demo
 
 teacher: source -> lesson -> generate (mock) -> review each block -> publish -> assign
 student: list/open assignment (no answers leak) -> attempt -> explanation after answering
 teacher: withdraw -> student gets 410. Uses the demo seed accounts (staging only). Exit 1 on the first failure.
 """
 import argparse
+import base64
 import http.cookiejar
 import json
 import ssl
@@ -23,8 +25,9 @@ LEAK = {"provenance", "anchor", "review", "validation", "answerKey", "answer_key
 
 
 class Client:
-    def __init__(self, base: str, insecure: bool) -> None:
+    def __init__(self, base: str, insecure: bool, basic_auth: str = "") -> None:
         self.base = base.rstrip("/")
+        self.auth = {"Authorization": "Basic " + base64.b64encode(basic_auth.encode()).decode()} if basic_auth else {}
         ctx = ssl.create_default_context()
         if insecure:  # Caddy's local CA on `localhost`
             ctx.check_hostname, ctx.verify_mode = False, ssl.CERT_NONE
@@ -32,7 +35,7 @@ class Client:
                                               urllib.request.HTTPSHandler(context=ctx))
 
     def call(self, method: str, path: str, body: object = None) -> tuple[int, dict]:
-        req = urllib.request.Request(self.base + path, method=method, headers={**HEADERS, "Origin": self.base},
+        req = urllib.request.Request(self.base + path, method=method, headers={**HEADERS, **self.auth, "Origin": self.base},
                                      data=None if body is None else json.dumps(body).encode())
         try:
             with self.op.open(req, timeout=30) as r:
@@ -64,8 +67,9 @@ def main() -> None:
     ap.add_argument("--base", default="https://localhost")
     ap.add_argument("--insecure", action="store_true")
     ap.add_argument("--password", default="preclass-demo")
+    ap.add_argument("--basic-auth", default="", help="user:pass if the site sits behind basic auth (preview tunnel)")
     a = ap.parse_args()
-    t, s = Client(a.base, a.insecure), Client(a.base, a.insecure)
+    t, s = Client(a.base, a.insecure, a.basic_auth), Client(a.base, a.insecure, a.basic_auth)
 
     step("health", t, "GET", "/v1/health")
     step("teacher login", t, "POST", "/v1/auth/login", {"identifier": "gv.dia@preclass.local", "password": a.password})

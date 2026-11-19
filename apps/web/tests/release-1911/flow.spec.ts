@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const DIR = "test-results/release-1911";
 const PASSWORD = process.env.SEED_PASSWORD ?? "preclass-demo";
-const STUDENT: Record<string, string> = { "390": "HS10-03", "768": "HS10-04", "1280": "HS10-05" };
+const STUDENT: Record<string, string> = { "390": "HS10-03", "768": "HS10-04", "1280": "HS10-05", webkit: "HS10-06" };
 const TEXT =
   "Số dân các vùng (DỮ LIỆU MINH HỌA)\n\nDân cư phân bố không đều giữa các vùng.\n\n" +
   "| Vùng | Số dân (triệu người) |\n|---|---|\n| Đồng bằng sông Hồng | 23,2 |\n| Tây Nguyên | 5,9 |\n" +
@@ -197,7 +197,7 @@ test("T2 student: answer 2 questions, explanation after submit, provenance block
   await S(page, vp, "S07-provenance-blocked", async () => {
     const r = await page.request.get(`/v1/blocks/${st.blockId}/provenance`);
     rec({ vp, check: "student-provenance-status", status: r.status() });
-    expect([403, 404]).toContain(r.status());
+    expect(r.status()).toBe(404); // PR-08
   });
   rec({ vp, check: "student-console-errors", n: errs.length, sample: errs.slice(0, 3) });
 });
