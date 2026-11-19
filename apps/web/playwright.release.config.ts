@@ -11,6 +11,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL,
     locale: "vi-VN",
+    trace: "retain-on-failure",
     launchOptions: { executablePath: process.env.CHROMIUM_PATH },
     ...(process.env.PREVIEW_USER
       ? { httpCredentials: { username: process.env.PREVIEW_USER, password: process.env.PREVIEW_PASS ?? "", send: "always" as const } }

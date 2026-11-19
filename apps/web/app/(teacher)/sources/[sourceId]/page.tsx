@@ -9,6 +9,7 @@ import { NewRevisionForm } from "@/features/source-form";
 import { api, unwrap } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fmtDateTime } from "@/lib/format";
+import { refresh } from "@/lib/query";
 
 export default function SourceDetailPage({ params }: { params: Promise<{ sourceId: string }> }) {
   const { sourceId } = use(params);
@@ -65,8 +66,8 @@ export default function SourceDetailPage({ params }: { params: Promise<{ sourceI
             sourceId={s.id}
             onCreated={() => {
               setUploading(false);
-              void qc.invalidateQueries({ queryKey: ["source", sourceId] });
-              void qc.invalidateQueries({ queryKey: ["sources"] });
+              void refresh(qc, { queryKey: ["source", sourceId] });
+              void refresh(qc, { queryKey: ["sources"] });
             }}
           />
         </section>

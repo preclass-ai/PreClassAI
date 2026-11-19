@@ -53,20 +53,16 @@ async function approveAll(page: Page) {
   // On mobile the block inspector is a bottom sheet that covers the tabs.
   if (await page.locator(".editor-inspector.open").count()) await page.getByRole("button", { name: "Đóng" }).click();
   await page.getByRole("tab", { name: "Duyệt" }).click();
-  const approve = page.getByRole("button", { name: "Duyệt khối này" });
+  // Only the review queue's own buttons: at 1280 the editor inspector also has one and is still in the DOM.
+  const list = page.locator(".review-list");
+  const approve = list.getByRole("button", { name: "Duyệt khối này" });
   await expect(approve.first()).toBeVisible({ timeout: 30_000 });
-  for (let i = 0, idle = 0; i < 80 && idle < 2; i++) {
-    if ((await approve.count()) === 0) {
-      // A refetch can briefly empty the list: only stop after it stays empty once the network is quiet.
-      await page.waitForLoadState("networkidle");
-      idle++;
-      continue;
-    }
-    idle = 0;
+  for (let i = 0; i < 80 && (await approve.count()) > 0; i++) {
     const before = await approve.count();
     await approve.first().click();
-    await expect(approve).toHaveCount(before - 1);
+    await expect(approve).toHaveCount(before - 1, { timeout: 20_000 });
   }
+  await expect(page.getByText("Không còn khối nào trong danh sách này.")).toBeVisible({ timeout: 20_000 });
 }
 
 async function publishAssign(page: Page, vp: string) {

@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { api, unwrap } from "@/lib/api";
+import { refresh } from "@/lib/query";
 
 export const keys = {
   lesson: (id: string) => ["lesson", id] as const,
@@ -62,14 +63,14 @@ export function useLessonAnchors(sourceRevisionIds: readonly string[]) {
 /** Anything that changes a block can change counts, the queue, the gate and the history: refresh them together. */
 export function invalidateLesson(qc: QueryClient, lessonId: string, onlyProvenanceOf?: string) {
   return Promise.all([
-    qc.invalidateQueries({ queryKey: ["lesson", lessonId] }),
-    qc.invalidateQueries({ queryKey: ["lessons"] }),
-    qc.invalidateQueries({ queryKey: ["blocks"] }),
+    refresh(qc, { queryKey: ["lesson", lessonId] }),
+    refresh(qc, { queryKey: ["lessons"] }),
+    refresh(qc, { queryKey: ["blocks"] }),
     // A review decision only changes its own block: refetching every card's provenance made N^2 requests (429/500).
-    qc.invalidateQueries({ queryKey: onlyProvenanceOf ? keys.provenance(onlyProvenanceOf) : ["provenance"] }),
-    qc.invalidateQueries({ queryKey: ["review-queue"] }),
-    qc.invalidateQueries({ queryKey: ["publish-check"] }),
-    qc.invalidateQueries({ queryKey: ["history", lessonId] }),
+    refresh(qc, { queryKey: onlyProvenanceOf ? keys.provenance(onlyProvenanceOf) : ["provenance"] }),
+    refresh(qc, { queryKey: ["review-queue"] }),
+    refresh(qc, { queryKey: ["publish-check"] }),
+    refresh(qc, { queryKey: ["history", lessonId] }),
   ]);
 }
 

@@ -8,6 +8,7 @@ import { NewSourceForm } from "@/features/source-form";
 import { api, unwrap } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fmtDateTime } from "@/lib/format";
+import { refresh } from "@/lib/query";
 
 export default function SourcesPage() {
   const { user } = useAuth();
@@ -33,7 +34,7 @@ export default function SourcesPage() {
           <NewSourceForm
             onCreated={() => {
               setAdding(false);
-              void qc.invalidateQueries({ queryKey: ["sources"] });
+              void refresh(qc, { queryKey: ["sources"] });
             }}
           />
         </section>
