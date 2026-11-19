@@ -56,13 +56,17 @@ async function approveAll(page: Page) {
   // Only the review queue's own buttons: at 1280 the editor inspector also has one and is still in the DOM.
   const list = page.locator(".review-list");
   const approve = list.getByRole("button", { name: "Duyệt khối này" });
-  await expect(approve.first()).toBeVisible({ timeout: 30_000 });
-  for (let i = 0; i < 80 && (await approve.count()) > 0; i++) {
+  const empty = page.getByText("Không còn khối nào trong danh sách này.");
+  // Either there is something to approve, or the queue is already empty (e.g. a fresh revision with carried-over approvals).
+  await expect(approve.first().or(empty)).toBeVisible({ timeout: 30_000 });
+  for (let i = 0; i < 120 && (await approve.count()) > 0; i++) {
     const before = await approve.count();
-    await approve.first().click();
-    await expect(approve).toHaveCount(before - 1, { timeout: 20_000 });
+    // Wait for the review request itself: a click that did not fire (seen on WebKit) is simply retried.
+    const sent = page.waitForResponse((r) => /\/reviews$/.test(r.url()) && r.request().method() === "POST", { timeout: 15_000 });
+    const clicked = await approve.first().click({ timeout: 10_000 }).then(() => true, () => false);
+    if ((await sent.then(() => true, () => false)) && clicked) await expect(approve).toHaveCount(before - 1, { timeout: 20_000 });
   }
-  await expect(page.getByText("Không còn khối nào trong danh sách này.")).toBeVisible({ timeout: 20_000 });
+  await expect(empty).toBeVisible({ timeout: 20_000 });
 }
 
 async function publishAssign(page: Page, vp: string) {
@@ -220,7 +224,9 @@ test("T3 teacher: withdraw (and republish on 1280)", async ({ page }, info) => {
     await S(page, vp, "republish-new-revision", async () => {
       await page.getByRole("tab", { name: "Lịch sử" }).click();
       const newRev = page.getByRole("button", { name: "Tạo bản sửa mới" });
-      if (await newRev.count()) await newRev.click();
+      await expect(newRev).toBeVisible({ timeout: 30_000 });
+      page.once("dialog", (d) => void d.accept()); // the button asks window.confirm first
+      await newRev.click();
       await approveAll(page);
       await publishAssign(page, vp);
     });
