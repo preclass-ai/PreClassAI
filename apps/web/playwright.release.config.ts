@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 // Release E2E against a deployed URL (tunnel or cloud). Env: E2E_BASE_URL, SEED_PASSWORD, optional PREVIEW_USER/PREVIEW_PASS (basic auth).
 export default defineConfig({
   testDir: "tests/release-1911",
+  globalTeardown: "./tests/release-1911/e2e-cleanup.ts", // withdraws every "[E2E]" lesson when the run ends
   outputDir: "test-results/pw-output-1911",
   timeout: 300_000,
   workers: 1,

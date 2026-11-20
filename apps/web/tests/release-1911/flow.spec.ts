@@ -1,9 +1,11 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
-import { openAccountForm, passwordFor } from "../e2e/helpers";
+import { E2E_CLASS_LABEL, E2E_MODE, openAccountForm, passwordFor, TITLE_PREFIX } from "../e2e/helpers";
 
 const DIR = "test-results/release-1911";
-const STUDENT: Record<string, string> = { "390": "HS10-03", "768": "HS10-04", "1280": "HS10-05", webkit: "HS10-06" };
+const SEED_STUDENT: Record<string, string> = { "390": "HS10-03", "768": "HS10-04", "1280": "HS10-05", webkit: "HS10-06" };
+// Cloud (E2E mode): the seed students cannot log in with a password; the E2E class has its own student.
+const STUDENT = new Proxy(SEED_STUDENT, { get: (t, k: string) => (E2E_MODE ? "E2E-1" : t[k]) });
 const TEXT =
   "Số dân các vùng (DỮ LIỆU MINH HỌA)\n\nDân cư phân bố không đều giữa các vùng.\n\n" +
   "| Vùng | Số dân (triệu người) |\n|---|---|\n| Đồng bằng sông Hồng | 23,2 |\n| Tây Nguyên | 5,9 |\n" +
@@ -89,11 +91,12 @@ async function publishAssign(page: Page, vp: string) {
   await page.getByText("Tôi đã đọc từng khối").click();
   await page.getByRole("button", { name: "Xuất bản", exact: true }).click({ timeout: 20_000 });
   await expect(page.getByText(/đã xuất bản\./)).toBeVisible({ timeout: 30_000 });
-  const sel = page.locator("select").filter({ has: page.locator("option", { hasText: "10A1" }) });
-  if (await sel.count()) {
-    const label = (await sel.first().locator("option", { hasText: "10A1" }).first().innerText()).trim();
-    await sel.first().selectOption({ label });
-  }
+  // The class list loads after the publish: wait for it, then pick the target class explicitly (the default is the FIRST class).
+  const sel = page.locator("select").filter({ has: page.locator("option", { hasText: E2E_CLASS_LABEL }) });
+  await expect(sel.first(), `class "${E2E_CLASS_LABEL}" must exist for the teacher`).toBeVisible({ timeout: 30_000 });
+  const label = (await sel.first().locator("option", { hasText: E2E_CLASS_LABEL }).first().innerText()).trim();
+  await sel.first().selectOption({ label });
+  await expect(sel.first().locator("option:checked")).toContainText(E2E_CLASS_LABEL);
   await page.getByRole("button", { name: "Giao bài" }).click();
   await expect(page.getByText(/Đã giao cho lớp/)).toBeVisible({ timeout: 30_000 });
 }
@@ -117,7 +120,7 @@ function watch(page: Page, errs: string[], badCsrf?: string[]) {
 test("T1 teacher: login, source, generate, edit, review, publish, assign, history", async ({ page, context }, info) => {
   const vp = info.project.name;
   Object.assign(cnt, { prov: 0, s5xx: 0, s429: 0 });
-  st.title = `Release ${vp} ${Date.now().toString(36)}`;
+  st.title = `${TITLE_PREFIX}Release ${vp} ${Date.now().toString(36)}`;
   const errs: string[] = [];
   const badCsrf: string[] = [];
   watch(page, errs, badCsrf);

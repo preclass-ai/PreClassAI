@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """End-to-end smoke of the whole flow against a running stack (GĐ10 gate). Stdlib only.
 
-    python scripts/smoke.py --base https://localhost --insecure [--password "$SEED_PASSWORD"] [--student-password ...] [--basic-auth user:pass]
+    python scripts/smoke.py --base https://localhost --insecure [--password "$SEED_PASSWORD"] [--student-password ...] [--student-id E2E-1 --class-code E2E] [--basic-auth user:pass]
     python scripts/smoke.py --base https://pre-class-ai.vercel.app          # cloud demo
 
 teacher: source -> lesson -> generate (mock) -> review each block -> publish -> assign
@@ -67,7 +67,9 @@ def main() -> None:
     ap.add_argument("--base", default="https://localhost")
     ap.add_argument("--insecure", action="store_true")
     ap.add_argument("--password", default="preclass-demo", help="teacher password (and the default for students)")
-    ap.add_argument("--student-password", default=None, help="seed student password (default: --password)")
+    ap.add_argument("--student-password", default=None, help="student password (default: --password)")
+    ap.add_argument("--student-id", default="HS10-01", help="student login code; on the cloud demo use E2E-1")
+    ap.add_argument("--class-code", default="10A1", help="class that receives the smoke lesson; on the cloud demo use E2E (never KS)")
     ap.add_argument("--basic-auth", default="", help="user:pass if the site sits behind basic auth (preview tunnel)")
     a = ap.parse_args()
     t, s = Client(a.base, a.insecure, a.basic_auth), Client(a.base, a.insecure, a.basic_auth)
@@ -77,8 +79,8 @@ def main() -> None:
     text = ("Số dân các vùng (DỮ LIỆU MINH HỌA)\n\nDân cư phân bố không đều giữa các vùng.\n\n"
             "| Vùng | Số dân (triệu người) |\n|---|---|\n| Đồng bằng sông Hồng | 23,2 |\n| Tây Nguyên | 5,9 |\n"
             "| Đông Nam Bộ | 17,8 |\n| Duyên hải miền Trung | 9,4 |")
-    src = step("source", t, "POST", "/v1/sources", {"title": f"Smoke {uuid.uuid4().hex[:6]}", "text": text}, 201)
-    lesson = step("lesson", t, "POST", "/v1/lessons", {"title": "Smoke", "grade": 10,
+    src = step("source", t, "POST", "/v1/sources", {"title": f"[E2E] Smoke {uuid.uuid4().hex[:6]}", "text": text}, 201)
+    lesson = step("lesson", t, "POST", "/v1/lessons", {"title": "[E2E] Smoke", "grade": 10,
                   "sourceRevisionIds": [src["latestRevision"]["id"]]}, 201)
     rev = lesson["currentRevision"]["id"]
     job = step("generate", t, "POST", f"/v1/lessons/{lesson['id']}/generate", {"outputType": "WORKSHEET", "nItems": 4}, 202)
@@ -94,12 +96,12 @@ def main() -> None:
     assert step("publish-check", t, "GET", f"/v1/revisions/{rev}/publish-check")["canPublish"] is True
     version = step("lesson", t, "GET", f"/v1/lessons/{lesson['id']}")["currentRevision"]["version"]
     pub = step("publish", t, "POST", f"/v1/revisions/{rev}/publish", {"confirmChecked": True, "version": version}, 201)
-    cls = next(x for x in step("classes", t, "GET", "/v1/classes")["items"] if x["code"] == "10A1")
+    cls = next(x for x in step("classes", t, "GET", "/v1/classes")["items"] if x["code"] == a.class_code)
     now = datetime.now(timezone.utc)
     asg = step("assign", t, "POST", f"/v1/published/{pub['id']}/assignments", {
         "classId": cls["id"], "openAt": (now - timedelta(hours=1)).isoformat(), "dueAt": (now + timedelta(days=1)).isoformat()}, 201)
 
-    step("student login", s, "POST", "/v1/auth/login", {"identifier": "HS10-01", "password": a.student_password or a.password})
+    step("student login", s, "POST", "/v1/auth/login", {"identifier": a.student_id, "password": a.student_password or a.password})
     listed = step("student list", s, "GET", "/v1/student/assignments")["items"]
     assert any(x["id"] == asg["id"] for x in listed), "assignment not visible to student"
     d = step("student open", s, "GET", f"/v1/student/assignments/{asg['id']}")

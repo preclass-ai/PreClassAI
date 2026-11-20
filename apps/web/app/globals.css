@@ -362,6 +362,7 @@ fieldset { border: 0; padding: 0; margin: 0; }
   .student-stats { grid-template-columns: 1fr 1fr; }
   .student-stats .stat-card:first-child { grid-column: 1 / -1; }
   .assignment-grid { grid-template-columns: 1fr; }
+  .assignment-card { min-height: 0; } /* no tall empty card when the due date is hidden (survey class) */
   .section-heading > .small { display: none; }
   .lesson-hero { padding: 26px 22px; }
   .item { padding: 20px; }

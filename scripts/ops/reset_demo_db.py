@@ -5,9 +5,15 @@ Run from apps/api so the app's settings and dependencies are used; DATABASE_URL 
 
     cd apps/api
     $env:DATABASE_URL = "<Neon direct connection string>"   # PowerShell
+    $env:APP_ENV = "demo"; $env:FRONTEND_ORIGIN = "https://pre-class-ai.vercel.app"
+    $env:SEED_TEACHER_PASSWORD = "..."; $env:SEED_REVIEWER_PASSWORD = "..."; $env:SEED_ADMIN_PASSWORD = "..."   # the CURRENT ones
+    # optional: $env:E2E_STUDENT_PASSWORD (creates student E2E-1 for automated tests), $env:SEED_STUDENT_PASSWORD
+    uv run python ../../scripts/ops/backup_demo_db.py                 # FIRST: pg_dump to a file outside the repo
     uv run python ../../scripts/ops/reset_demo_db.py
 
-Asks you to type RESET. Refuses APP_ENV=production. Destroys every row: demo data only.
+Asks you to type RESET. Refuses APP_ENV=production. Destroys every row: demo data only. When APP_ENV is demo the SEED_*
+passwords must be set (the same values as on Render): otherwise it refuses BEFORE dropping anything, because a reset without them
+would leave a database with no accounts.
 """
 import asyncio
 import os
@@ -20,6 +26,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 sys.path.insert(0, os.getcwd())  # run from apps/api: import the app package from there
 from app.config import get_settings  # noqa: E402
+from seed.passwords import MissingSeedPassword, hashes, is_deployed  # noqa: E402
 
 
 async def drop_schema(url: str) -> None:
@@ -36,6 +43,11 @@ def main() -> None:
     s = get_settings()
     if s.app_env.lower() in ("production", "prod"):
         sys.exit("Refusing: APP_ENV=production.")
+    if is_deployed(s.app_env):
+        try:
+            hashes(s.app_env)
+        except MissingSeedPassword as e:
+            sys.exit(f"Refusing before dropping anything: {e}. The reset would create an empty database.")
     target = urlsplit(s.database_url)
     print(f"Target: host={target.hostname} db={target.path.lstrip('/')}  (all data will be deleted)")
     if input('Type RESET to continue: ').strip() != "RESET":
