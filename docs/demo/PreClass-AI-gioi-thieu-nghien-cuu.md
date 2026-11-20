@@ -81,39 +81,23 @@ Hai lỗi thật tìm thấy **chỉ nhờ chạy trên môi trường triển k
 - **Chưa làm:** ảnh/bản đồ do AI sinh (VAL-07 là chỗ giữ chỗ), kiểm thử tải nặng, đánh giá khả dụng với người dùng thật.
 - **Đạo đức và dữ liệu:** bản cloud chỉ chứa dữ liệu minh họa; triển khai với dữ liệu học sinh thật sẽ chạy trên máy chủ trong nước.
 
-## 7. Hướng dẫn trải nghiệm (5 phút)
+## 7. Trải nghiệm thử
 
-> Mở link **trước 1 phút** để đánh thức máy chủ. Mật khẩu của mọi tài khoản demo: `preclass-demo`.
+Hướng dẫn từng bước cho học sinh và giáo viên (kể cả cách vào bằng mã QR) nằm ở **`docs/demo/HUONG-DAN-SU-DUNG-THU.md`**. Tóm tắt:
 
-1. Đăng nhập giáo viên → **Nguồn** → *Thêm nguồn* (dán một đoạn văn kèm bảng số liệu) → *Lưu nguồn*; nguồn mới hiện ngay ở đầu danh sách.
-2. **Bài học** → *Tạo bài* → chọn nguồn → hệ thống soạn học liệu (mô phỏng). Mở một khối, xem **Bằng chứng từ nguồn** và kết quả kiểm tra VAL.
-3. Tab **Duyệt**: duyệt từng khối (thử sửa một khối rồi quan sát việc duyệt cũ mất hiệu lực).
-4. Tab **Xuất bản & giao bài**: xem bảng kiểm tra trước khi xuất bản, xuất bản, giao cho lớp 10A1.
-5. Đăng xuất, đăng nhập học sinh: làm 2 câu, chỉ sau khi nộp mới thấy giải thích. Thử thu hồi bài ở tài khoản giáo viên và tải lại phía học sinh (thấy thông báo đã thu hồi).
-6. Mở **/docs** để xem hợp đồng API đầy đủ.
+- **Học sinh:** không cần tài khoản. Mở `https://pre-class-ai.vercel.app/thu?bai=dan-so-vung`, nhận mã khảo sát `KS-XXXX`, làm bài, chỉ thấy lời giải thích sau khi nộp từng câu.
+- **Giáo viên:** đăng nhập, thêm nguồn, tạo bài, sinh bản nháp (AI mô phỏng), duyệt từng khối, xuất bản và giao bài, thu hồi, xem lịch sử.
+- Mở link trước khoảng 1 phút để đánh thức máy chủ miễn phí.
 
-## 8. Tài khoản demo
+## 8. Tài khoản dùng thử
 
-**Giáo viên (20 tài khoản mới + 2 tài khoản gốc)** — đăng nhập bằng email:
+| Đối tượng | Cách vào | Ghi chú |
+|---|---|---|
+| Học sinh | Chế độ khách, không tài khoản, không mật khẩu | Mỗi người một mã `KS-XXXX` ngẫu nhiên, không lưu tên/email/IP |
+| Giáo viên | `gv01@preclass.local` … `gv20@preclass.local` | Mật khẩu do ban tổ chức cấp riêng (không ghi trong tài liệu). Mỗi tài khoản có không gian riêng, bắt đầu trống; có nguồn dùng chung "Phân bố dân cư theo vùng" |
+| Quản trị, người duyệt, tài khoản kiểm thử E2E | Chỉ ban tổ chức | Mật khẩu lấy từ biến môi trường, không công bố |
 
-| Tài khoản | Ghi chú |
-|---|---|
-| `gv01@preclass.local` … `gv20@preclass.local` | Mỗi tài khoản có không gian riêng (bắt đầu trống); dùng nguồn "Phân bố dân cư theo vùng" (dùng chung toàn trường) hoặc tự thêm nguồn. Thuộc cả hai lớp demo nên giao bài được |
-| `gv.dia@preclass.local` | Có sẵn 6 bài minh họa (đã xuất bản và giao cho 10A1) |
-| `gv.khac@preclass.local` | Giáo viên thứ hai, thấy bài riêng của mình (kiểm tra cách ly dữ liệu giữa giáo viên) |
-
-**Học sinh (20 tài khoản mới + 30 tài khoản gốc)** — đăng nhập bằng mã học sinh:
-
-| Mã | Lớp |
-|---|---|
-| `HS10-16` … `HS10-35` | 10A1 (mới, chưa dùng) |
-| `HS10-01` … `HS10-15` | 10A1 (HS10-12 đến HS10-15 đã bị kiểm thử tự động sử dụng nên đã có bài làm) |
-| `HS11-01` … `HS11-15` | 11A1 |
-
-Quản trị (xem nhật ký kiểm toán): `admin@preclass.local`.
-
-> Các tài khoản mới (`gv01`–`gv20`, `HS10-16`–`HS10-35`) được tạo tự động mỗi lần API khởi động (idempotent) sau khi bản mã chứa chúng được triển khai.
-> Mật khẩu chung chỉ dành cho bản demo công khai; không dùng cho dữ liệu thật.
+Các tài khoản học sinh mẫu (`HS10-xx`, `HS11-xx`) **không còn đăng nhập bằng mật khẩu** trên bản công khai; học sinh chỉ dùng chế độ khách. Mật khẩu chung cũ của bản dev không còn hiệu lực trên cloud.
 
 ## 9. Khả năng tái lập
 
