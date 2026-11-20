@@ -44,3 +44,10 @@ Chỉ mã khảo sát KS, không tên/email/IP trong DB; dữ liệu ở Neon Si
 - Auto-Deploy Render phải bật (đã gặp mã mới không chạy sau merge). Kiểm bằng `/v1/health`.
 - Tồn đọng: CSP còn `'unsafe-inline'` cho script; GV dùng chung một mật khẩu seed; không MFA admin; chưa làm lại UI (các pha UI chờ duyệt).
 - Việc sau đợt khảo sát: xuất CSV, chốt thời hạn lưu, subdomain trường, máy chủ trong nước cho dữ liệu thật.
+
+## Update 2026-11-20 (sau reset cloud)
+
+- Reset DB demo xong: 6 bài seed, KS có 1 assignment thêm, lớp E2E + `E2E-1`. Health ok, `guestEnabled=true`, khách mới chỉ thấy bài seed.
+- Mật khẩu Neon đã đổi (lộ trong chat) và `DATABASE_URL` Render đã cập nhật; mật khẩu admin đã rotate, `SEED_ADMIN_PASSWORD` Render đã đồng bộ.
+- E2E cloud 44 pass, 1 fail (T1 @390, `Refused to apply style … text/plain`). Chẩn đoán: hash `0b79d5a8…` trả 404 text/plain trên Vercel, HTML hiện tại của mọi route trỏ `4fe710ae…` (200 text/css, immutable), không có middleware hay `headers()` ghi đè `/_next/static` -> lệch bản deploy khi chạy E2E đúng lúc deploy sau merge. Thêm `tests/release-1911/static-assets.spec.ts` (chỉ GET). Không chạy lại E2E ghi dữ liệu lên cloud trừ khi được yêu cầu.
+- `pg_dump` 16 không dump được Neon PG18: `backup_demo_db.py` chạy `postgres:18` qua Docker. Production PG18, CI/compose PG16: nâng trong PR riêng (chưa làm).
