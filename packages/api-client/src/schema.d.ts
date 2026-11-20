@@ -615,6 +615,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sources/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a source from a DOCX, PDF, XLSX or PPTX file (TEACHER, multipart)
+         * @description Accepts DOCX, PDF, XLSX, PPTX; the type is read from the file's magic bytes, the client's name and Content-Type are ignored. Limits: 10 MB; ≤ 1000 zip entries, ≤ 20 MB unzipped; ≤ 50 PDF pages, ≤ 5 sheets × 2000 cells, ≤ 60 slides (env `SOURCE_*`). Rejected with 422: `FILE_TOO_LARGE`, `SOURCE_TOO_LARGE`, `INVALID_FILE`, `MACRO_REJECTED`, `EXTERNAL_CONTENT_REJECTED`, `ACTIVE_CONTENT_REJECTED` (PDF JavaScript/attachments), `PARSE_TIMEOUT` (30 s), `EMPTY_SOURCE`. A PDF without a text layer returns 201 with `extractStatus=FAILED`, `extractError=SCANNED_PDF` (no OCR). Anchor locators: PDF `{page, para}`, XLSX `{sheet, row, col, header?}` (0-based row/col, stored values only, formulas are never evaluated), PPTX `{slide, shape, para}` or `{slide, shape, row, col}`.
+         */
+        post: operations["createSourceFromFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sources/{source_id}": {
         parameters: {
             query?: never;
@@ -1303,6 +1323,21 @@ export interface components {
         };
         /** Body_createSourceFromDocx */
         Body_createSourceFromDocx: {
+            /** File */
+            file: string;
+            /** Licensenote */
+            licenseNote?: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Visibility
+             * @default PRIVATE
+             * @enum {string}
+             */
+            visibility: "PRIVATE" | "SCHOOL";
+        };
+        /** Body_createSourceFromFile */
+        Body_createSourceFromFile: {
             /** File */
             file: string;
             /** Licensenote */
@@ -2556,6 +2591,11 @@ export interface components {
              * Format: date-time
              */
             createdAt: string;
+            /**
+             * Extracterror
+             * @description `SCANNED_PDF` when `extractStatus` is FAILED.
+             */
+            extractError?: string | null;
             /**
              * Extractstatus
              * @enum {string}
@@ -4849,6 +4889,57 @@ export interface operations {
         requestBody: {
             content: {
                 "multipart/form-data": components["schemas"]["Body_createSourceFromDocx"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createSourceFromFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_createSourceFromFile"];
             };
         };
         responses: {

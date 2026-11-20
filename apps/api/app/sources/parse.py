@@ -78,16 +78,29 @@ def parse_text(text: str) -> list[ParsedAnchor]:
     return _limit(out)
 
 
+OOXML = {  # kind -> (human label, main part content-type marker, embedded/external part prefixes)
+    "docx": ("DOCX", "wordprocessingml.document.main+xml", ("word/embeddings/", "word/activex/")),
+    "xlsx": ("XLSX", "spreadsheetml.sheet.main+xml", ("xl/embeddings/", "xl/activex/", "xl/externallinks/")),
+    "pptx": ("PPTX", "presentationml.presentation.main+xml", ("ppt/embeddings/", "ppt/activex/")),
+}
+
+
 def check_docx_container(data: bytes) -> None:
+    check_ooxml(data, "docx")
+
+
+def check_ooxml(data: bytes, kind: str) -> None:
+    """Zip-level checks for DOCX/XLSX/PPTX, run before any library opens the file."""
+    label, main_marker, embed_prefixes = OOXML[kind]
     if len(data) > MAX_UPLOAD_BYTES:
         raise ApiError(422, "FILE_TOO_LARGE", "Tệp vượt quá 10 MB")
     if data[:2] != b"PK":
-        raise ApiError(422, "INVALID_FILE", "Chỉ nhận tệp DOCX")
+        raise ApiError(422, "INVALID_FILE", f"Chỉ nhận tệp {label} hợp lệ")
     try:
         zf = zipfile.ZipFile(io.BytesIO(data))
         infos = zf.infolist()
         if len(infos) > MAX_ENTRIES:
-            raise ApiError(422, "INVALID_FILE", "Tệp DOCX có quá nhiều thành phần")
+            raise ApiError(422, "INVALID_FILE", f"Tệp {label} có quá nhiều thành phần")
         total = sum(i.file_size for i in infos)
         if total > MAX_UNCOMPRESSED_BYTES:
             raise ApiError(422, "FILE_TOO_LARGE", "Tệp giải nén quá lớn")
@@ -96,27 +109,27 @@ def check_docx_container(data: bytes) -> None:
             raise ApiError(422, "FILE_TOO_LARGE", "Tệp nén bất thường (nghi zip bomb)")
         names = [i.filename for i in infos]
         if any(".." in n.split("/") or n.startswith("/") for n in names):
-            raise ApiError(422, "INVALID_FILE", "Tệp DOCX không hợp lệ")
-        if any("vbaproject" in n.lower() or n.lower().endswith((".docm", ".dotm")) for n in names):
+            raise ApiError(422, "INVALID_FILE", f"Tệp {label} không hợp lệ")
+        if any("vbaproject" in n.lower() or n.lower().endswith((".docm", ".dotm", ".xlsm", ".pptm")) for n in names):
             raise ApiError(422, "MACRO_REJECTED", "Tệp chứa macro nên không được nhận")
-        if any(n.lower().startswith(("word/embeddings/", "word/activex/")) for n in names):
+        if any(n.lower().startswith(embed_prefixes) for n in names):
             raise ApiError(422, "EXTERNAL_CONTENT_REJECTED", "Tệp chứa đối tượng nhúng nên không được nhận")
         for i in infos:  # linked templates/images/OLE/frames point outside the file: only plain hyperlinks are allowed
             if i.filename.lower().endswith(".rels"):
                 if i.file_size > MAX_RELS_BYTES:
-                    raise ApiError(422, "INVALID_FILE", "Tệp DOCX không hợp lệ")
+                    raise ApiError(422, "INVALID_FILE", f"Tệp {label} không hợp lệ")
                 for rel in _REL.findall(zf.read(i).decode("utf-8", "replace")):
                     if _EXTERNAL.search(rel) and not _HYPERLINK.search(rel):
                         raise ApiError(422, "EXTERNAL_CONTENT_REJECTED", "Tệp liên kết tới nội dung ngoài nên không được nhận")
         if "[Content_Types].xml" not in names:
-            raise ApiError(422, "INVALID_FILE", "Chỉ nhận tệp DOCX")
+            raise ApiError(422, "INVALID_FILE", f"Chỉ nhận tệp {label} hợp lệ")
         ctypes = zf.read("[Content_Types].xml").decode("utf-8", "replace")
     except zipfile.BadZipFile as e:
-        raise ApiError(422, "INVALID_FILE", "Chỉ nhận tệp DOCX") from e
+        raise ApiError(422, "INVALID_FILE", f"Chỉ nhận tệp {label} hợp lệ") from e
     if "macroEnabled" in ctypes:
         raise ApiError(422, "MACRO_REJECTED", "Tệp chứa macro nên không được nhận")
-    if "wordprocessingml.document.main+xml" not in ctypes:
-        raise ApiError(422, "INVALID_FILE", "Chỉ nhận tệp DOCX")
+    if main_marker not in ctypes:
+        raise ApiError(422, "INVALID_FILE", f"Chỉ nhận tệp {label} hợp lệ")
 
 
 def parse_docx(data: bytes) -> list[ParsedAnchor]:
