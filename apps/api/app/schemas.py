@@ -200,10 +200,11 @@ class SourceRevisionOut(ApiModel):
     sha256: str
     mime: str
     extract_status: ExtractStatus
+    extract_error: str | None = Field(None, description="`SCANNED_PDF` when `extractStatus` is FAILED.")
     anchor_count: int
     created_at: datetime
     model_config = ex({"id": I["srcrev"], "assetId": I["asset"], "version": 1, "sha256": H, "mime": "text/plain",
-                       "extractStatus": "OK", "anchorCount": 11, "createdAt": T0})
+                       "extractStatus": "OK", "extractError": None, "anchorCount": 11, "createdAt": T0})
 
 
 _SRC_REV = e0(SourceRevisionOut)
