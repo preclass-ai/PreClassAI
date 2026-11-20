@@ -30,7 +30,7 @@ export interface paths {
         };
         /**
          * Survey data export (CSV)
-         * @description One row per guest answer: `survey_code, lesson, item, first_attempt_is_correct, answered_at_utc`. No other identifying column.
+         * @description One row per guest answer: `survey_code, lesson, item, first_attempt_is_correct, answered_at_utc, hints_used, max_hint_level, chat_asks, used_explain, blocked_count` (Habit counters, never message text). No other identifying column.
          */
         get: operations["exportSurveyCsv"];
         put?: never;
@@ -749,6 +749,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/student/assignments/{assignment_id}/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask Habit for a hint (1→3), a scoped answer from the approved lesson, or an explanation after answering
+         * @description Grounded only in the published snapshot. Before the student answers the item the reply never contains the answer (label, value, or a verdict on one option); asks for it are refused with a `blockedReason`. `explain` needs the student's own attempt. Limits: `CHAT_MAX_PER_ITEM`, `CHAT_MAX_PER_DAY_PER_STUDENT`. Repeating the same `requestId` returns the stored reply.
+         */
+        post: operations["chatHabit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/student/assignments/{assignment_id}/habit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Study habit of the student for this assignment (streak, daily goal, badges, hints used)
+         * @description 404 when `CHAT_ENABLED` is off or the assignment is not the student's.
+         */
+        get: operations["getHabit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1091,10 +1131,17 @@ export interface components {
         /**
          * AuthConfig
          * @example {
+         *       "chatEnabled": false,
          *       "guestEnabled": true
          *     }
          */
         AuthConfig: {
+            /**
+             * Chatenabled
+             * @description True when Habit (hints + chat) is on (CHAT_ENABLED).
+             * @default false
+             */
+            chatEnabled: boolean;
             /**
              * Guestenabled
              * @description True when anonymous guest access is switched on (GUEST_ACCESS_ENABLED).
@@ -1362,6 +1409,65 @@ export interface components {
             text: string;
         };
         /**
+         * ChatReply
+         * @example {
+         *       "hintLevel": 1,
+         *       "reply": "Em đọc kỹ đề và xác định đề đang hỏi về vùng nào, năm nào nhé.",
+         *       "sourceRefs": []
+         *     }
+         */
+        ChatReply: {
+            /**
+             * Blockedreason
+             * @description Refusal code (e.g. ANSWER_REQUEST) when the reply is a refusal.
+             */
+            blockedReason?: string | null;
+            /**
+             * Hintlevel
+             * @description 1..3 for `hint`, 0 otherwise.
+             */
+            hintLevel: number;
+            /**
+             * Reply
+             * @description Plain text. Never contains the answer before the student has answered the item.
+             */
+            reply: string;
+            /** Sourcerefs */
+            sourceRefs: components["schemas"]["SourceRef"][];
+        };
+        /**
+         * ChatRequest
+         * @example {
+         *       "action": "hint",
+         *       "itemId": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73",
+         *       "requestId": "395bd63b-62df-5c53-a2ef-0b46956092f7"
+         *     }
+         */
+        ChatRequest: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "hint" | "ask" | "explain";
+            /**
+             * Itemid
+             * Format: uuid
+             * @description The item the student is working on (must belong to this assignment).
+             */
+            itemId: string;
+            /**
+             * Message
+             * @description Free question for `ask` (PII redacted before storing).
+             */
+            message?: string | null;
+            /**
+             * Requestid
+             * Format: uuid
+             * @description Idempotency key: a retry returns the stored reply, uncounted.
+             */
+            requestId: string;
+        };
+        /**
          * ClassList
          * @example {
          *       "items": [
@@ -1556,6 +1662,64 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HabitBadge */
+        HabitBadge: {
+            /**
+             * Code
+             * @description TU_LUC, KIEN_TRI or THAM_HIEM.
+             */
+            code: string;
+            /** Label */
+            label: string;
+        };
+        /** HabitItem */
+        HabitItem: {
+            /** Hintsmax */
+            hintsMax: number;
+            /** Hintsused */
+            hintsUsed: number;
+            /**
+             * Itemid
+             * Format: uuid
+             */
+            itemId: string;
+        };
+        /**
+         * HabitOut
+         * @example {
+         *       "badges": [
+         *         {
+         *           "code": "TU_LUC",
+         *           "label": "Tự lực"
+         *         }
+         *       ],
+         *       "hintsAvailable": [
+         *         {
+         *           "hintsMax": 3,
+         *           "hintsUsed": 1,
+         *           "itemId": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73"
+         *         }
+         *       ],
+         *       "streak": 2,
+         *       "todayDone": 1,
+         *       "todayGoal": 3
+         *     }
+         */
+        HabitOut: {
+            /** Badges */
+            badges: components["schemas"]["HabitBadge"][];
+            /** Hintsavailable */
+            hintsAvailable: components["schemas"]["HabitItem"][];
+            /**
+             * Streak
+             * @description Consecutive days (Asia/Ho_Chi_Minh) with at least one answered item.
+             */
+            streak: number;
+            /** Todaydone */
+            todayDone: number;
+            /** Todaygoal */
+            todayGoal: number;
         };
         /** HeadingPayload */
         HeadingPayload: {
@@ -2555,6 +2719,24 @@ export interface components {
              */
             visibility: "PRIVATE" | "SCHOOL";
         };
+        /** SourceRef */
+        SourceRef: {
+            /**
+             * Blockid
+             * Format: uuid
+             */
+            blockId: string;
+            /**
+             * Excerpt
+             * @description Approved text, verbatim from the published snapshot.
+             */
+            excerpt: string;
+            /**
+             * Label
+             * @description Kind of approved block: Tiêu đề, Đoạn văn, Câu dẫn.
+             */
+            label: string;
+        };
         /**
          * SourceRevisionCreateText
          * @example {
@@ -2796,6 +2978,13 @@ export interface components {
          * SurveyStats
          * @example {
          *       "activeGuests": 42,
+         *       "chatBlocked": {
+         *         "ANSWER_REQUEST": 7
+         *       },
+         *       "chatFallbackRate": 0,
+         *       "chatTokensIn": 0,
+         *       "chatTokensOut": 0,
+         *       "chatTotal": 120,
          *       "createPerHourPerIp": 60,
          *       "createdLastHour": 12,
          *       "maxActive": 500
@@ -2807,6 +2996,35 @@ export interface components {
              * @description Guests seen or created in the last 14 days.
              */
             activeGuests: number;
+            /**
+             * Chatblocked
+             * @description Replies per blocked_reason.
+             */
+            chatBlocked?: {
+                [key: string]: number;
+            };
+            /**
+             * Chatfallbackrate
+             * @description Share of LLM attempts that fell back to the rule reply.
+             * @default 0
+             */
+            chatFallbackRate: number;
+            /**
+             * Chattokensin
+             * @default 0
+             */
+            chatTokensIn: number;
+            /**
+             * Chattokensout
+             * @default 0
+             */
+            chatTokensOut: number;
+            /**
+             * Chattotal
+             * @description Habit replies stored so far.
+             * @default 0
+             */
+            chatTotal: number;
             /**
              * Createperhourperip
              * @description GUEST_CREATE_PER_HOUR.
@@ -5362,6 +5580,162 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    chatHabit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatReply"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description NOT_ANSWERED (explain trước khi trả lời) hoặc ALREADY_ANSWERED (xin gợi ý sau khi nộp). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Đã thu hồi (WITHDRAWN). */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description CHAT_LIMIT. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getHabit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HabitOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Đã thu hồi (WITHDRAWN). */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

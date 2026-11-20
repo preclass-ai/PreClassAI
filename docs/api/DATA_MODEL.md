@@ -139,6 +139,12 @@ Id seed cố định (uuid5), nên trùng với ví dụ trong `openapi.json`: l
 
 Mỗi bài có: 1 nguồn văn bản (tiêu đề, 2 đoạn, bảng 4 hàng × 2 cột → 11 anchor) và ~19 block: `heading`, 2 `paragraph`, `instruction`, `data_fact`, 1 câu MCQ (4 `option`, `answer_key`, `explanation`), 1 câu NUMERIC (`answer_key` có `derivation`, `explanation`).
 
-## Nguồn từ nhiều định dạng (không đổi schema DB)
+## Habit (migration 0003, chỉ thêm)
 
-`source_revision.mime` nhận thêm `application/pdf`, `...spreadsheetml.sheet`, `...presentationml.presentation`; `extract_status = FAILED` (kèm 0 anchor) là bản PDF scan, và API suy ra `extractError = SCANNED_PDF` (đó là lỗi duy nhất được lưu; các lỗi khác bị từ chối, không lưu gì). `source_anchor.locator` là JSON tự do theo định dạng, xem API_GUIDE mục 12. Tệp gốc lưu dưới `UPLOAD_DIR` với tên `uuid.<ext>`.
+| Bảng | Cột chính | Ghi chú |
+|---|---|---|
+| `chat_session` | `id, assignment_id, student_id, item_block_id, created_at` | duy nhất theo (assignment, student, item) |
+| `chat_message` | `id, session_id, role user/assistant, action hint/ask/explain, text, hint_level 0..3, mode rule/llm, blocked_reason, tokens_in, tokens_out, request_id, created_at` | **append-only** (trigger `tg_append_only`); `text` đã che PII; duy nhất (session, request_id) cho dòng assistant |
+| `study_activity` | `student_id, day, items_answered, hints_used` | khóa chính (student, day); chỉ cập nhật khi `CHAT_ENABLED=true` |
+
+`blocked_reason` ghi cả từ chối (INJECTION, ANSWER_REQUEST, CONFIRM_OPTION, UNSAFE, OFFTOPIC) lẫn lý do rơi về rule của LLM (`LLM_ANSWER, LLM_NUMBER, LLM_PII, LLM_PROMPT, LLM_ERROR, LLM_BUDGET`).

@@ -1,6 +1,8 @@
 "use client";
 
 import { GuestSurveyCard } from "@/features/guest";
+import { HabitBar, HabitItem } from "@/features/habit";
+import { habitKey } from "@/features/habit-api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { use, useRef, useState, type FormEvent } from "react";
@@ -69,6 +71,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
         <div className="bar" aria-label={`Đã làm ${answered}/${data.items.length} câu`}><span style={{ width: `${data.items.length ? (100 * answered) / data.items.length : 0}%` }} /></div>
       </header>
       <DataNotice />
+      <HabitBar assignmentId={assignmentId} />
       {isClosed ? <Notice>Bài đã hết hạn nộp. Em vẫn xem lại được bài.</Notice> : null}
       {entries.map((e) =>
         "block" in e && e.block ? (
@@ -80,7 +83,10 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
             item={e.item}
             assignmentId={assignmentId}
             disabled={isClosed}
-            onAnswered={() => void qc.invalidateQueries({ queryKey: key })}
+            onAnswered={() => {
+              void qc.invalidateQueries({ queryKey: key });
+              void qc.invalidateQueries({ queryKey: habitKey(assignmentId) }); // streak + daily goal
+            }}
             onClosed={() => setClosed(true)}
           />
         ) : null,
@@ -170,6 +176,7 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
       <p id={`q-${item.id}`} className="stem">
         {item.stem}
       </p>
+      <HabitItem assignmentId={assignmentId} itemId={item.id} answered={!!result} explanation={result?.explanation ?? null} />
       {result ? (
         <Result result={result} />
       ) : (

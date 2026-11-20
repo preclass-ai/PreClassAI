@@ -107,7 +107,8 @@ class LoginRequest(ApiModel):
 
 class AuthConfig(ApiModel):
     guest_enabled: bool = Field(description="True when anonymous guest access is switched on (GUEST_ACCESS_ENABLED).")
-    model_config = ex({"guestEnabled": True})
+    chat_enabled: bool = Field(False, description="True when Habit (hints + chat) is on (CHAT_ENABLED).")
+    model_config = ex({"guestEnabled": True, "chatEnabled": False})
 
 
 class GuestRequest(ApiModel):
@@ -141,7 +142,14 @@ class SurveyStats(ApiModel):
     created_last_hour: int
     max_active: int = Field(description="GUEST_MAX_ACTIVE.")
     create_per_hour_per_ip: int = Field(description="GUEST_CREATE_PER_HOUR.")
-    model_config = ex({"activeGuests": 42, "createdLastHour": 12, "maxActive": 500, "createPerHourPerIp": 60})
+    chat_total: int = Field(0, description="Habit replies stored so far.")
+    chat_fallback_rate: float = Field(0, description="Share of LLM attempts that fell back to the rule reply.")
+    chat_blocked: dict[str, int] = Field(default_factory=dict, description="Replies per blocked_reason.")
+    chat_tokens_in: int = 0
+    chat_tokens_out: int = 0
+    model_config = ex({"activeGuests": 42, "createdLastHour": 12, "maxActive": 500, "createPerHourPerIp": 60,
+                       "chatTotal": 120, "chatFallbackRate": 0.0, "chatBlocked": {"ANSWER_REQUEST": 7},
+                       "chatTokensIn": 0, "chatTokensOut": 0})
 
 
 class GuestOut(ApiModel):
@@ -807,3 +815,51 @@ class AttemptRequest(ApiModel):
     answer: AnswerIn
     request_id: UUID = Field(description="Idempotency key (retry of the same submit). One attempt per item.")
     model_config = ex({"itemId": I["q1"], "answer": {"choice": "A"}, "requestId": I["request"]})
+
+
+# ---------------------------------------------------------------- Habit (CHAT_ENABLED)
+HabitAction = Literal["hint", "ask", "explain"]
+
+
+class ChatRequest(ApiModel):
+    item_id: UUID = Field(description="The item the student is working on (must belong to this assignment).")
+    action: HabitAction
+    message: str | None = Field(None, max_length=300, description="Free question for `ask` (PII redacted before storing).")
+    request_id: UUID = Field(description="Idempotency key: a retry returns the stored reply, uncounted.")
+    model_config = ex({"itemId": I["q1"], "action": "hint", "requestId": I["request"]})
+
+
+class SourceRef(ApiModel):
+    block_id: UUID
+    label: str = Field(description="Kind of approved block: Tiêu đề, Đoạn văn, Câu dẫn.")
+    excerpt: str = Field(description="Approved text, verbatim from the published snapshot.")
+
+
+class ChatReply(ApiModel):
+    reply: str = Field(description="Plain text. Never contains the answer before the student has answered the item.")
+    hint_level: int = Field(description="1..3 for `hint`, 0 otherwise.")
+    source_refs: list[SourceRef]
+    blocked_reason: str | None = Field(None, description="Refusal code (e.g. ANSWER_REQUEST) when the reply is a refusal.")
+    model_config = ex({"reply": "Em đọc kỹ đề và xác định đề đang hỏi về vùng nào, năm nào nhé.", "hintLevel": 1,
+                       "sourceRefs": [], "blockedReason": None})
+
+
+class HabitBadge(ApiModel):
+    code: str = Field(description="TU_LUC, KIEN_TRI or THAM_HIEM.")
+    label: str
+
+
+class HabitItem(ApiModel):
+    item_id: UUID
+    hints_used: int
+    hints_max: int
+
+
+class HabitOut(ApiModel):
+    streak: int = Field(description="Consecutive days (Asia/Ho_Chi_Minh) with at least one answered item.")
+    today_goal: int
+    today_done: int
+    badges: list[HabitBadge]
+    hints_available: list[HabitItem]
+    model_config = ex({"streak": 2, "todayGoal": 3, "todayDone": 1, "badges": [{"code": "TU_LUC", "label": "Tự lực"}],
+                       "hintsAvailable": [{"itemId": I["q1"], "hintsUsed": 1, "hintsMax": 3}]})
