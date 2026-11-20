@@ -138,3 +138,7 @@ Chạy: `uv run alembic upgrade head && uv run python -m seed.seed` trong `apps/
 Id seed cố định (uuid5), nên trùng với ví dụ trong `openapi.json`: lesson `dan-so-vung` = `712030dc-698a-5be5-9781-5d7a907b3628`, lớp 10A1 = `d97fbc44-edb6-5333-b65d-1427e836354c`, lớp 11A1 = `cf4d05fd-9a71-57a0-9eaa-421c08c3c74c`.
 
 Mỗi bài có: 1 nguồn văn bản (tiêu đề, 2 đoạn, bảng 4 hàng × 2 cột → 11 anchor) và ~19 block: `heading`, 2 `paragraph`, `instruction`, `data_fact`, 1 câu MCQ (4 `option`, `answer_key`, `explanation`), 1 câu NUMERIC (`answer_key` có `derivation`, `explanation`).
+
+## Nguồn từ nhiều định dạng (không đổi schema DB)
+
+`source_revision.mime` nhận thêm `application/pdf`, `...spreadsheetml.sheet`, `...presentationml.presentation`; `extract_status = FAILED` (kèm 0 anchor) là bản PDF scan, và API suy ra `extractError = SCANNED_PDF` (đó là lỗi duy nhất được lưu; các lỗi khác bị từ chối, không lưu gì). `source_anchor.locator` là JSON tự do theo định dạng, xem API_GUIDE mục 12. Tệp gốc lưu dưới `UPLOAD_DIR` với tên `uuid.<ext>`.

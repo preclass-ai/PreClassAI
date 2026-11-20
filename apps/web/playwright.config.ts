@@ -15,5 +15,7 @@ export default defineConfig({
     { name: "mobile-390", use: { ...devices["Desktop Chrome"], viewport: { width: 390, height: 844 } } },
     { name: "tablet-768", use: { ...devices["Desktop Chrome"], viewport: { width: 768, height: 1024 } } },
     { name: "desktop-1280", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } } },
+    // Opt-in (needs `npx playwright install webkit`): E2E_WEBKIT=1
+    ...(process.env.E2E_WEBKIT ? [{ name: "webkit-390", use: { ...devices["iPhone 13"], viewport: { width: 390, height: 844 } } }] : []),
   ],
 });

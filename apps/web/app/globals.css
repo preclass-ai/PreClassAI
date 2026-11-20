@@ -405,3 +405,15 @@ fieldset { border: 0; padding: 0; margin: 0; }
 .login-more > summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; }
 .login-more[open] > summary { margin-bottom: 8px; }
 .btn-lg { min-height: 56px; font-size: 1.1rem; }
+
+/* S01 upload: drop zone + anchor preview (tokens only) */
+.dropzone { position: relative; display: flex; flex-direction: column; gap: 4px; align-items: center; justify-content: center; text-align: center; min-height: 112px; padding: 18px; border: 2px dashed var(--border); border-radius: var(--radius); background: var(--surface-2); cursor: pointer; transition: border-color 160ms ease, background 160ms ease; }
+.dropzone:hover, .dropzone.over { border-color: var(--primary); background: var(--info-bg); }
+.dropzone.bad { border-color: var(--danger); }
+.dropzone input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.dropzone:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
+.dropzone strong { overflow-wrap: anywhere; }
+.anchor-preview details { border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; margin-bottom: 8px; background: var(--surface); }
+.anchor-preview summary { cursor: pointer; font-weight: 700; min-height: 32px; }
+.anchor-preview ul { margin: 8px 0 0; padding-left: 18px; }
+.anchor-preview li { margin-bottom: 4px; overflow-wrap: anywhere; }
