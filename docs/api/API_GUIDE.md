@@ -197,3 +197,14 @@ Khi tắt: mọi route dưới đây trả 404 và `GET /v1/auth/config` có `ch
   - `explain`: chỉ sau khi chính học sinh đã nộp câu đó, nếu không 409 `NOT_ANSWERED`.
   - 429 `CHAT_LIMIT` khi quá `CHAT_MAX_PER_ITEM` (6) hoặc `CHAT_MAX_PER_DAY_PER_STUDENT` (30). Gửi lại cùng `requestId` trả phản hồi đã lưu, không tính hạn mức (`sourceRefs` rỗng khi phát lại).
 - `GET /v1/admin/survey/export.csv` thêm cột `hints_used, max_hint_level, chat_asks, used_explain, blocked_count` (chỉ số đếm). `GET /v1/admin/survey/stats` thêm `chatTotal, chatFallbackRate, chatBlocked{reason:n}, chatTokensIn, chatTokensOut`.
+
+## 13. Cá nhân hóa do học sinh chọn (PERSONALIZATION_ENABLED, mặc định tắt; ADR-0013)
+
+Khi tắt: các route dưới đây trả 404 và `GET /v1/auth/config` có `personalizationEnabled:false` (UI ẩn). Chỉ STUDENT, chỉ dữ liệu của chính em. Hệ thống **không** có trường nào về tâm lý, sức khỏe hay tính cách.
+
+- `GET /v1/student/preferences` → `{preferences: {key: value}}` (chỉ các lựa chọn đang bật; thiếu khóa = tắt).
+- `PUT /v1/student/preferences` `{preferences: {key: "on"|"off"|"5"|"10"}}`: cập nhật từng phần, `off` xóa lựa chọn. Khóa: `chia_nho_tung_buoc`, `uu_tien_bang_so_lieu`, `uu_tien_giai_thich`, `nhac_tien_do` (`on`/`off`), `hen_gio_tap_trung` (`5`/`10`/`off`), `focus_mode_used` (dấu "đã dùng chế độ tập trung" để khảo sát đếm). Khóa lạ hoặc giá trị sai kiểu → 422.
+- `DELETE /v1/student/preferences`: tắt hết.
+- `GET .../habit` thêm cho mỗi câu `advice` (`REVIEW` = nên xem lại nội dung bài trước, kèm `preview` là Gợi ý 1 mở sẵn và **không** tính là đã dùng gợi ý; `QUIET` = kỹ năng này đang ổn, giảm nhắc; `null` = không có lời khuyên). Tính bằng luật từ kết quả lần làm đầu và số lần dùng gợi ý theo kỹ năng của chính em (`REVIEW`: ≥ 2 câu và sai ≥ 50%; `QUIET`: ≥ 3 câu và ≥ 80% đúng ngay không gợi ý), không lưu kết luận.
+- `POST .../chat`: `chia_nho_tung_buoc` rút gợi ý còn một câu ngắn; `uu_tien_bang_so_lieu` làm gợi ý bậc 2 nhắc bảng số liệu trước. Chỉ đổi cách diễn đạt, mọi quy tắc không lộ đáp án giữ nguyên.
+- `GET /v1/admin/survey/export.csv` thêm `pref_chia_nho, pref_hen_gio_phut, pref_bang_so_lieu, pref_giai_thich, pref_nhac_tien_do, focus_mode_used` (cờ 0/1; `pref_hen_gio_phut` là 0, 5 hoặc 10).

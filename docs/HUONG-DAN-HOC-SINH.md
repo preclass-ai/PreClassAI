@@ -18,3 +18,16 @@ Em xin đáp án, hỏi "A có đúng không", bảo Habit bỏ qua quy tắc, h
 - **Không nhập thông tin cá nhân** (số điện thoại, email, địa chỉ). Habit sẽ che những thứ này, nhưng em đừng gõ.
 - Một câu chỉ nộp **một lần**. Hãy dùng gợi ý trước khi nộp.
 - Habit có thể tắt khi thầy cô chưa bật; khi đó em chỉ thấy bài như bình thường.
+
+## Chọn cách học hôm nay (nếu thầy cô đã bật)
+
+Ở đầu bài có mục **"Em muốn học theo cách nào hôm nay?"**. Em tự bật hoặc tắt bất cứ lúc nào, chỉ em thấy:
+
+- **Chia nhỏ từng bước**: gợi ý của Habit ngắn hơn, mỗi lần một ý.
+- **Hẹn giờ tập trung** (5 hoặc 10 phút): có đồng hồ đếm ngược; hết giờ Habit nhắc em nghỉ mắt một chút.
+- **Ưu tiên bảng số liệu**: gợi ý nhắc em nhìn bảng số liệu trước.
+- **Ưu tiên phần giải thích**: nút "Habit giải thích" nổi bật hơn sau khi em nộp.
+- **Nhắc tiến độ**: hiện em đã làm mấy câu và còn mấy câu.
+- **Tắt hết**: về mặc định.
+
+**Chế độ tập trung** (nút ngay bên cạnh): mỗi màn hình chỉ một câu, có thanh tiến độ, nội dung bài thu gọn ở "Xem lại nội dung bài". Bấm "Câu tiếp" / "Câu trước" để đổi câu. Habit còn nhớ kết quả của em theo từng kỹ năng để gợi ý đúng lúc (ví dụ nhắc xem lại nội dung bài nếu em hay chưa chắc ở một kỹ năng, và nhắc ít hơn nếu em đã làm tốt); Habit **không** đoán tính cách hay sức khỏe của em.

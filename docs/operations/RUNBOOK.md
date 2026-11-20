@@ -60,3 +60,7 @@ python ../scripts/smoke.py --base https://localhost --insecure --password "<SEED
 Giá trị đề xuất trên Render cho đợt thử: `CHAT_ENABLED=true`, `CHAT_MODE=rule`, còn lại mặc định. Tắt khẩn cấp: `CHAT_ENABLED=false` rồi restart. Cần migration `alembic upgrade head` (0003) trước khi bật.
 
 Xem tokens và số lần bị chặn: đăng nhập ADMIN rồi `GET /v1/admin/survey/stats` (`chatTotal, chatFallbackRate, chatBlocked, chatTokensIn/Out`). Red team trước khi bật `llm`: `cd apps/api && PYTHONPATH=. uv run python ../../scripts/ops/habit_redteam.py` (0 vi phạm). Giữ uvicorn `--workers 1`: cache và giới hạn dùng bộ nhớ một tiến trình.
+
+## Cá nhân hóa (lựa chọn của học sinh, chế độ tập trung)
+
+`PERSONALIZATION_ENABLED` (mặc định `false`): bật thì học sinh thấy "Em muốn học theo cách nào hôm nay?" và nút "Chế độ tập trung" ở bài; tắt thì route trả 404 và UI ẩn. Đổi cần restart API; cần `alembic upgrade head` (0004) trước khi bật. Habit (`CHAT_ENABLED=true`) không bắt buộc, nhưng lời khuyên theo kỹ năng và cách gợi ý ngắn/ưu tiên bảng chỉ có khi Habit bật. Giá trị đề xuất cho đợt thử: `CHAT_ENABLED=true`, `PERSONALIZATION_ENABLED=true`. Xóa dữ liệu của một học sinh: `DELETE FROM student_preference WHERE student_id = ...`.

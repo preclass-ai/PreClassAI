@@ -7,6 +7,7 @@ import { Button } from "@/components/ui";
 import { errorCode, errorMessage } from "@/lib/errors";
 import { newRequestId } from "@/lib/uuid";
 import { HabitMark, SourceRef } from "./habit-parts";
+import { usePersonalizationOn, usePrefs } from "./personalization";
 import { askHabit, habitKey, useHabit, useHabitOn, type ChatReply } from "./habit-api";
 
 // The chat sheet is only downloaded when a student opens it.
@@ -66,10 +67,13 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const rid = useRef<string | null>(null);
+  const persOn = usePersonalizationOn();
+  const prefs = usePrefs(persOn);
   const close = useCallback(() => setOpen(false), []);
   if (!on) return null;
 
-  const server = h.data?.hintsAvailable.find((x) => x.itemId === itemId)?.hintsUsed ?? 0;
+  const info = h.data?.hintsAvailable.find((x) => x.itemId === itemId);
+  const server = info?.hintsUsed ?? 0;
   const used = Math.max(hints.length, server);
   const limited = errorCode(err) === "CHAT_LIMIT";
   const openChat = () => {
@@ -102,7 +106,7 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
     return (
       <div className="habit">
         <div className="habit-actions">
-          <Button variant="secondary" className="habit-btn" onClick={openChat}>
+          <Button variant={prefs.uu_tien_giai_thich ? "primary" : "secondary"} className="habit-btn" onClick={openChat}>
             <HabitMark /> Habit giải thích
           </Button>
         </div>
@@ -111,7 +115,15 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
     );
   }
   return (
-    <div className="habit">
+    <div className={`habit${info?.advice === "QUIET" ? " quiet" : ""}`}>
+      {info?.advice === "REVIEW" && info.preview ? (
+        <div className="habit-advice" role="note">
+          <strong>Gợi ý cho em:</strong> xem lại phần nội dung của bài trước khi làm câu này.
+          <p className="habit-preview">
+            <strong>Gợi ý 1.</strong> {info.preview}
+          </p>
+        </div>
+      ) : null}
       <div className="habit-actions">
         <Button variant="secondary" className="habit-btn" onClick={() => void hint()} busy={busy} disabled={used >= 3 || limited}>
           <HabitMark /> {used >= 3 ? "Gợi ý 3/3 (đã dùng hết)" : `Gợi ý ${used + 1}/3`}
