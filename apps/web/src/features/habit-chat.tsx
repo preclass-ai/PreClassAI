@@ -21,7 +21,7 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
   onClose: () => void;
 }) {
   const dlg = useRef<HTMLDialogElement>(null);
-  const end = useRef<HTMLDivElement>(null);
+  const log = useRef<HTMLDivElement>(null);
   const seq = useRef(0);
   const retry = useRef<{ text: string; rid: string } | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>(() => (answered && explanation ? [{ id: 0, from: "habit", text: explanation }] : []));
@@ -50,7 +50,8 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
   }, [open, onClose]);
 
   useEffect(() => {
-    end.current?.scrollIntoView?.({ block: "end" });
+    // scrollTop on the log itself: scrollIntoView also scrolls the page/dialog in WebKit
+    if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [msgs, busy]);
 
   async function send(message: string) {
@@ -91,7 +92,7 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
         </button>
       </header>
       <p className="habit-note">Habit không đưa đáp án — em tự làm nhé! Không nhập thông tin cá nhân.</p>
-      <div className="habit-log" aria-live="polite" aria-busy={busy}>
+      <div ref={log} className="habit-log" aria-live="polite" aria-busy={busy}>
         {msgs.map((m) => (
           <div key={m.id} className={`habit-msg ${m.from}${m.refused ? " refused" : ""}`}>
             <p>{m.text}</p>
@@ -114,7 +115,6 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
             </Button>
           </div>
         ) : null}
-        <div ref={end} />
       </div>
       {!answered ? (
         <form className="habit-form" onSubmit={submit}>
