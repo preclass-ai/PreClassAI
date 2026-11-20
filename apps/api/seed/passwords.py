@@ -1,7 +1,7 @@
 """Seed passwords per role. Development/staging/CI keep one shared demo password; a deployed demo never does.
 
 APP_ENV=demo (public cloud): TEACHER/REVIEWER/ADMIN passwords come from SEED_TEACHER_PASSWORD, SEED_REVIEWER_PASSWORD and
-SEED_ADMIN_PASSWORD (>= 12 characters, otherwise the seed refuses). Seed students get SEED_STUDENT_PASSWORD if set, else a
+SEED_ADMIN_PASSWORD (>= 12 characters, otherwise accounts are NOT created and a warning is logged). Seed students get SEED_STUDENT_PASSWORD if set, else a
 random secret that is thrown away: they cannot log in with a password at all (the public demo uses anonymous guests).
 """
 import os
@@ -11,6 +11,11 @@ from collections.abc import Mapping
 from argon2 import PasswordHasher
 
 DEPLOYED = ("demo", "production", "prod")
+
+
+class MissingSeedPassword(Exception):
+    """A required SEED_*_PASSWORD is missing or too short. The seed scripts catch it, log a warning and skip creating
+    accounts (a missing variable must never crash-loop the service); rotate_passwords.py turns it into a hard error."""
 MIN_LENGTH = 12
 ROLE_ENV = {"TEACHER": "SEED_TEACHER_PASSWORD", "REVIEWER": "SEED_REVIEWER_PASSWORD", "ADMIN": "SEED_ADMIN_PASSWORD"}
 ROLES = ("TEACHER", "REVIEWER", "ADMIN", "STUDENT")
@@ -30,7 +35,7 @@ def role_passwords(app_env: str, env: Mapping[str, str] | None = None) -> dict[s
     for role, name in ROLE_ENV.items():
         value = env.get(name, "")
         if len(value) < MIN_LENGTH:
-            raise SystemExit(f"Refusing to seed: set {name} (at least {MIN_LENGTH} characters) when APP_ENV={app_env}.")
+            raise MissingSeedPassword(f"set {name} (at least {MIN_LENGTH} characters) when APP_ENV={app_env}")
         out[role] = value
     out["STUDENT"] = env.get("SEED_STUDENT_PASSWORD") or secrets.token_urlsafe(32)
     return out

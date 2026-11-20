@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 sys.path.insert(0, os.getcwd())  # run from apps/api
 from app.config import get_settings  # noqa: E402
-from seed.passwords import ROLE_ENV, hashes  # noqa: E402
+from seed.passwords import ROLE_ENV, MissingSeedPassword, hashes  # noqa: E402
 
 
 async def rotate(url: str, by_role: dict[str, str]) -> dict[str, int]:
@@ -50,7 +50,10 @@ def main() -> None:
     if missing:
         sys.exit("Set in this shell: " + ", ".join(missing))
     cfg = get_settings()
-    by_role = hashes("demo")  # validates length >= 12; students: SEED_STUDENT_PASSWORD or a random throw-away secret
+    try:
+        by_role = hashes("demo")  # validates length >= 12; students: SEED_STUDENT_PASSWORD or a random throw-away secret
+    except MissingSeedPassword as e:
+        sys.exit(f"Refusing: {e}")
     print(f"Target database host: {cfg.database_url.split('@')[-1].split('/')[0]}")
     if input("Type ROTATE to change the passwords of all seed accounts: ").strip() != "ROTATE":
         sys.exit("Cancelled.")

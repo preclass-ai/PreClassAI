@@ -27,3 +27,12 @@ services:
       - { key: DATABASE_URL, sync: false }   # Neon direct string; scheme/sslmode are normalized by the app
       - { key: FRONTEND_ORIGIN, sync: false } # https://pre-class-ai.vercel.app
       - { key: SESSION_SECRET, generateValue: true }
+      # Demo account passwords (>= 12 characters each). Missing -> accounts are NOT created and a warning is logged; the API still starts.
+      - { key: SEED_TEACHER_PASSWORD, sync: false }
+      - { key: SEED_REVIEWER_PASSWORD, sync: false }
+      - { key: SEED_ADMIN_PASSWORD, sync: false }
+      - { key: SEED_STUDENT_PASSWORD, sync: false }  # optional: without it seed students cannot log in with a password (guests only)
+      - { key: GUEST_ACCESS_ENABLED, value: "true" }
+      - { key: GUEST_CLASS_CODE, value: KS }
+      - { key: GUEST_CREATE_PER_HOUR, value: "200" }
+      - { key: DOCS_ACCESS, value: staff }  # open | staff | off  (/docs and /v1/openapi.json)

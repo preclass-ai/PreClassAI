@@ -1,6 +1,6 @@
 import pytest
 
-from seed.passwords import hashes, role_passwords
+from seed.passwords import MissingSeedPassword, hashes, role_passwords
 
 GOOD = {"SEED_TEACHER_PASSWORD": "teacher-pass-0001", "SEED_REVIEWER_PASSWORD": "reviewer-pass-0002",
         "SEED_ADMIN_PASSWORD": "admin-pass-000003"}
@@ -14,9 +14,9 @@ def test_dev_keeps_one_shared_demo_password() -> None:
 def test_demo_requires_strong_per_role_passwords() -> None:
     for missing in GOOD:
         env = {k: v for k, v in GOOD.items() if k != missing}
-        with pytest.raises(SystemExit, match=missing):
+        with pytest.raises(MissingSeedPassword, match=missing):
             role_passwords("demo", env)
-    with pytest.raises(SystemExit, match="SEED_ADMIN_PASSWORD"):
+    with pytest.raises(MissingSeedPassword, match="SEED_ADMIN_PASSWORD"):
         role_passwords("demo", {**GOOD, "SEED_ADMIN_PASSWORD": "short"})
 
 

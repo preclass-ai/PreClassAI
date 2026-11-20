@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 from app.config import get_settings
 from app.db import models as m
 from app.ids import uid
+from seed.passwords import MissingSeedPassword
 from seed.passwords import hashes as pw_hashes
 
 DOMAIN = "preclass.local"
@@ -48,7 +49,11 @@ async def main() -> None:
         raise SystemExit("Refusing: APP_ENV=production (demo accounts share a known password).")
     engine = create_async_engine(get_settings().database_url)
     async with engine.begin() as conn:
-        n = await ensure_accounts(conn, lambda: pw_hashes(get_settings().app_env))
+        try:
+            n = await ensure_accounts(conn, lambda: pw_hashes(get_settings().app_env))
+        except MissingSeedPassword as e:
+            n = 0
+            print(f"WARNING: extra demo accounts NOT created: {e}. The API starts anyway.")
     await engine.dispose()
     print(f"demo accounts added: {n}")
 

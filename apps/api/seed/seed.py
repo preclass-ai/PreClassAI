@@ -22,6 +22,7 @@ from app.ids import uid
 from app.snapshot import build_snapshot
 from app.sources.numbers import parse_numbers
 from seed.lessons import LESSONS, NOTE
+from seed.passwords import MissingSeedPassword
 from seed.passwords import hashes as pw_hashes
 
 DOMAIN = "preclass.local"
@@ -265,8 +266,13 @@ async def main() -> None:
         if (await conn.execute(select(m.AppUser.id).where(m.AppUser.email == f"gv.dia@{DOMAIN}"))).first():
             print("already seeded")
         else:
-            await seed(conn, pw_hashes(get_settings().app_env))
-            print(f"seeded {len(LESSONS)} lessons; accounts: gv.dia@{DOMAIN}, HS10-01, HS11-01, admin@{DOMAIN}")
+            try:
+                hashed = pw_hashes(get_settings().app_env)
+            except MissingSeedPassword as e:
+                print(f"WARNING: demo accounts NOT created: {e}. The API starts anyway; set the variables and restart.")
+            else:
+                await seed(conn, hashed)
+                print(f"seeded {len(LESSONS)} lessons; accounts: gv.dia@{DOMAIN}, HS10-01, HS11-01, admin@{DOMAIN}")
     await engine.dispose()
 
 

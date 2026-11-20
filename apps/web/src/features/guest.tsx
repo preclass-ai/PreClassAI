@@ -7,7 +7,9 @@ import { useAuth } from "@/lib/auth";
 export const GUEST_NOTICE =
   "Không thu tên hay email. Kết quả làm bài chỉ dùng cho nghiên cứu và không gắn với danh tính của em.";
 
-const SURVEY_URL = process.env.NEXT_PUBLIC_SURVEY_URL ?? "";
+// Only an https link is ever rendered as a href (a mistyped javascript: value must not become a link).
+const RAW_SURVEY_URL = process.env.NEXT_PUBLIC_SURVEY_URL ?? "";
+const SURVEY_URL = /^https:\/\//i.test(RAW_SURVEY_URL) ? RAW_SURVEY_URL : "";
 
 function CopyCode({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);

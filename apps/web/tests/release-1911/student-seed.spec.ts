@@ -1,10 +1,9 @@
 import { appendFileSync, mkdirSync } from "node:fs";
-import { openAccountForm } from "../e2e/helpers";
+import { openAccountForm, passwordFor } from "../e2e/helpers";
 import { expect, test, type Page } from "@playwright/test";
 
 // Student flow on the SEEDED published lesson (no publish/assign). Env: STUDENT_<vp> ids, BLOCK_ID.
 const DIR = "test-results/release-1911";
-const PASSWORD = process.env.SEED_PASSWORD ?? "preclass-demo";
 const STUDENT: Record<string, string> = { "390": "HS10-12", "768": "HS10-14", "1280": "HS10-13", webkit: "HS10-15" };
 
 function rec(o: object) {
@@ -27,7 +26,7 @@ test("seeded: student answers 2 questions, sees explanation, provenance blocked"
     await page.goto("/login");
     await openAccountForm(page);
     await page.getByLabel("Email hoặc mã học sinh").fill(STUDENT[vp]!);
-    await page.getByLabel("Mật khẩu").fill(PASSWORD);
+    await page.getByLabel("Mật khẩu").fill(passwordFor(STUDENT[vp]!));
     await page.getByRole("button", { name: "Đăng nhập" }).click();
     await expect(page.getByRole("heading", { name: "Bài được giao" })).toBeVisible({ timeout: 30_000 });
     await noHScroll(page);

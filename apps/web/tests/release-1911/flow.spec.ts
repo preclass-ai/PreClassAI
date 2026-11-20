@@ -1,9 +1,8 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
-import { openAccountForm } from "../e2e/helpers";
+import { openAccountForm, passwordFor } from "../e2e/helpers";
 
 const DIR = "test-results/release-1911";
-const PASSWORD = process.env.SEED_PASSWORD ?? "preclass-demo";
 const STUDENT: Record<string, string> = { "390": "HS10-03", "768": "HS10-04", "1280": "HS10-05", webkit: "HS10-06" };
 const TEXT =
   "Số dân các vùng (DỮ LIỆU MINH HỌA)\n\nDân cư phân bố không đều giữa các vùng.\n\n" +
@@ -44,7 +43,7 @@ async function login(page: Page, id: string) {
   await page.goto("/login");
   await openAccountForm(page);
   await page.getByLabel("Email hoặc mã học sinh").fill(id);
-  await page.getByLabel("Mật khẩu").fill(PASSWORD);
+  await page.getByLabel("Mật khẩu").fill(passwordFor(id));
   await page.getByRole("button", { name: "Đăng nhập" }).click();
   await expect(page).not.toHaveURL(/\/login/, { timeout: 30_000 });
 }
@@ -161,7 +160,7 @@ test("T1 teacher: login, source, generate, edit, review, publish, assign, histor
     st.blockId = new URL(page.url()).searchParams.get("block") ?? "";
     await page.getByRole("button", { name: "Sửa nội dung" }).click();
     const ta = page.locator("textarea").first();
-    await ta.fill((await ta.inputValue()) + " (đã chỉnh)");
+    await ta.fill((await ta.inputValue()) + " (đã chỉnh) <img src=x onerror=\"window.__xss=1\">"); // XSS probe: must stay text
     await page.getByRole("button", { name: "Lưu", exact: true }).click();
     await expect(page.getByRole("button", { name: "Sửa nội dung" })).toBeVisible({ timeout: 30_000 });
   });
@@ -177,6 +176,8 @@ test("T1 teacher: login, source, generate, edit, review, publish, assign, histor
     await expect(page.locator(".tree.snapshot .block-card").first()).toBeVisible();
   });
   rec({ vp, check: "teacher-console-errors", n: errs.length, sample: errs.slice(0, 3) });
+  expect(errs, "console errors (incl. CSP violations) on teacher screens").toEqual([]);
+  expect(await page.evaluate(() => (window as unknown as { __xss?: number }).__xss)).toBeUndefined();
   rec({ vp, check: "requests", ...cnt });
   rec({ vp, check: "csrf-missing", n: badCsrf.length, sample: badCsrf.slice(0, 3) });
 });
@@ -215,6 +216,8 @@ test("T2 student: answer 2 questions, explanation after submit, provenance block
     expect(r.status()).toBe(404); // PR-08
   });
   rec({ vp, check: "student-console-errors", n: errs.length, sample: errs.slice(0, 3) });
+  expect(errs, "console errors (incl. CSP violations) on student screens").toEqual([]);
+  expect(await page.evaluate(() => (window as unknown as { __xss?: number }).__xss)).toBeUndefined();
 });
 
 test("T3 teacher: withdraw (and republish on 1280)", async ({ page }, info) => {

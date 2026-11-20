@@ -41,6 +41,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/survey/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Guest counters (ADMIN)
+         * @description Active guests, guests created in the last hour and the limits.
+         */
+        get: operations["getSurveyStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/config": {
         parameters: {
             query?: never;
@@ -2732,6 +2752,34 @@ export interface components {
             /** Text */
             text: string;
         };
+        /**
+         * SurveyStats
+         * @example {
+         *       "activeGuests": 42,
+         *       "createPerHourPerIp": 60,
+         *       "createdLastHour": 12,
+         *       "maxActive": 500
+         *     }
+         */
+        SurveyStats: {
+            /**
+             * Activeguests
+             * @description Guests seen or created in the last 14 days.
+             */
+            activeGuests: number;
+            /**
+             * Createperhourperip
+             * @description GUEST_CREATE_PER_HOUR.
+             */
+            createPerHourPerIp: number;
+            /** Createdlasthour */
+            createdLastHour: number;
+            /**
+             * Maxactive
+             * @description GUEST_MAX_ACTIVE.
+             */
+            maxActive: number;
+        };
         /** TransformationEventOut */
         TransformationEventOut: {
             /** Actorid */
@@ -2996,6 +3044,44 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                     "text/csv": string;
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSurveyStats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurveyStats"];
                 };
             };
             /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
