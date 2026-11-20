@@ -38,7 +38,7 @@ REFUSAL = {
 
 _PHONE = re.compile(r"(?<!\d)(?:\+?84|0)[\d .\-]{8,12}\d(?!\d)")
 _EMAIL = re.compile(r"[\w.+\-]+@[\w\-]+(?:\.[\w\-]+)+")
-_ADDR = re.compile(r"(?i)\b(?:số nhà|so nha|ngõ|ngo|hẻm|hem|đường|duong|phường|phuong|quận|quan|thôn|xóm|xom)\s+[\w/\-]+(?:\s+[\w/\-]+)?")
+_ADDR = re.compile(r"(?i)\b(?:số nhà|so nha|ngõ|hẻm|đường|phường|quận|thôn|xóm)\s+[\w/\-]+(?:\s+[\w/\-]+)?")
 _TAG = "[đã ẩn]"
 
 
@@ -124,7 +124,7 @@ def leak(text: str, v: ItemView) -> str | None:
             return "ANSWER"
     if v.answer_value is not None and v.answer_value in set(parse_numbers(text)):
         return "ANSWER"
-    if re.search(r"\b(?:dap an|phuong an|lua chon|cau)\s+[abcd]\b", n):
+    if re.search(r"\b(?:dap an|phuong an|lua chon|cau|chon|tra loi)\s+(?:la\s+)?[abcd]\b", n):
         return "ANSWER"
     labels = {lab.lower() for lab, _ in v.options}
     if (set(n.split()) & labels) and any(f" {k} " in n for k in VERDICT):

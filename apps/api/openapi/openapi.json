@@ -637,10 +637,17 @@
       "AuthConfig": {
         "examples": [
           {
+            "chatEnabled": false,
             "guestEnabled": true
           }
         ],
         "properties": {
+          "chatEnabled": {
+            "default": false,
+            "description": "True when Habit (hints + chat) is on (CHAT_ENABLED).",
+            "title": "Chatenabled",
+            "type": "boolean"
+          },
           "guestEnabled": {
             "description": "True when anonymous guest access is switched on (GUEST_ACCESS_ENABLED).",
             "title": "Guestenabled",
@@ -1180,6 +1187,105 @@
         "title": "CardPayload",
         "type": "object"
       },
+      "ChatReply": {
+        "examples": [
+          {
+            "hintLevel": 1,
+            "reply": "Em đọc kỹ đề và xác định đề đang hỏi về vùng nào, năm nào nhé.",
+            "sourceRefs": []
+          }
+        ],
+        "properties": {
+          "blockedReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Refusal code (e.g. ANSWER_REQUEST) when the reply is a refusal.",
+            "title": "Blockedreason"
+          },
+          "hintLevel": {
+            "description": "1..3 for `hint`, 0 otherwise.",
+            "title": "Hintlevel",
+            "type": "integer"
+          },
+          "reply": {
+            "description": "Plain text. Never contains the answer before the student has answered the item.",
+            "title": "Reply",
+            "type": "string"
+          },
+          "sourceRefs": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "title": "Sourcerefs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reply",
+          "hintLevel",
+          "sourceRefs"
+        ],
+        "title": "ChatReply",
+        "type": "object"
+      },
+      "ChatRequest": {
+        "examples": [
+          {
+            "action": "hint",
+            "itemId": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73",
+            "requestId": "395bd63b-62df-5c53-a2ef-0b46956092f7"
+          }
+        ],
+        "properties": {
+          "action": {
+            "enum": [
+              "hint",
+              "ask",
+              "explain"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "itemId": {
+            "description": "The item the student is working on (must belong to this assignment).",
+            "format": "uuid",
+            "title": "Itemid",
+            "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free question for `ask` (PII redacted before storing).",
+            "title": "Message"
+          },
+          "requestId": {
+            "description": "Idempotency key: a retry returns the stored reply, uncounted.",
+            "format": "uuid",
+            "title": "Requestid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemId",
+          "action",
+          "requestId"
+        ],
+        "title": "ChatRequest",
+        "type": "object"
+      },
       "ClassList": {
         "examples": [
           {
@@ -1557,6 +1663,109 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HabitBadge": {
+        "properties": {
+          "code": {
+            "description": "TU_LUC, KIEN_TRI or THAM_HIEM.",
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "HabitBadge",
+        "type": "object"
+      },
+      "HabitItem": {
+        "properties": {
+          "hintsMax": {
+            "title": "Hintsmax",
+            "type": "integer"
+          },
+          "hintsUsed": {
+            "title": "Hintsused",
+            "type": "integer"
+          },
+          "itemId": {
+            "format": "uuid",
+            "title": "Itemid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemId",
+          "hintsUsed",
+          "hintsMax"
+        ],
+        "title": "HabitItem",
+        "type": "object"
+      },
+      "HabitOut": {
+        "examples": [
+          {
+            "badges": [
+              {
+                "code": "TU_LUC",
+                "label": "Tự lực"
+              }
+            ],
+            "hintsAvailable": [
+              {
+                "hintsMax": 3,
+                "hintsUsed": 1,
+                "itemId": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73"
+              }
+            ],
+            "streak": 2,
+            "todayDone": 1,
+            "todayGoal": 3
+          }
+        ],
+        "properties": {
+          "badges": {
+            "items": {
+              "$ref": "#/components/schemas/HabitBadge"
+            },
+            "title": "Badges",
+            "type": "array"
+          },
+          "hintsAvailable": {
+            "items": {
+              "$ref": "#/components/schemas/HabitItem"
+            },
+            "title": "Hintsavailable",
+            "type": "array"
+          },
+          "streak": {
+            "description": "Consecutive days (Asia/Ho_Chi_Minh) with at least one answered item.",
+            "title": "Streak",
+            "type": "integer"
+          },
+          "todayDone": {
+            "title": "Todaydone",
+            "type": "integer"
+          },
+          "todayGoal": {
+            "title": "Todaygoal",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "streak",
+          "todayGoal",
+          "todayDone",
+          "badges",
+          "hintsAvailable"
+        ],
+        "title": "HabitOut",
         "type": "object"
       },
       "HeadingPayload": {
@@ -3337,6 +3546,32 @@
         "title": "SourceOut",
         "type": "object"
       },
+      "SourceRef": {
+        "properties": {
+          "blockId": {
+            "format": "uuid",
+            "title": "Blockid",
+            "type": "string"
+          },
+          "excerpt": {
+            "description": "Approved text, verbatim from the published snapshot.",
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "label": {
+            "description": "Kind of approved block: Tiêu đề, Đoạn văn, Câu dẫn.",
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "blockId",
+          "label",
+          "excerpt"
+        ],
+        "title": "SourceRef",
+        "type": "object"
+      },
       "SourceRevisionCreateText": {
         "examples": [
           {
@@ -3762,6 +3997,13 @@
         "examples": [
           {
             "activeGuests": 42,
+            "chatBlocked": {
+              "ANSWER_REQUEST": 7
+            },
+            "chatFallbackRate": 0.0,
+            "chatTokensIn": 0,
+            "chatTokensOut": 0,
+            "chatTotal": 120,
             "createPerHourPerIp": 60,
             "createdLastHour": 12,
             "maxActive": 500
@@ -3771,6 +4013,36 @@
           "activeGuests": {
             "description": "Guests seen or created in the last 14 days.",
             "title": "Activeguests",
+            "type": "integer"
+          },
+          "chatBlocked": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Replies per blocked_reason.",
+            "title": "Chatblocked",
+            "type": "object"
+          },
+          "chatFallbackRate": {
+            "default": 0,
+            "description": "Share of LLM attempts that fell back to the rule reply.",
+            "title": "Chatfallbackrate",
+            "type": "number"
+          },
+          "chatTokensIn": {
+            "default": 0,
+            "title": "Chattokensin",
+            "type": "integer"
+          },
+          "chatTokensOut": {
+            "default": 0,
+            "title": "Chattokensout",
+            "type": "integer"
+          },
+          "chatTotal": {
+            "default": 0,
+            "description": "Habit replies stored so far.",
+            "title": "Chattotal",
             "type": "integer"
           },
           "createPerHourPerIp": {
@@ -4273,7 +4545,7 @@
     },
     "/v1/admin/survey/export.csv": {
       "get": {
-        "description": "One row per guest answer: `survey_code, lesson, item, first_attempt_is_correct, answered_at_utc`. No other identifying column.",
+        "description": "One row per guest answer: `survey_code, lesson, item, first_attempt_is_correct, answered_at_utc, hints_used, max_hint_level, chat_asks, used_explain, blocked_count` (Habit counters, never message text). No other identifying column.",
         "operationId": "exportSurveyCsv",
         "responses": {
           "200": {
@@ -7117,6 +7389,204 @@
         "summary": "Answer one item; the result and explanation come back now",
         "tags": [
           "student"
+        ]
+      }
+    },
+    "/v1/student/assignments/{assignment_id}/chat": {
+      "post": {
+        "description": "Grounded only in the published snapshot. Before the student answers the item the reply never contains the answer (label, value, or a verdict on one option); asks for it are refused with a `blockedReason`. `explain` needs the student's own attempt. Limits: `CHAT_MAX_PER_ITEM`, `CHAT_MAX_PER_DAY_PER_STUDENT`. Repeating the same `requestId` returns the stored reply.",
+        "operationId": "chatHabit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatReply"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "NOT_ANSWERED (explain trước khi trả lời) hoặc ALREADY_ANSWERED (xin gợi ý sau khi nộp)."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Đã thu hồi (WITHDRAWN)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "CHAT_LIMIT."
+          }
+        },
+        "summary": "Ask Habit for a hint (1→3), a scoped answer from the approved lesson, or an explanation after answering",
+        "tags": [
+          "habit"
+        ]
+      }
+    },
+    "/v1/student/assignments/{assignment_id}/habit": {
+      "get": {
+        "description": "404 when `CHAT_ENABLED` is off or the assignment is not the student's.",
+        "operationId": "getHabit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HabitOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Đã thu hồi (WITHDRAWN)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Study habit of the student for this assignment (streak, daily goal, badges, hints used)",
+        "tags": [
+          "habit"
         ]
       }
     }
