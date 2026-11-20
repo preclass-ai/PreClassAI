@@ -136,6 +136,14 @@ class UserOut(ApiModel):
         "email": "gv.dia@preclass.local", "loginCode": None, "classIds": [I["class"]]})
 
 
+class SurveyStats(ApiModel):
+    active_guests: int = Field(description="Guests seen or created in the last 14 days.")
+    created_last_hour: int
+    max_active: int = Field(description="GUEST_MAX_ACTIVE.")
+    create_per_hour_per_ip: int = Field(description="GUEST_CREATE_PER_HOUR.")
+    model_config = ex({"activeGuests": 42, "createdLastHour": 12, "maxActive": 500, "createPerHourPerIp": 60})
+
+
 class GuestOut(ApiModel):
     user: UserOut
     survey_code: str

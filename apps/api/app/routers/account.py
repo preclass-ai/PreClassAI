@@ -9,6 +9,7 @@ from app.audit import audit
 from app.auth import (
     COOKIE,
     CurrentUser,
+    admin_login_limiter,
     create_session,
     current_user,
     login_limiter,
@@ -58,13 +59,19 @@ async def login(
             m.AppUser.is_guest.is_(False),  # guests have no password: they use /auth/guest[/resume]
         )
     )
+    is_admin = user is not None and user.role == "ADMIN"
+    if is_admin:
+        admin_login_limiter.check(key)  # stricter than ordinary accounts
     # Same answer and similar timing for unknown user and wrong password.
     if not verify_password(user.password_hash if user else None, body.password) or user is None:
         login_limiter.fail(key)
+        if is_admin:
+            admin_login_limiter.fail(key)
         audit(db, None, "LOGIN_FAILED", "session")
         await db.commit()
         raise ApiError(401, "INVALID_CREDENTIALS", "Tài khoản hoặc mật khẩu không đúng")
     login_limiter.reset(key)
+    admin_login_limiter.reset(key)
     token = await create_session(db, user.id)
     audit(db, user.id, "LOGIN", "session")
     out = await _user_out(db, user)
@@ -136,7 +143,7 @@ async def assignment_progress(class_id: UUID, assignment_id: UUID, cu: Annotated
             summary="Audit log, newest first (ADMIN, read-only; never contains content)",
             responses=errs(401, 403))
 async def audit_logs(
-    _: Annotated[CurrentUser, Depends(require_role("ADMIN"))],
+    cu: Annotated[CurrentUser, Depends(require_role("ADMIN"))],
     db: Annotated[AsyncSession, Depends(get_db)],
     action: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
@@ -145,6 +152,8 @@ async def audit_logs(
     if action:
         q = q.where(m.AuditLog.action == action)
     rows = (await db.scalars(q)).all()
+    audit(db, cu.id, "ADMIN_VIEW_AUDIT_LOGS", "audit_log")
+    await db.commit()
     return AuditLogList(items=[AuditLogOut(id=r.id, actor_id=r.actor_id, action=r.action,
                                            resource_type=r.resource_type, resource_id=r.resource_id,
                                            metadata=r.meta, created_at=r.created_at) for r in rows])

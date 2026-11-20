@@ -1,11 +1,13 @@
 """Source parsing: pasted text and DOCX -> anchors (paragraphs, headings, table cells).
 
-DOCX is untrusted input: magic bytes, content types, decompressed-size limits and macro rejection happen
+DOCX is untrusted input: magic bytes, content types, size/entry-count/compression-ratio limits, macro, embedded and
+external-content rejection happen
 BEFORE python-docx opens it. shortcut: no malware scan (D-001 #11); add one before accepting files from outside
 the school.
 """
 
 import io
+import re
 import zipfile
 from dataclasses import dataclass
 from decimal import Decimal
@@ -16,7 +18,14 @@ from app.hashing import excerpt_hash
 from app.sources.numbers import parse_numbers
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
-MAX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024  # checked on the zip directory, before extraction
+MAX_UNCOMPRESSED_BYTES = 20 * 1024 * 1024  # checked on the zip directory, before extraction
+MAX_ENTRIES = 1000
+MAX_RATIO = 100  # uncompressed / compressed; real documents are ~3-15, a zip bomb is 1000+
+RATIO_FREE_BYTES = 1024 * 1024  # small parts may compress extremely well (repeated XML): only judge parts above this
+MAX_RELS_BYTES = 1024 * 1024
+_REL = re.compile(r"<Relationship\b[^>]*>", re.I)
+_EXTERNAL = re.compile(r'TargetMode\s*=\s*"External"', re.I)
+_HYPERLINK = re.compile(r'Type\s*=\s*"[^"]*/hyperlink"', re.I)
 MAX_ANCHORS = 5000
 DOCX_MAIN = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
@@ -77,13 +86,28 @@ def check_docx_container(data: bytes) -> None:
     try:
         zf = zipfile.ZipFile(io.BytesIO(data))
         infos = zf.infolist()
-        if sum(i.file_size for i in infos) > MAX_UNCOMPRESSED_BYTES:
+        if len(infos) > MAX_ENTRIES:
+            raise ApiError(422, "INVALID_FILE", "Tệp DOCX có quá nhiều thành phần")
+        total = sum(i.file_size for i in infos)
+        if total > MAX_UNCOMPRESSED_BYTES:
             raise ApiError(422, "FILE_TOO_LARGE", "Tệp giải nén quá lớn")
+        if any(i.file_size > RATIO_FREE_BYTES and i.file_size > MAX_RATIO * max(i.compress_size, 1) for i in infos) or (
+                total > RATIO_FREE_BYTES and total > MAX_RATIO * len(data)):
+            raise ApiError(422, "FILE_TOO_LARGE", "Tệp nén bất thường (nghi zip bomb)")
         names = [i.filename for i in infos]
         if any(".." in n.split("/") or n.startswith("/") for n in names):
             raise ApiError(422, "INVALID_FILE", "Tệp DOCX không hợp lệ")
-        if any("vbaproject" in n.lower() or n.lower().endswith(".docm") for n in names):
+        if any("vbaproject" in n.lower() or n.lower().endswith((".docm", ".dotm")) for n in names):
             raise ApiError(422, "MACRO_REJECTED", "Tệp chứa macro nên không được nhận")
+        if any(n.lower().startswith(("word/embeddings/", "word/activex/")) for n in names):
+            raise ApiError(422, "EXTERNAL_CONTENT_REJECTED", "Tệp chứa đối tượng nhúng nên không được nhận")
+        for i in infos:  # linked templates/images/OLE/frames point outside the file: only plain hyperlinks are allowed
+            if i.filename.lower().endswith(".rels"):
+                if i.file_size > MAX_RELS_BYTES:
+                    raise ApiError(422, "INVALID_FILE", "Tệp DOCX không hợp lệ")
+                for rel in _REL.findall(zf.read(i).decode("utf-8", "replace")):
+                    if _EXTERNAL.search(rel) and not _HYPERLINK.search(rel):
+                        raise ApiError(422, "EXTERNAL_CONTENT_REJECTED", "Tệp liên kết tới nội dung ngoài nên không được nhận")
         if "[Content_Types].xml" not in names:
             raise ApiError(422, "INVALID_FILE", "Chỉ nhận tệp DOCX")
         ctypes = zf.read("[Content_Types].xml").decode("utf-8", "replace")

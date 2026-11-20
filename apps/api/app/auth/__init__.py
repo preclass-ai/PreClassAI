@@ -74,6 +74,7 @@ class LoginLimiter:
 
 
 login_limiter = LoginLimiter()
+admin_login_limiter = LoginLimiter(max_failures=3, window_s=900)  # ADMIN accounts: 3 wrong passwords / 15 min per (account, IP)
 
 
 class CurrentUser:

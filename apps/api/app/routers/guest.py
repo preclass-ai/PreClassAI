@@ -6,12 +6,13 @@ from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import guest as svc
+from app.audit import audit
 from app.auth import COOKIE, CurrentUser, create_session, require_role
 from app.config import get_settings
 from app.db.session import get_db
 from app.routers._base import errs
 from app.routers.account import _user_out
-from app.schemas import AuthConfig, GuestOut, GuestRequest, GuestResumeRequest
+from app.schemas import AuthConfig, GuestOut, GuestRequest, GuestResumeRequest, SurveyStats
 
 router = APIRouter()
 _PUBLIC: dict[str, Any] = {"security": []}
@@ -66,6 +67,19 @@ async def resume_guest(body: GuestResumeRequest, request: Request, response: Res
             "No other identifying column.",
             responses={200: {"content": {"text/csv": {"schema": {"type": "string"}}}, "description": "CSV file."},
                        **errs(401, 403)})
-async def export_survey(_: Annotated[CurrentUser, Depends(require_role("ADMIN", "TEACHER"))], db: Db) -> Response:
-    return Response(await svc.export_csv(db), media_type="text/csv; charset=utf-8",
+async def export_survey(cu: Annotated[CurrentUser, Depends(require_role("ADMIN", "TEACHER"))], db: Db) -> Response:
+    body = await svc.export_csv(db)
+    audit(db, cu.id, "EXPORT_SURVEY", "survey")
+    await db.commit()
+    return Response(body, media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="survey.csv"'})
+
+
+@router.get("/admin/survey/stats", tags=["admin"], operation_id="getSurveyStats", response_model=SurveyStats,
+            summary="Guest counters (ADMIN)", description="Active guests, guests created in the last hour and the limits.",
+            responses=errs(401, 403))
+async def survey_stats(cu: Annotated[CurrentUser, Depends(require_role("ADMIN"))], db: Db) -> SurveyStats:
+    out = SurveyStats(**await svc.stats(db))
+    audit(db, cu.id, "ADMIN_VIEW_SURVEY_STATS", "survey")
+    await db.commit()
+    return out

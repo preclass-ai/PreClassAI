@@ -85,7 +85,7 @@ async def db(db_ready: None) -> AsyncIterator[AsyncSession]:
 
 @pytest.fixture
 async def client(db: AsyncSession) -> AsyncIterator[httpx.AsyncClient]:
-    from app.auth import login_limiter
+    from app.auth import admin_login_limiter, login_limiter
     from app.db.session import get_db
     from app.generation import background_runner, run_job
     from app.main import app
@@ -100,6 +100,7 @@ async def client(db: AsyncSession) -> AsyncIterator[httpx.AsyncClient]:
 
     app.dependency_overrides[background_runner] = lambda: _inline
     login_limiter.reset()
+    admin_login_limiter.reset()
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://t", headers={"X-PreClass-CSRF": "1"}
     ) as c:

@@ -2,18 +2,16 @@
 
     DATABASE_URL=... uv run python -m seed.seed
 
-Refuses to run when APP_ENV=production. Re-running is a no-op once seeded. Password for every seeded account: $SEED_PASSWORD
+Refuses to run when APP_ENV=production. Re-running is a no-op once seeded. Passwords: see seed/passwords.py (dev: $SEED_PASSWORD; APP_ENV=demo: per-role SEED_*_PASSWORD, required)
 (default "preclass-demo", DEV ONLY; set your own anywhere else).
 """
 
 import asyncio
-import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from argon2 import PasswordHasher
 from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 
@@ -24,6 +22,7 @@ from app.ids import uid
 from app.snapshot import build_snapshot
 from app.sources.numbers import parse_numbers
 from seed.lessons import LESSONS, NOTE
+from seed.passwords import hashes as pw_hashes
 
 DOMAIN = "preclass.local"
 
@@ -118,14 +117,13 @@ async def ins(conn: AsyncConnection, model: type[m.Base], rows: list[dict[str, A
         await conn.execute(insert(model.__table__), rows)  # type: ignore[attr-defined]
 
 
-async def seed(conn: AsyncConnection, password: str) -> None:
+async def seed(conn: AsyncConnection, pw_by_role: dict[str, str]) -> None:
     now = datetime.now(UTC)
-    pw = PasswordHasher().hash(password)
     # --- users and classes
     staff = [("gv.dia", "TEACHER", "Cô Địa Lí (minh họa)"), ("gv.khac", "TEACHER", "Thầy Khác (minh họa)"),
              ("reviewer", "REVIEWER", "Người duyệt (minh họa)"), ("admin", "ADMIN", "Quản trị (minh họa)")]
     users = [{"id": uid(f"user:{n}"), "email": f"{n}@{DOMAIN}", "login_code": None, "display_name": d,
-              "role": r, "password_hash": pw}
+              "role": r, "password_hash": pw_by_role[r]}
              for n, r, d in staff]
     classes = {"10A1": 10, "11A1": 11}
     members = []
@@ -135,7 +133,7 @@ async def seed(conn: AsyncConnection, password: str) -> None:
             login = f"HS{grade}-{i:02d}"
             users.append({"id": uid(f"user:{login}"), "email": None, "login_code": login,
                           "display_name": f"Học sinh {grade}-{i:02d} (minh họa)", "role": "STUDENT",
-                          "password_hash": pw})
+                          "password_hash": pw_by_role["STUDENT"]})
             members.append({"class_id": uid(f"class:{code}"), "user_id": uid(f"user:{login}"),
                             "role_in_class": "STUDENT"})
     await ins(conn, m.AppUser, users)
@@ -267,7 +265,7 @@ async def main() -> None:
         if (await conn.execute(select(m.AppUser.id).where(m.AppUser.email == f"gv.dia@{DOMAIN}"))).first():
             print("already seeded")
         else:
-            await seed(conn, os.environ.get("SEED_PASSWORD", "preclass-demo"))  # noqa: S105
+            await seed(conn, pw_hashes(get_settings().app_env))
             print(f"seeded {len(LESSONS)} lessons; accounts: gv.dia@{DOMAIN}, HS10-01, HS11-01, admin@{DOMAIN}")
     await engine.dispose()
 
