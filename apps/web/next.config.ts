@@ -20,6 +20,31 @@ function resolveApiOrigin(): string {
 
 const apiOrigin = resolveApiOrigin();
 
+/**
+ * Security headers for every page. script-src keeps 'unsafe-inline' because Next injects inline bootstrap scripts and a
+ * nonce would turn every statically rendered page into a dynamic one (tracked in docs/security). No 'unsafe-eval' in
+ * production (React dev tooling needs it only in `next dev`). /docs is the API's Scalar page (CDN script): no CSP there.
+ */
+const dev = process.env.NODE_ENV !== "production";
+const csp = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+const baseHeaders = [
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+];
+
 const config: NextConfig = {
   // Vercel has its own output format; standalone is for the Docker image only.
   ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
@@ -27,6 +52,12 @@ const config: NextConfig = {
   transpilePackages: ["@preclass/api-client"],
   poweredByHeader: false,
   distDir: process.env.NEXT_DIST_DIR ?? ".next", // lets CI/ops build without touching a running `next start`
+  async headers() {
+    return [
+      { source: "/((?!docs).*)", headers: [...baseHeaders, { key: "Content-Security-Policy", value: csp }] },
+      { source: "/docs", headers: baseHeaders },
+    ];
+  },
   // Dev and Vercel: one origin, the browser never calls the API host. Docker/prod: Caddy routes /v1/* first.
   async rewrites() {
     return [

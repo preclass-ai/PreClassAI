@@ -130,11 +130,12 @@ async def test_school_visibility_requires_license_note(client: httpx.AsyncClient
 async def test_new_revision_has_new_hash_and_does_not_touch_lessons(client: httpx.AsyncClient) -> None:
     await login(client, "gv.dia@preclass.local")
     v1 = (await upload(client, make_docx())).json()
-    r = await upload(client, make_docx(" Đã sửa."), path=f"/v1/sources/{v1['id']}/revisions/docx")
+    edited = make_docx(" Đã sửa.")  # one byte string: zip entries carry the current second, so two builds can differ
+    r = await upload(client, edited, path=f"/v1/sources/{v1['id']}/revisions/docx")
     assert r.status_code == 201, r.text
     v2 = r.json()["latestRevision"]
     assert v2["version"] == 2 and v2["sha256"] != v1["latestRevision"]["sha256"] and v2["id"] != v1["latestRevision"]["id"]
-    same = await upload(client, make_docx(" Đã sửa."), path=f"/v1/sources/{v1['id']}/revisions/docx")
+    same = await upload(client, edited, path=f"/v1/sources/{v1['id']}/revisions/docx")
     assert same.status_code == 409 and same.json()["code"] == "SOURCE_UNCHANGED"
     t = await client.post(f"/v1/sources/{v1['id']}/revisions", json={"text": "Mới\n\nHoàn toàn khác."})
     assert t.status_code == 201 and t.json()["latestRevision"]["version"] == 3

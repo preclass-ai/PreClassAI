@@ -3758,6 +3758,45 @@
         "title": "StudentOption",
         "type": "object"
       },
+      "SurveyStats": {
+        "examples": [
+          {
+            "activeGuests": 42,
+            "createPerHourPerIp": 60,
+            "createdLastHour": 12,
+            "maxActive": 500
+          }
+        ],
+        "properties": {
+          "activeGuests": {
+            "description": "Guests seen or created in the last 14 days.",
+            "title": "Activeguests",
+            "type": "integer"
+          },
+          "createPerHourPerIp": {
+            "description": "GUEST_CREATE_PER_HOUR.",
+            "title": "Createperhourperip",
+            "type": "integer"
+          },
+          "createdLastHour": {
+            "title": "Createdlasthour",
+            "type": "integer"
+          },
+          "maxActive": {
+            "description": "GUEST_MAX_ACTIVE.",
+            "title": "Maxactive",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "activeGuests",
+          "createdLastHour",
+          "maxActive",
+          "createPerHourPerIp"
+        ],
+        "title": "SurveyStats",
+        "type": "object"
+      },
       "TransformationEventOut": {
         "properties": {
           "actorId": {
@@ -4272,6 +4311,48 @@
           }
         },
         "summary": "Survey data export (CSV)",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/v1/admin/survey/stats": {
+      "get": {
+        "description": "Active guests, guests created in the last hour and the limits.",
+        "operationId": "getSurveyStats",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyStats"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          }
+        },
+        "summary": "Guest counters (ADMIN)",
         "tags": [
           "admin"
         ]

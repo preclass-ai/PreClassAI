@@ -2,6 +2,15 @@ import { expect, type Page } from "@playwright/test";
 
 export const PASSWORD = process.env.SEED_PASSWORD ?? "preclass-demo";
 
+/** Per-role seed passwords (a deployed demo has no shared password): SEED_ADMIN_PASSWORD / SEED_STUDENT_PASSWORD /
+ * SEED_TEACHER_PASSWORD, each falling back to SEED_PASSWORD, then the dev default. */
+export function passwordFor(identifier: string): string {
+  const id = identifier.toLowerCase();
+  if (id.startsWith("admin@")) return process.env.SEED_ADMIN_PASSWORD ?? PASSWORD;
+  if (id.startsWith("hs")) return process.env.SEED_STUDENT_PASSWORD ?? PASSWORD;
+  return process.env.SEED_TEACHER_PASSWORD ?? PASSWORD;
+}
+
 /** With guest access on, the account form is collapsed under "Giáo viên / có tài khoản": open it when present. */
 export async function openAccountForm(page: Page) {
   const toggle = page.getByText("Giáo viên / có tài khoản");
@@ -13,7 +22,7 @@ export async function login(page: Page, identifier: string) {
   await page.goto("/login");
   await openAccountForm(page);
   await page.getByLabel("Email hoặc mã học sinh").fill(identifier);
-  await page.getByLabel("Mật khẩu").fill(PASSWORD);
+  await page.getByLabel("Mật khẩu").fill(passwordFor(identifier));
   await page.getByRole("button", { name: "Đăng nhập" }).click();
   // Generous: the first hit on a dev server compiles the target route.
   await expect(page).not.toHaveURL(/\/login/, { timeout: 20_000 });

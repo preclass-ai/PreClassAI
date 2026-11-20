@@ -6,6 +6,7 @@ answers them 403 and the student whitelist (PR-08) applies unchanged.
 
 import csv
 import io
+import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -24,6 +25,8 @@ ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O/1/I: codes are copied by
 PREFIX = "KS-"
 UNUSABLE_HASH = "!guest"  # not an argon2 hash: password login can never succeed
 NOT_ENABLED = ApiError(404, "NOT_FOUND", "Không tìm thấy")
+log = logging.getLogger("preclass.guest")
+WARN_AT = 0.8  # log a warning when a guest limit is 80% used
 
 create_limiter = LoginLimiter(window_s=3600)  # counts every guest created from an IP in the last hour
 resume_limiter = LoginLimiter(max_failures=5, window_s=900)  # wrong codes per IP per 15 minutes
@@ -49,14 +52,27 @@ async def survey_class(db: AsyncSession) -> m.Class:
     return cls
 
 
+async def active_guests(db: AsyncSession) -> int:
+    """Guests seen (or created) in the last 14 days."""
+    return int(await db.scalar(select(func.count()).select_from(m.AppUser).where(
+        m.AppUser.is_guest.is_(True),
+        func.coalesce(m.AppUser.last_seen_at, m.AppUser.created_at) > datetime.now(UTC) - timedelta(days=14))) or 0)
+
+
+async def stats(db: AsyncSession) -> dict[str, int]:
+    cfg = get_settings()
+    last_hour = await db.scalar(select(func.count()).select_from(m.AppUser).where(
+        m.AppUser.is_guest.is_(True), m.AppUser.created_at > datetime.now(UTC) - timedelta(hours=1)))
+    return {"active_guests": await active_guests(db), "created_last_hour": int(last_hour or 0),
+            "max_active": cfg.guest_max_active, "create_per_hour_per_ip": cfg.guest_create_per_hour}
+
+
 async def create_guest(db: AsyncSession, ip: str) -> m.AppUser:
     cfg = get_settings()
     create_limiter.check(ip, cfg.guest_create_per_hour)
     cls = await survey_class(db)
-    active = await db.scalar(select(func.count()).select_from(m.AppUser).where(
-        m.AppUser.is_guest.is_(True),
-        func.coalesce(m.AppUser.last_seen_at, m.AppUser.created_at) > datetime.now(UTC) - timedelta(days=14)))
-    if (active or 0) >= cfg.guest_max_active:
+    active = await active_guests(db)
+    if active >= cfg.guest_max_active:
         raise ApiError(503, "GUEST_CAPACITY", "Hệ thống khảo sát đang quá tải, vui lòng thử lại sau")
     for _ in range(20):
         code = new_code()
@@ -70,6 +86,11 @@ async def create_guest(db: AsyncSession, ip: str) -> m.AppUser:
     await db.flush()
     db.add(m.ClassMember(class_id=cls.id, user_id=user.id, role_in_class="STUDENT"))
     create_limiter.fail(ip)
+    # Counts only: never the IP or the code in a log line.
+    if len(create_limiter.hits[ip]) >= WARN_AT * cfg.guest_create_per_hour:
+        log.warning("guest creation from one client at %d/%d per hour", len(create_limiter.hits[ip]), cfg.guest_create_per_hour)
+    if active + 1 >= WARN_AT * cfg.guest_max_active:
+        log.warning("active guests %d/%d (>= 80%% of GUEST_MAX_ACTIVE)", active + 1, cfg.guest_max_active)
     return user
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """End-to-end smoke of the whole flow against a running stack (GĐ10 gate). Stdlib only.
 
-    python scripts/smoke.py --base https://localhost --insecure [--password "$SEED_PASSWORD"] [--basic-auth user:pass]
+    python scripts/smoke.py --base https://localhost --insecure [--password "$SEED_PASSWORD"] [--student-password ...] [--basic-auth user:pass]
     python scripts/smoke.py --base https://pre-class-ai.vercel.app          # cloud demo
 
 teacher: source -> lesson -> generate (mock) -> review each block -> publish -> assign
@@ -66,7 +66,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="https://localhost")
     ap.add_argument("--insecure", action="store_true")
-    ap.add_argument("--password", default="preclass-demo")
+    ap.add_argument("--password", default="preclass-demo", help="teacher password (and the default for students)")
+    ap.add_argument("--student-password", default=None, help="seed student password (default: --password)")
     ap.add_argument("--basic-auth", default="", help="user:pass if the site sits behind basic auth (preview tunnel)")
     a = ap.parse_args()
     t, s = Client(a.base, a.insecure, a.basic_auth), Client(a.base, a.insecure, a.basic_auth)
@@ -98,7 +99,7 @@ def main() -> None:
     asg = step("assign", t, "POST", f"/v1/published/{pub['id']}/assignments", {
         "classId": cls["id"], "openAt": (now - timedelta(hours=1)).isoformat(), "dueAt": (now + timedelta(days=1)).isoformat()}, 201)
 
-    step("student login", s, "POST", "/v1/auth/login", {"identifier": "HS10-01", "password": a.password})
+    step("student login", s, "POST", "/v1/auth/login", {"identifier": "HS10-01", "password": a.student_password or a.password})
     listed = step("student list", s, "GET", "/v1/student/assignments")["items"]
     assert any(x["id"] == asg["id"] for x in listed), "assignment not visible to student"
     d = step("student open", s, "GET", f"/v1/student/assignments/{asg['id']}")

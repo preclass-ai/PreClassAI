@@ -1,14 +1,16 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import FastAPI, Response
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import csrf_middleware
+from app.auth import csrf_middleware, current_user
 from app.config import get_settings
-from app.errors import install_error_handlers
+from app.db.session import get_db
+from app.errors import ApiError, install_error_handlers
 from app.generation import recover_after_restart
 from app.routers import api_router
 
@@ -57,10 +59,21 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     lifespan=lifespan,
     title="PreClass AI API", version="0.1.0-v0", description=DESCRIPTION, openapi_tags=TAGS,
-    docs_url=None, redoc_url=None, openapi_url="/v1/openapi.json",  # /docs is Scalar (below)
+    docs_url=None, redoc_url=None, openapi_url=None,  # /docs (Scalar) and /v1/openapi.json are our own guarded routes (below)
 )
 install_error_handlers(app)
 app.middleware("http")(csrf_middleware)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    resp = await call_next(request)
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    path = request.url.path
+    if path.startswith("/v1/") and path not in ("/v1/health", "/v1/openapi.json"):
+        resp.headers["Cache-Control"] = "no-store"  # responses carry user data: never cached by browsers or proxies
+    return resp
+
 
 # Same-origin via Caddy in staging/prod; CORS only matters for split-origin dev.
 app.add_middleware(
@@ -110,6 +123,22 @@ _DOCS_HTML = (
 )
 
 
-@app.get("/docs", include_in_schema=False)
+async def docs_guard(request: Request, db: Annotated[AsyncSession, Depends(get_db)]) -> None:
+    """DOCS_ACCESS: open (anyone), staff (logged-in TEACHER/REVIEWER/ADMIN), off (404)."""
+    mode = get_settings().docs_mode
+    if mode == "off":
+        raise ApiError(404, "NOT_FOUND", "Không tìm thấy")
+    if mode == "staff":
+        user = await current_user(request, db)
+        if user.role not in ("TEACHER", "REVIEWER", "ADMIN"):
+            raise ApiError(404, "NOT_FOUND", "Không tìm thấy")
+
+
+@app.get("/v1/openapi.json", include_in_schema=False, dependencies=[Depends(docs_guard)])
+async def openapi_json() -> JSONResponse:
+    return JSONResponse(app.openapi())
+
+
+@app.get("/docs", include_in_schema=False, dependencies=[Depends(docs_guard)])
 async def docs() -> HTMLResponse:
     return HTMLResponse(_DOCS_HTML)

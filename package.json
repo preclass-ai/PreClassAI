@@ -7,5 +7,10 @@
     "typecheck": "pnpm --filter @preclass/web typecheck",
     "test": "pnpm --filter @preclass/web test",
     "build": "pnpm --filter @preclass/web build"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "^8.5.23"
+    }
   }
 }

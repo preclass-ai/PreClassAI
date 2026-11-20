@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     guest_max_active: int = 500  # guests seen in the last 14 days; beyond it new guests get 503
     guest_create_per_hour: int = 60  # per real client IP; a classroom shares one Wi-Fi (NAT), so keep it generous
     guest_session_days: int = 14
+    docs_access: str = ""  # who may open /docs and /v1/openapi.json: open | staff (logged-in teacher/reviewer/admin) | off.
+    # Unset: "open" everywhere except APP_ENV=production, where it is "off".
 
     @model_validator(mode="after")
     def _public_origin_when_deployed(self) -> "Settings":
@@ -49,6 +51,17 @@ class Settings(BaseSettings):
             if u.scheme != "https" or u.hostname in (None, "localhost", "127.0.0.1", "::1"):
                 raise ValueError(f"FRONTEND_ORIGIN must be public https when APP_ENV={self.app_env}: {self.frontend_origin!r}")
         return self
+
+    @field_validator("docs_access")
+    @classmethod
+    def _docs_access(cls, v: str) -> str:
+        if v not in ("", "open", "staff", "off"):
+            raise ValueError("DOCS_ACCESS must be open, staff or off")
+        return v
+
+    @property
+    def docs_mode(self) -> str:
+        return self.docs_access or ("off" if self.app_env.lower() in ("production", "prod") else "open")
 
     @field_validator("database_url")
     @classmethod

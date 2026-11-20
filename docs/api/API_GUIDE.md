@@ -176,3 +176,12 @@ Bật bằng env `GUEST_ACCESS_ENABLED=true` (mặc định tắt → mọi endp
 
 - `UserOut` có thêm `isGuest`, `surveyCode`. Khách là STUDENT: route giáo viên/admin trả 403, PR-08 giữ nguyên (provenance của khách → 404). Mã khách không đăng nhập được bằng `/auth/login`.
 - Dọn dẹp thủ công: `scripts/ops/purge_guests.py --dry-run`. Khách đã có bài làm không xóa được (bảng attempt chỉ-thêm), nên chỉ bị vô hiệu hóa.
+
+## 11. Bảo mật khi triển khai (pre-launch)
+
+- **Mật khẩu seed:** `APP_ENV=demo` yêu cầu `SEED_TEACHER_PASSWORD`, `SEED_REVIEWER_PASSWORD`, `SEED_ADMIN_PASSWORD` (≥ 12 ký tự). Thiếu thì **không tạo tài khoản** và log cảnh báo (API vẫn khởi động). Học sinh seed: `SEED_STUDENT_PASSWORD` nếu đặt, nếu không thì mật khẩu ngẫu nhiên bị bỏ đi (không đăng nhập bằng mật khẩu được, chỉ dùng khách). Dev/CI vẫn dùng `SEED_PASSWORD` (mặc định `preclass-demo`). Đổi mật khẩu tài khoản đã có: `scripts/ops/rotate_passwords.py`.
+- **Đăng nhập ADMIN:** 3 lần sai / 15 phút (GV/HS: 5 lần / 5 phút). Mọi thao tác admin (`GET /admin/audit-logs`, `GET /admin/survey/stats`, `GET /admin/survey/export.csv`) ghi audit (`ADMIN_VIEW_AUDIT_LOGS`, `ADMIN_VIEW_SURVEY_STATS`, `EXPORT_SURVEY`).
+- **`GET /admin/survey/stats`** (ADMIN): `{activeGuests, createdLastHour, maxActive, createPerHourPerIp}`. Log cảnh báo (chỉ số đếm, không IP/mã) khi dùng ≥ 80% `GUEST_CREATE_PER_HOUR` của một client hoặc `GUEST_MAX_ACTIVE`.
+- **`/docs` và `/v1/openapi.json`:** `DOCS_ACCESS=open|staff|off`. Mặc định `open`, riêng `APP_ENV=production` mặc định `off`. `staff` = chỉ GV/người duyệt/admin đã đăng nhập (người khác: 404, chưa đăng nhập: 401).
+- **Header API:** mọi phản hồi `X-Content-Type-Options: nosniff`; mọi `/v1/*` trừ health `Cache-Control: no-store`.
+- **DOCX:** ≤ 10 MB tải lên, ≤ 20 MB giải nén, ≤ 1000 thành phần, tỉ lệ nén ≤ 100:1; từ chối macro (`.docm`, `vbaProject`), đối tượng nhúng/ActiveX và liên kết tới nội dung ngoài (chỉ cho phép hyperlink): `422 EXTERNAL_CONTENT_REJECTED`.
