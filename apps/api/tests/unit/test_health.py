@@ -13,6 +13,12 @@ async def test_health_ok() -> None:
     assert r.status_code == 200 and r.json() == {"status": "ok"}
 
 
+async def test_health_accepts_head_with_no_body() -> None:
+    async with await _client() as c:
+        r = await c.head("/v1/health")
+    assert r.status_code == 200 and r.content == b""
+
+
 async def test_unknown_route_is_problem_json() -> None:
     async with await _client() as c:
         r = await c.get("/v1/nope")
