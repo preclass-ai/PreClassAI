@@ -1,3 +1,4 @@
+import os
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Annotated, Any
@@ -88,7 +89,8 @@ app.include_router(api_router)
 
 @app.get("/v1/health", tags=["system"], operation_id="getHealth", openapi_extra={"security": []})
 async def health() -> dict[str, str]:
-    return {"status": "ok"}
+    # RENDER_GIT_COMMIT is set by Render for every deploy: `curl /v1/health` tells which commit is actually live ("dev" locally).
+    return {"status": "ok", "commit": os.environ.get("RENDER_GIT_COMMIT", "dev")[:7]}
 
 
 @app.head("/v1/health", include_in_schema=False)  # UptimeRobot (free) probes with HEAD; kept out of the schema: one operationId

@@ -1,4 +1,5 @@
 import httpx
+import pytest
 
 from app.main import app
 
@@ -10,7 +11,15 @@ async def _client() -> httpx.AsyncClient:
 async def test_health_ok() -> None:
     async with await _client() as c:
         r = await c.get("/v1/health")
-    assert r.status_code == 200 and r.json() == {"status": "ok"}
+    assert r.status_code == 200 and r.json()["status"] == "ok"
+
+
+async def test_health_reports_the_deployed_commit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("RENDER_GIT_COMMIT", raising=False)
+    async with await _client() as c:
+        assert (await c.get("/v1/health")).json()["commit"] == "dev"
+        monkeypatch.setenv("RENDER_GIT_COMMIT", "4199c7d0123456789abcdef")
+        assert (await c.get("/v1/health")).json() == {"status": "ok", "commit": "4199c7d"}
 
 
 async def test_health_accepts_head_with_no_body() -> None:

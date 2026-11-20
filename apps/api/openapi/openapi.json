@@ -1167,6 +1167,45 @@
         "title": "Body_createSourceFromDocx",
         "type": "object"
       },
+      "Body_createSourceFromFile": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "licenseNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licensenote"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "visibility": {
+            "default": "PRIVATE",
+            "enum": [
+              "PRIVATE",
+              "SCHOOL"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "title"
+        ],
+        "title": "Body_createSourceFromFile",
+        "type": "object"
+      },
       "Body_createSourceRevisionFromDocx": {
         "properties": {
           "file": {
@@ -3720,6 +3759,18 @@
             "format": "date-time",
             "title": "Createdat",
             "type": "string"
+          },
+          "extractError": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`SCANNED_PDF` when `extractStatus` is FAILED.",
+            "title": "Extracterror"
           },
           "extractStatus": {
             "enum": [
@@ -6998,6 +7049,68 @@
           }
         },
         "summary": "Create a source from a DOCX file (TEACHER, multipart)",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/v1/sources/file": {
+      "post": {
+        "description": "Accepts DOCX, PDF, XLSX, PPTX; the type is read from the file's magic bytes, the client's name and Content-Type are ignored. Limits: 10 MB; ≤ 1000 zip entries, ≤ 20 MB unzipped; ≤ 50 PDF pages, ≤ 5 sheets × 2000 cells, ≤ 60 slides (env `SOURCE_*`). Rejected with 422: `FILE_TOO_LARGE`, `SOURCE_TOO_LARGE`, `INVALID_FILE`, `MACRO_REJECTED`, `EXTERNAL_CONTENT_REJECTED`, `ACTIVE_CONTENT_REJECTED` (PDF JavaScript/attachments), `PARSE_TIMEOUT` (30 s), `EMPTY_SOURCE`. A PDF without a text layer returns 201 with `extractStatus=FAILED`, `extractError=SCANNED_PDF` (no OCR). Anchor locators: PDF `{page, para}`, XLSX `{sheet, row, col, header?}` (0-based row/col, stored values only, formulas are never evaluated), PPTX `{slide, shape, para}` or `{slide, shape, row, col}`.",
+        "operationId": "createSourceFromFile",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_createSourceFromFile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Create a source from a DOCX, PDF, XLSX or PPTX file (TEACHER, multipart)",
         "tags": [
           "sources"
         ]

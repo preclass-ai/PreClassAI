@@ -32,6 +32,7 @@ export default function SourcesPage() {
         <section className="card">
           <h2>Nguồn mới</h2>
           <NewSourceForm
+            onSaved={() => void refresh(qc, { queryKey: ["sources"] })}
             onCreated={() => {
               setAdding(false);
               void refresh(qc, { queryKey: ["sources"] });
@@ -43,7 +44,7 @@ export default function SourcesPage() {
       {sources.isPending ? (
         <Loading />
       ) : sources.data?.items.length === 0 ? (
-        <Empty>Chưa có nguồn. Bấm &quot;Thêm nguồn&quot; để dán văn bản hoặc tải tệp DOCX.</Empty>
+        <Empty>Chưa có nguồn. Bấm &quot;Thêm nguồn&quot; để dán văn bản hoặc tải tệp Word, PDF, Excel, PowerPoint.</Empty>
       ) : (
         <div className="table-wrap">
           <table>
