@@ -130,7 +130,8 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
               rows={2}
               value={text}
               maxLength={MAX}
-              placeholder="Em muốn hỏi gì về bài này?"
+              placeholder="Em muốn hỏi gì về bài này…"
+              autoComplete="off"
               aria-label="Câu hỏi cho Habit"
               disabled={limited}
               onChange={(e) => setText(e.target.value)}

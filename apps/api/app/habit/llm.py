@@ -57,8 +57,11 @@ def get_chat_llm() -> ChatLLM | None:
 
 
 def build_user(v: ItemView, level: int, msg: str, history: list[str], excerpt: str) -> str:
-    opts = "\n".join(f"{lab}. {t}" for lab, t in v.options)
-    hist = "\n".join(history[-4:])
+    def defang(t: str) -> str:  # a student must not be able to close our data fence
+        return t.replace("<", "‹").replace(">", "›")
+
+    opts = "\n".join(f"{lab}. {defang(t)}" for lab, t in v.options)
+    hist, msg, excerpt = defang("\n".join(history[-4:])), defang(msg), defang(excerpt)
     return (f"<lesson>\nCâu hỏi ({v.skill}): {v.stem}\n{opts}\n"
             f"Nội dung đã duyệt: {excerpt[:1200]}\nBậc gợi ý: {level}\n</lesson>\n"
             f"<history>\n{hist}\n</history>\n<student_message>\n{msg}\n</student_message>")
