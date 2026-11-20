@@ -108,7 +108,8 @@ class LoginRequest(ApiModel):
 class AuthConfig(ApiModel):
     guest_enabled: bool = Field(description="True when anonymous guest access is switched on (GUEST_ACCESS_ENABLED).")
     chat_enabled: bool = Field(False, description="True when Habit (hints + chat) is on (CHAT_ENABLED).")
-    model_config = ex({"guestEnabled": True, "chatEnabled": False})
+    personalization_enabled: bool = Field(False, description="True when student-chosen options and focus mode are on.")
+    model_config = ex({"guestEnabled": True, "chatEnabled": False, "personalizationEnabled": False})
 
 
 class GuestRequest(ApiModel):
@@ -852,6 +853,10 @@ class HabitItem(ApiModel):
     item_id: UUID
     hints_used: int
     hints_max: int
+    advice: Literal["REVIEW", "QUIET"] | None = Field(
+        None, description="From the student's own first-attempt results and hint use per skill (rules): REVIEW = suggest "
+        "re-reading the lesson first; QUIET = the skill goes well, fewer nudges. Null when personalization is off.")
+    preview: str | None = Field(None, description="Hint 1 text shown open for a REVIEW item (does not count as a hint used).")
 
 
 class HabitOut(ApiModel):
@@ -862,3 +867,20 @@ class HabitOut(ApiModel):
     hints_available: list[HabitItem]
     model_config = ex({"streak": 2, "todayGoal": 3, "todayDone": 1, "badges": [{"code": "TU_LUC", "label": "Tự lực"}],
                        "hintsAvailable": [{"itemId": I["q1"], "hintsUsed": 1, "hintsMax": 3}]})
+
+
+# ---------------------------------------------------------------- Personalization (PERSONALIZATION_ENABLED)
+PreferenceKey = Literal["chia_nho_tung_buoc", "hen_gio_tap_trung", "uu_tien_bang_so_lieu", "uu_tien_giai_thich", "nhac_tien_do",
+                        "focus_mode_used"]
+
+
+class PreferencesOut(ApiModel):
+    preferences: dict[str, str] = Field(description="Only the options that are ON: `on`, or `5`/`10` minutes for "
+                                        "`hen_gio_tap_trung`. A missing key means off.")
+    model_config = ex({"preferences": {"chia_nho_tung_buoc": "on", "hen_gio_tap_trung": "10"}})
+
+
+class PreferencesIn(ApiModel):
+    preferences: dict[PreferenceKey, Literal["on", "off", "5", "10"]] = Field(
+        description="Partial update: `off` removes the option. `hen_gio_tap_trung` takes `5`, `10` or `off`; others `on`/`off`.")
+    model_config = ex({"preferences": {"chia_nho_tung_buoc": "on", "hen_gio_tap_trung": "off"}})

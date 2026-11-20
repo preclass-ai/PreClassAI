@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     chat_max_output_tokens: int = 220
     chat_daily_token_budget: int = 300_000
     habit_daily_goal: int = 3
+    personalization_enabled: bool = False  # student-chosen options, focus mode, behaviour-based hints; 404 when off
     docs_access: str = ""  # who may open /docs and /v1/openapi.json: open | staff (logged-in teacher/reviewer/admin) | off.
     # Unset: "open" everywhere except APP_ENV=production, where it is "off".
 

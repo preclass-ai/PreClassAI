@@ -142,15 +142,23 @@ async def export_csv(db: AsyncSession) -> str:
                func.count().filter(A.action == "ask"), func.bool_or(A.action == "explain"),
                func.count().filter(A.blocked_reason.is_not(None)))
         .join(S, S.id == A.session_id).where(A.role == "assistant").group_by(S.student_id, S.item_block_id))).all()}
+    P = m.StudentPreference  # noqa: N806 options the student switched on, as flags (no other attribute of the student)
+    prefs: dict[Any, dict[str, str]] = {}
+    for sid, key, value in (await db.execute(select(P.student_id, P.key, P.value))).all():
+        prefs.setdefault(sid, {})[key] = value
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\n")
     w.writerow(["survey_code", "lesson", "item", "first_attempt_is_correct", "answered_at_utc", "hints_used",
-                "max_hint_level", "chat_asks", "used_explain", "blocked_count"])
+                "max_hint_level", "chat_asks", "used_explain", "blocked_count", "pref_chia_nho", "pref_hen_gio_phut",
+                "pref_bang_so_lieu", "pref_giai_thich", "pref_nhac_tien_do", "focus_mode_used"])
     for code, snap, item_id, ok, at, student_id in rows:
         hints, top, asks, expl, blocked = chat.get((student_id, item_id), (0, 0, 0, False, 0))
+        p = prefs.get(student_id, {})
         items: list[dict[str, Any]] = [b for b in snap["blocks"] if b["kind"] == "worksheet_item"]
         n = next((i for i, b in enumerate(items, start=1) if b["id"] == str(item_id)), 0)
         w.writerow([code, _safe(str(snap["title"])), f"Câu {n}", "" if ok is None else str(ok).lower(),
                     at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    hints, top, asks, str(bool(expl)).lower(), blocked])
+                    hints, top, asks, str(bool(expl)).lower(), blocked,
+                    int("chia_nho_tung_buoc" in p), p.get("hen_gio_tap_trung", "0"), int("uu_tien_bang_so_lieu" in p),
+                    int("uu_tien_giai_thich" in p), int("nhac_tien_do" in p), int("focus_mode_used" in p)])
     return out.getvalue()

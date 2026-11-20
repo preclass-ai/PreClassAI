@@ -165,18 +165,33 @@ L3 = {
 }
 
 
-def hint(v: ItemView, level: int, salt: int = 0) -> tuple[str, list[tuple[str, str, str]]]:
-    """Level 1: orientation (rotating templates); 2: point at approved source parts (never values); 3: method."""
+def _short(text: str, limit: int = 110) -> str:
+    """First sentence only (student chose "chia nhỏ từng bước"): same content, less to read at once."""
+    first = re.split(r"(?<=[.!?])\s", text, maxsplit=1)[0]
+    return first if len(first) <= limit else first[:limit].rsplit(" ", 1)[0] + "…"
+
+
+def hint(v: ItemView, level: int, salt: int = 0, small: bool = False,
+         table_first: bool = False) -> tuple[str, list[tuple[str, str, str]]]:
+    """Level 1: orientation (rotating templates); 2: point at approved source parts (never values); 3: method.
+    `small` and `table_first` are student-chosen options: they change wording and order only, never what is revealed."""
     skill = v.skill if v.skill in L1 else "READ_TABLE"
+    refs: list[tuple[str, str, str]] = []
     if level <= 1:
-        return L1[skill][(salt + len(v.stem)) % 3], []
-    if level == 2:
+        text = L1[skill][(salt + len(v.stem)) % 3]
+    elif level == 2:
         bits = [x for x in (f"đơn vị “{v.unit}”" if v.unit else "", f"năm {v.period}" if v.period else "") if x]
-        where = f" Hãy tìm dữ liệu có {' và '.join(bits)}." if bits else ""
-        refs = [b for b in v.blocks if b[1] in ("Tiêu đề", "Đoạn văn")][:2]
-        return (f"Em xem lại phần nội dung của bài (tiêu đề và đoạn văn bên dưới).{where} "
-                "Chỉ cần xác định đúng dữ liệu cần dùng, chưa cần tính vội."), refs
-    return L3[skill], []
+        if table_first:
+            text = f"Em nhìn vào bảng số liệu trước{' (' + ', '.join(bits) + ')' if bits else ''}, rồi mới đọc đoạn văn."
+            refs = [b for b in v.blocks if b[1] == "Tiêu đề"][:1]
+        else:
+            where = f" Hãy tìm dữ liệu có {' và '.join(bits)}." if bits else ""
+            refs = [b for b in v.blocks if b[1] in ("Tiêu đề", "Đoạn văn")][:2]
+            text = (f"Em xem lại phần nội dung của bài (tiêu đề và đoạn văn bên dưới).{where} "
+                    "Chỉ cần xác định đúng dữ liệu cần dùng, chưa cần tính vội.")
+    else:
+        text = L3[skill]
+    return (_short(text) if small else text), refs
 
 
 def ask(v: ItemView, msg: str) -> tuple[str, list[tuple[str, str, str]]] | None:
@@ -191,7 +206,8 @@ def ask(v: ItemView, msg: str) -> tuple[str, list[tuple[str, str, str]]] | None:
     return None
 
 
-def decide(v: ItemView, action: str, msg: str, used_hints: int) -> tuple[str, int, list[tuple[str, str, str]], str | None]:
+def decide(v: ItemView, action: str, msg: str, used_hints: int, small: bool = False,
+           table_first: bool = False) -> tuple[str, int, list[tuple[str, str, str]], str | None]:
     """The whole rule-mode decision, pure: (reply, hint level, source refs, refusal reason). `msg` is already redacted."""
     if action == "explain":  # caller guarantees the student answered this item
         return v.explanation or "Câu này chưa có lời giải.", 0, [], None
@@ -199,7 +215,7 @@ def decide(v: ItemView, action: str, msg: str, used_hints: int) -> tuple[str, in
     refs: list[tuple[str, str, str]] = []
     if action == "hint":
         level = min(used_hints + 1, 3)
-        text, refs = hint(v, level, salt=used_hints)
+        text, refs = hint(v, level, salt=used_hints, small=small, table_first=table_first)
     else:
         reason = intent(msg, v)
         got = None if reason else ask(v, msg)

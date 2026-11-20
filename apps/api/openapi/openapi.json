@@ -638,7 +638,8 @@
         "examples": [
           {
             "chatEnabled": false,
-            "guestEnabled": true
+            "guestEnabled": true,
+            "personalizationEnabled": false
           }
         ],
         "properties": {
@@ -651,6 +652,12 @@
           "guestEnabled": {
             "description": "True when anonymous guest access is switched on (GUEST_ACCESS_ENABLED).",
             "title": "Guestenabled",
+            "type": "boolean"
+          },
+          "personalizationEnabled": {
+            "default": false,
+            "description": "True when student-chosen options and focus mode are on.",
+            "title": "Personalizationenabled",
             "type": "boolean"
           }
         },
@@ -1686,6 +1693,22 @@
       },
       "HabitItem": {
         "properties": {
+          "advice": {
+            "anyOf": [
+              {
+                "enum": [
+                  "REVIEW",
+                  "QUIET"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "From the student's own first-attempt results and hint use per skill (rules): REVIEW = suggest re-reading the lesson first; QUIET = the skill goes well, fewer nudges. Null when personalization is off.",
+            "title": "Advice"
+          },
           "hintsMax": {
             "title": "Hintsmax",
             "type": "integer"
@@ -1698,6 +1721,18 @@
             "format": "uuid",
             "title": "Itemid",
             "type": "string"
+          },
+          "preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Hint 1 text shown open for a REVIEW item (does not count as a hint used).",
+            "title": "Preview"
           }
         },
         "required": [
@@ -2401,6 +2436,72 @@
           "text"
         ],
         "title": "ParagraphPayload",
+        "type": "object"
+      },
+      "PreferencesIn": {
+        "examples": [
+          {
+            "preferences": {
+              "chia_nho_tung_buoc": "on",
+              "hen_gio_tap_trung": "off"
+            }
+          }
+        ],
+        "properties": {
+          "preferences": {
+            "additionalProperties": {
+              "enum": [
+                "on",
+                "off",
+                "5",
+                "10"
+              ],
+              "type": "string"
+            },
+            "description": "Partial update: `off` removes the option. `hen_gio_tap_trung` takes `5`, `10` or `off`; others `on`/`off`.",
+            "propertyNames": {
+              "enum": [
+                "chia_nho_tung_buoc",
+                "hen_gio_tap_trung",
+                "uu_tien_bang_so_lieu",
+                "uu_tien_giai_thich",
+                "nhac_tien_do",
+                "focus_mode_used"
+              ]
+            },
+            "title": "Preferences",
+            "type": "object"
+          }
+        },
+        "required": [
+          "preferences"
+        ],
+        "title": "PreferencesIn",
+        "type": "object"
+      },
+      "PreferencesOut": {
+        "examples": [
+          {
+            "preferences": {
+              "chia_nho_tung_buoc": "on",
+              "hen_gio_tap_trung": "10"
+            }
+          }
+        ],
+        "properties": {
+          "preferences": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Only the options that are ON: `on`, or `5`/`10` minutes for `hen_gio_tap_trung`. A missing key means off.",
+            "title": "Preferences",
+            "type": "object"
+          }
+        },
+        "required": [
+          "preferences"
+        ],
+        "title": "PreferencesOut",
         "type": "object"
       },
       "Problem": {
@@ -7587,6 +7688,178 @@
         "summary": "Study habit of the student for this assignment (streak, daily goal, badges, hints used)",
         "tags": [
           "habit"
+        ]
+      }
+    },
+    "/v1/student/preferences": {
+      "delete": {
+        "description": "404 when `PERSONALIZATION_ENABLED` is off. Only options the student chose; never a label about the student (ADR-0013). A missing key means the option is off.",
+        "operationId": "resetPreferences",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          }
+        },
+        "summary": "Switch every option off",
+        "tags": [
+          "personalization"
+        ]
+      },
+      "get": {
+        "description": "404 when `PERSONALIZATION_ENABLED` is off. Only options the student chose; never a label about the student (ADR-0013). A missing key means the option is off.",
+        "operationId": "getPreferences",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          }
+        },
+        "summary": "The student's own learning options",
+        "tags": [
+          "personalization"
+        ]
+      },
+      "put": {
+        "description": "404 when `PERSONALIZATION_ENABLED` is off. Only options the student chose; never a label about the student (ADR-0013). A missing key means the option is off.",
+        "operationId": "updatePreferences",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Switch learning options on or off (partial update)",
+        "tags": [
+          "personalization"
         ]
       }
     }

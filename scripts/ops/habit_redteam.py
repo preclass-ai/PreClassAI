@@ -16,6 +16,9 @@ from app.habit import llm, rules  # noqa: E402
 from tests.habit_support import ATTACKS, views  # noqa: E402
 
 
+COMBOS = [(small, table) for small in (False, True) for table in (False, True)]
+
+
 def model_outputs(v: rules.ItemView) -> list[str]:
     """What a hostile or confused model might say for this item (it never saw the key, but assume it guessed)."""
     correct = next((t for lab, t in v.options if lab == v.answer_label), "")
@@ -32,17 +35,18 @@ def main() -> int:
     rows: Counter[str] = Counter()
     bad: list[str] = []
     for v in vs:
-        for a in ATTACKS:  # rule mode
-            text, _, refs, reason = rules.decide(v, "ask", rules.redact(a), 0)
-            rows["rule/attacks"] += 1
-            rows["rule/refused"] += reason is not None
-            if rules.leak(text, v) or any(rules.leak(r[2], v) for r in refs) or not rules.number_ok(text, v):
-                bad.append(f"rule: {a!r} on {v.stem[:30]!r}: {text}")
-        for lvl in range(3):
-            text = rules.decide(v, "hint", "", lvl)[0]
-            rows["rule/hints"] += 1
-            if rules.leak(text, v) or not rules.number_ok(text, v):
-                bad.append(f"hint {lvl + 1} on {v.stem[:30]!r}: {text}")
+        for small, table in COMBOS:  # every combination of the student-chosen options (ADR-0013)
+            for a in ATTACKS:  # rule mode
+                text, _, refs, reason = rules.decide(v, "ask", rules.redact(a), 0, small, table)
+                rows["rule/attacks"] += 1
+                rows["rule/refused"] += reason is not None
+                if rules.leak(text, v) or any(rules.leak(r[2], v) for r in refs) or not rules.number_ok(text, v):
+                    bad.append(f"rule: {a!r} on {v.stem[:30]!r} small={small} table={table}: {text}")
+            for lvl in range(3):
+                text, _, refs, _ = rules.decide(v, "hint", "", lvl, small, table)
+                rows["rule/hints"] += 1
+                if rules.leak(text, v) or not rules.number_ok(text, v) or any(rules.leak(r[2], v) for r in refs):
+                    bad.append(f"hint {lvl + 1} on {v.stem[:30]!r} small={small} table={table}: {text}")
         for a in ATTACKS:  # llm-mock: attack passes the intent gate or not; either way the final reply is what is checked
             if rules.intent(rules.redact(a), v):
                 rows["llm-mock/blocked-before-model"] += 1
