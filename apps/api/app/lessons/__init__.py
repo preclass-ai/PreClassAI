@@ -54,6 +54,13 @@ async def revision_out(db: AsyncSession, rev: m.LessonRevision) -> RevisionOut:
     )
 
 
+async def _reject_failed(db: AsyncSession, ids: set[UUID]) -> None:
+    """A source whose text could not be read (e.g. a scanned PDF) has no anchors: it cannot feed a lesson."""
+    if ids and await db.scalar(select(m.SourceRevision.id).where(
+            m.SourceRevision.id.in_(ids), m.SourceRevision.extract_status != "OK").limit(1)):
+        raise ApiError(422, "SOURCE_NOT_READABLE", "Nguồn chưa đọc được nội dung chữ, hãy nạp bản có chữ")
+
+
 async def replace_sources(
     db: AsyncSession, user: CurrentUser, revision_id: UUID, body: RevisionSourcesUpdate
 ) -> RevisionSourcesResult:
@@ -86,6 +93,7 @@ async def replace_sources(
     ))
     if visible != new_ids:
         raise ApiError(404, "NOT_FOUND", "Không tìm thấy nguồn")
+    await _reject_failed(db, new_ids)
     old_ids = set(await db.scalars(select(m.LessonSource.source_revision_id).where(
         m.LessonSource.lesson_revision_id == rev.id)))
     removed, added = old_ids - new_ids, new_ids - old_ids
@@ -190,6 +198,7 @@ async def create_lesson(db: AsyncSession, user: CurrentUser, body: LessonCreate)
                                                     m.SourceAsset.visibility == "SCHOOL"))))
     if visible != wanted:
         raise ApiError(404, "NOT_FOUND", "Không tìm thấy nguồn")
+    await _reject_failed(db, wanted)
     lesson = m.Lesson(author_id=user.id, grade=body.grade, title=body.title.strip(), goal=body.goal)
     db.add(lesson)
     await db.flush()
