@@ -1,9 +1,10 @@
 import { createApiClient, isProblem, type Problem, type Schemas } from "@preclass/api-client";
+import { timeoutFetch } from "./http";
 
 export type { Problem, Schemas };
 
 /** Same-origin client: cookie session + `X-PreClass-CSRF: 1` are sent on every request. */
-export const api = createApiClient();
+export const api = createApiClient({ fetch: timeoutFetch });
 
 /** A failed API call. Branch on `code` (stable), never on `title`/`detail` (Vietnamese text, may change). */
 export class ApiError extends Error {

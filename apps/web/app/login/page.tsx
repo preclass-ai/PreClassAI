@@ -7,6 +7,7 @@ import { Button, ErrorBox, Field, Loading } from "@/components/ui";
 import { GUEST_NOTICE } from "@/features/guest";
 import { api, unwrap } from "@/lib/api";
 import { homeFor, ME_KEY, useAuth } from "@/lib/auth";
+import { withTimeout, useAfter } from "@/lib/http";
 import { safeNext } from "@/lib/redirect";
 
 function LoginForm() {
@@ -20,7 +21,15 @@ function LoginForm() {
   const [error, setError] = useState<unknown>(null);
   const [guestBusy, setGuestBusy] = useState(false);
   const [code, setCode] = useState("");
-  const cfg = useQuery({ queryKey: ["auth-config"], queryFn: () => unwrap(api.GET("/v1/auth/config")), retry: false });
+  // The config decides whether to show the guest button. It must never block the sign-in form: 15 s timeout, no retry.
+  const cfg = useQuery({
+    queryKey: ["auth-config"],
+    queryFn: ({ signal }) => unwrap(api.GET("/v1/auth/config", { signal: withTimeout(15_000, signal) })),
+    retry: false,
+  });
+  const waited = useAfter(cfg.isPending, 3_000); // slow config: show the account form anyway
+  const gaveUp = useAfter(cfg.isPending, 20_000); // hard cap: error state with a retry button
+  const configFailed = cfg.isError || gaveUp;
   const guest = cfg.data?.guestEnabled === true;
 
   useEffect(() => {
@@ -94,8 +103,18 @@ function LoginForm() {
       <h1>Chào mừng trở lại!</h1>
       <p className="muted">Đăng nhập để tiếp tục hành trình Địa lí của em.</p>
       <ErrorBox error={error} />
-      {cfg.isPending ? (
-        <Loading /> // do not flash the account form and then collapse it when guest access turns out to be on
+      {cfg.isPending && !waited ? (
+        <Loading /> // brief: avoids flashing the account form and then collapsing it when guest access is on
+      ) : configFailed ? (
+        <>
+          <div className="alert alert-warning" role="status">
+            Máy chủ đang khởi động, thử lại sau ít giây.{" "}
+            <Button type="button" onClick={() => void cfg.refetch()}>
+              Thử lại
+            </Button>
+          </div>
+          {accountFields}
+        </>
       ) : guest ? (
         <>
           <div className="stack">
@@ -121,7 +140,10 @@ function LoginForm() {
           </details>
         </>
       ) : (
-        accountFields
+        <>
+          {cfg.isPending ? <p className="muted small">Đang kiểm tra chế độ vào làm thử…</p> : null}
+          {accountFields}
+        </>
       )}
       <p className="login-footnote">Bài học có nguồn kiểm chứng · Lời giải được thầy cô duyệt</p>
     </form>
