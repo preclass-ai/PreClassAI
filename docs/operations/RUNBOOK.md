@@ -61,7 +61,7 @@ Sau khi chạy, khách mới phải vẫn chỉ thấy bài seed. **Không chạ
 
 **Backup trước khi reset (hai lớp).**
 1. *Neon branch (nhanh, khuyến nghị):* Neon Console → project → Branches → **Create branch** từ `production`, đặt tên `backup-before-reset-YYYYMMDD`. Branch là bản sao tức thời (copy-on-write). Khôi phục: Branches → chọn branch → *Restore*, hoặc đổi `DATABASE_URL` trên Render sang chuỗi của branch đó rồi Manual Deploy.
-2. *pg_dump ra tệp:* `cd apps\api; $env:DATABASE_URL="<Neon direct>"; uv run python ..\..\scripts\ops\backup_demo_db.py` (dùng Docker `infra-postgres-1`; tệp lưu ngoài repo, mặc định `~/preclass-backups`, không commit). Khôi phục: `docker exec -i infra-postgres-1 pg_restore -U preclass -d <db_tạm> < tệp.dump`.
+2. *pg_dump ra tệp:* `cd apps\api; $env:DATABASE_URL="<Neon direct>"; uv run python ..\..\scripts\ops\backup_demo_db.py` (chạy `pg_dump` trong container `postgres:18` dùng một lần — Neon là PostgreSQL 18, `pg_dump` 16 bị từ chối vì cũ hơn server; nếu không dùng Docker thì cài PostgreSQL 18 client tools; tệp lưu ngoài repo, mặc định `~/preclass-backups`, không commit). Khôi phục: `docker exec -i infra-postgres-1 pg_restore -U preclass -d <db_tạm> < tệp.dump`.
 
 **Reset DB demo (xóa mọi dữ liệu).** PowerShell riêng, trong `apps\api`: đặt `DATABASE_URL` (Neon **direct**), `APP_ENV=demo`, `FRONTEND_ORIGIN`, ba `SEED_*_PASSWORD` **giống hệt Render** và `E2E_STUDENT_PASSWORD`, rồi `uv run python ..\..\scripts\ops\reset_demo_db.py` (gõ `RESET`). Script từ chối trước khi xóa nếu thiếu mật khẩu; sau khi chạy nó seed lại tài khoản, bài mẫu, lớp KS và E2E. Kiểm sau reset: `/v1/health`, `guestEnabled`, khách mới chỉ thấy bài seed, GV đăng nhập được.
 
@@ -72,8 +72,11 @@ Sau khi chạy, khách mới phải vẫn chỉ thấy bài seed. **Không chạ
 |---|---|
 | `/login` hiện "Máy chủ đang khởi động" | Render ngủ hoặc đang khởi động; chờ 60 giây, bấm Thử lại. Mọi request có timeout 60 giây, config 15 giây (không còn spinner vô hạn) |
 | UptimeRobot Down với phản hồi nhanh | Trước đây HEAD bị 405; đã sửa (`HEAD /v1/health` 200). Kiểm bằng `curl -I` |
+| E2E cloud: console `Refused to apply style from /_next/static/css/<hash>.css … MIME type ('text/plain')` | Lệch bản triển khai (deployment skew): HTML từ lần deploy cũ trỏ tới CSS đã không còn (Vercel trả 404 `text/plain`). Xảy ra khi chạy E2E đúng lúc Vercel vừa deploy sau merge. Không phải lỗi cấu hình: chờ deploy xong rồi chạy lại; kiểm bằng `npx playwright test -c playwright.release.config.ts static-assets` (chỉ GET) |
 | Vercel `DNS_HOSTNAME_RESOLVED_PRIVATE` / build lỗi `API_ORIGIN` | Thiếu hoặc sai `API_ORIGIN` (cả Production và Preview); build có guard |
 | Đăng nhập 403 CSRF | `FRONTEND_ORIGIN` trên Render phải đúng `https://pre-class-ai.vercel.app` |
 | `/docs` 401/404 | `DOCS_ACCESS=staff` (cần đăng nhập GV/admin) hoặc `off` |
 | Khách 429 / 503 | `GUEST_CREATE_PER_HOUR` (mỗi IP) / `GUEST_MAX_ACTIVE`; xem `/v1/admin/survey/stats` |
 | Khách thấy bài lạ | Render chưa chạy `seed.survey` mới; xem "Biết commit nào đang chạy" |
+
+**Phiên bản PostgreSQL.** Production (Neon) là PG18; CI và compose dev đang PG16. Đề xuất nâng testcontainers/compose lên 18 trong PR riêng (chưa làm).

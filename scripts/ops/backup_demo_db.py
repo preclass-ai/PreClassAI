@@ -4,7 +4,7 @@
     $env:DATABASE_URL = "<Neon direct connection string>"     # this shell only
     uv run python ../../scripts/ops/backup_demo_db.py [output-dir]   # default: ~/preclass-backups
 
-Uses the pg_dump inside the local `infra-postgres-1` container (docker compose -f infra/compose.dev.yml up -d postgres).
+Runs pg_dump from a throwaway `postgres:18` container (Neon is PG18; pg_dump must be >= the server, the local PG16 one is refused).
 The dump holds demo data and password hashes: keep it private, never commit it. Restore into a scratch database with:
     docker exec -i infra-postgres-1 pg_restore -U preclass -d <scratch_db> < backup.dump
 """
@@ -33,7 +33,7 @@ def main() -> None:
     host = urlsplit(url).hostname
     print(f"Dumping {host} -> {out}")
     with out.open("wb") as f:
-        r = subprocess.run(["docker", "exec", "infra-postgres-1", "pg_dump", "-Fc", "--no-owner", libpq_url(url)],  # noqa: S603, S607
+        r = subprocess.run(["docker", "run", "--rm", "postgres:18", "pg_dump", "-Fc", "--no-owner", libpq_url(url)],  # noqa: S603, S607
                            stdout=f, stderr=subprocess.PIPE)
     if r.returncode != 0:
         out.unlink(missing_ok=True)
