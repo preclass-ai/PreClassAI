@@ -1,7 +1,7 @@
 """SQLAlchemy models. Enums are text + CHECK. Triggers live in alembic/versions/0001_triggers.sql."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -9,6 +9,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     ForeignKey,
     Integer,
     Numeric,
@@ -297,8 +298,8 @@ class GenerationJob(Base):
     error: Mapped[str | None] = mapped_column(Text)
     model: Mapped[str | None] = mapped_column(Text)
     prompt_version: Mapped[str | None] = mapped_column(Text)
-    tokens_in: Mapped[int] = mapped_column(Integer, server_default=text("0"))
-    tokens_out: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    tokens_in: Mapped[int] = mapped_column(Integer, server_default="0")
+    tokens_out: Mapped[int] = mapped_column(Integer, server_default="0")
     created_by: Mapped[uuid.UUID | None] = fk("app_user.id", nullable=True)
     created_at: Mapped[datetime] = ts()
 
@@ -357,3 +358,36 @@ class AuditLog(Base):
     resource_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     meta: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, server_default=text("'{}'"))  # no content
     created_at: Mapped[datetime] = ts()
+
+
+class ChatSession(Base):
+    __tablename__ = "chat_session"  # unique index uq_chat_session (COALESCE on item) lives in 0003_habit.sql
+    id: Mapped[uuid.UUID] = pk()
+    assignment_id: Mapped[uuid.UUID] = fk("assignment.id")
+    student_id: Mapped[uuid.UUID] = fk("app_user.id")
+    item_block_id: Mapped[uuid.UUID | None] = fk("content_block.id", nullable=True)
+    created_at: Mapped[datetime] = ts()
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_message"  # append-only (trigger tg_append_only)
+    id: Mapped[uuid.UUID] = pk()
+    session_id: Mapped[uuid.UUID] = fk("chat_session.id")
+    role: Mapped[str] = mapped_column(Text)  # user | assistant
+    action: Mapped[str] = mapped_column(Text)  # hint | ask | explain
+    text: Mapped[str] = mapped_column(Text)  # PII already redacted
+    hint_level: Mapped[int | None] = mapped_column(Integer)
+    mode: Mapped[str] = mapped_column(Text)  # rule | llm
+    blocked_reason: Mapped[str | None] = mapped_column(Text)
+    tokens_in: Mapped[int] = mapped_column(Integer, server_default="0")
+    tokens_out: Mapped[int] = mapped_column(Integer, server_default="0")
+    request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    created_at: Mapped[datetime] = ts()
+
+
+class StudyActivity(Base):
+    __tablename__ = "study_activity"
+    student_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("app_user.id"), primary_key=True)
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    items_answered: Mapped[int] = mapped_column(Integer, server_default="0")
+    hints_used: Mapped[int] = mapped_column(Integer, server_default="0")

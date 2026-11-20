@@ -10,6 +10,7 @@ from app.audit import audit
 from app.auth import COOKIE, CurrentUser, create_session, require_role
 from app.config import get_settings
 from app.db.session import get_db
+from app.habit import chat_stats as habit_stats
 from app.routers._base import errs
 from app.routers.account import _user_out
 from app.schemas import AuthConfig, GuestOut, GuestRequest, GuestResumeRequest, SurveyStats
@@ -37,7 +38,7 @@ async def _start(db: AsyncSession, response: Response, user: Any, lesson_key: st
 @router.get("/auth/config", tags=["auth"], operation_id="getAuthConfig", response_model=AuthConfig, openapi_extra=_PUBLIC,
             summary="Public sign-in options (is anonymous guest access on?)")
 async def auth_config() -> AuthConfig:
-    return AuthConfig(guest_enabled=get_settings().guest_access_enabled)
+    return AuthConfig(guest_enabled=get_settings().guest_access_enabled, chat_enabled=get_settings().chat_enabled)
 
 
 @router.post("/auth/guest", tags=["auth"], operation_id="createGuest", status_code=201, response_model=GuestOut,
@@ -63,8 +64,8 @@ async def resume_guest(body: GuestResumeRequest, request: Request, response: Res
 
 
 @router.get("/admin/survey/export.csv", tags=["admin"], operation_id="exportSurveyCsv", summary="Survey data export (CSV)",
-            description="One row per guest answer: `survey_code, lesson, item, first_attempt_is_correct, answered_at_utc`. "
-            "No other identifying column.",
+            description="One row per guest answer: `survey_code, lesson, item, first_attempt_is_correct, answered_at_utc, hints_used, max_hint_level, "
+            "chat_asks, used_explain, blocked_count` (Habit counters, never message text). No other identifying column.",
             responses={200: {"content": {"text/csv": {"schema": {"type": "string"}}}, "description": "CSV file."},
                        **errs(401, 403)})
 async def export_survey(cu: Annotated[CurrentUser, Depends(require_role("ADMIN", "TEACHER"))], db: Db) -> Response:
@@ -79,7 +80,7 @@ async def export_survey(cu: Annotated[CurrentUser, Depends(require_role("ADMIN",
             summary="Guest counters (ADMIN)", description="Active guests, guests created in the last hour and the limits.",
             responses=errs(401, 403))
 async def survey_stats(cu: Annotated[CurrentUser, Depends(require_role("ADMIN"))], db: Db) -> SurveyStats:
-    out = SurveyStats(**await svc.stats(db))
+    out = SurveyStats(**await svc.stats(db), **await habit_stats(db))
     audit(db, cu.id, "ADMIN_VIEW_SURVEY_STATS", "survey")
     await db.commit()
     return out

@@ -54,13 +54,13 @@ async def answer_first_mcq(c: httpx.AsyncClient, assignment: str) -> dict[str, A
 
 
 async def test_flag_off_means_404_everywhere(client: httpx.AsyncClient) -> None:
-    assert (await client.get("/v1/auth/config")).json() == {"guestEnabled": False}
+    assert (await client.get("/v1/auth/config")).json() == {"guestEnabled": False, "chatEnabled": False}
     assert (await client.post("/v1/auth/guest", json={})).status_code == 404
     assert (await client.post("/v1/auth/guest/resume", json={"surveyCode": "KS-ABCD"})).status_code == 404
 
 
 async def test_guest_gets_code_cookie_and_the_survey_assignment(client: httpx.AsyncClient, guests_on: None) -> None:
-    assert (await client.get("/v1/auth/config")).json() == {"guestEnabled": True}
+    assert (await client.get("/v1/auth/config")).json() == {"guestEnabled": True, "chatEnabled": False}
     g = await new_guest(client, lessonKey="dan-so-vung")
     assert CODE.match(g["surveyCode"]) and g["assignmentId"] == str(KS_ASSIGN)
     assert g["user"]["isGuest"] and g["user"]["role"] == "STUDENT" and g["user"]["email"] is None

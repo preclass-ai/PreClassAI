@@ -41,6 +41,16 @@ class Settings(BaseSettings):
     guest_max_active: int = 500  # guests seen in the last 14 days; beyond it new guests get 503
     guest_create_per_hour: int = 60  # per real client IP; a classroom shares one Wi-Fi (NAT), so keep it generous
     guest_session_days: int = 14
+    chat_enabled: bool = False  # Habit (hints + chat) for students; every Habit route is 404 when off
+    chat_mode: str = "rule"  # rule (free, deterministic) | llm (rule guards + LLM wording; falls back to rule)
+    chat_max_per_day_per_student: int = 30
+    chat_max_per_item: int = 6
+    chat_llm_base_url: str = ""
+    chat_llm_api_key: str = ""
+    chat_llm_model: str = ""
+    chat_max_output_tokens: int = 220
+    chat_daily_token_budget: int = 300_000
+    habit_daily_goal: int = 3
     docs_access: str = ""  # who may open /docs and /v1/openapi.json: open | staff (logged-in teacher/reviewer/admin) | off.
     # Unset: "open" everywhere except APP_ENV=production, where it is "off".
 
@@ -51,6 +61,13 @@ class Settings(BaseSettings):
             if u.scheme != "https" or u.hostname in (None, "localhost", "127.0.0.1", "::1"):
                 raise ValueError(f"FRONTEND_ORIGIN must be public https when APP_ENV={self.app_env}: {self.frontend_origin!r}")
         return self
+
+    @field_validator("chat_mode")
+    @classmethod
+    def _chat_mode(cls, v: str) -> str:
+        if v not in ("rule", "llm"):
+            raise ValueError("CHAT_MODE must be rule or llm")
+        return v
 
     @field_validator("docs_access")
     @classmethod

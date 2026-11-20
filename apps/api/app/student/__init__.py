@@ -11,8 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import CurrentUser
 from app.blocks import NOT_FOUND
+from app.config import get_settings
 from app.db import models as m
 from app.errors import ApiError
+from app.habit.activity import bump
 from app.schemas import (
     AnswerIn,
     AttemptRequest,
@@ -141,6 +143,8 @@ async def submit_attempt(db: AsyncSession, user: CurrentUser, assignment_id: UUI
         if again is not None and again.request_id == body.request_id:
             return _result(snap, item["id"], again.is_correct)
         raise ApiError(409, "ALREADY_ANSWERED", "Bạn đã trả lời câu này rồi")
+    if get_settings().chat_enabled:
+        await bump(db, user.id, items=1)
     await db.commit()
     return _result(snap, item["id"], ok)
 

@@ -125,22 +125,32 @@ def _safe(cell: str) -> str:
 
 
 async def export_csv(db: AsyncSession) -> str:
-    """One row per guest answer: survey_code, lesson, item, is_correct, answered_at. Attempts are write-once, so each row
-    is the FIRST (and only) attempt. Nothing else identifies the person."""
+    """One row per guest answer (+ Habit counters): survey_code, lesson, item, is_correct, answered_at.
+    Attempts are write-once, so each row is the FIRST (and only) attempt. Nothing else identifies the person."""
     rows = (await db.execute(
         select(m.AppUser.survey_code, m.PublishedVersion.snapshot, m.StudentAttempt.item_block_id,
-               m.StudentAttempt.is_correct, m.StudentAttempt.created_at)
+               m.StudentAttempt.is_correct, m.StudentAttempt.created_at, m.StudentAttempt.student_id)
         .join(m.AppUser, m.AppUser.id == m.StudentAttempt.student_id)
         .join(m.Assignment, m.Assignment.id == m.StudentAttempt.assignment_id)
         .join(m.PublishedVersion, m.PublishedVersion.id == m.Assignment.published_version_id)
         .where(m.AppUser.is_guest.is_(True))
         .order_by(m.AppUser.survey_code, m.StudentAttempt.created_at))).all()
+    A, S = m.ChatMessage, m.ChatSession  # noqa: N806 Habit counters per (student, item): counts only, never message text
+    chat = {(r[0], r[1]): r[2:] for r in (await db.execute(
+        select(S.student_id, S.item_block_id,
+               func.count().filter(A.action == "hint"), func.coalesce(func.max(A.hint_level), 0),
+               func.count().filter(A.action == "ask"), func.bool_or(A.action == "explain"),
+               func.count().filter(A.blocked_reason.is_not(None)))
+        .join(S, S.id == A.session_id).where(A.role == "assistant").group_by(S.student_id, S.item_block_id))).all()}
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\n")
-    w.writerow(["survey_code", "lesson", "item", "first_attempt_is_correct", "answered_at_utc"])
-    for code, snap, item_id, ok, at in rows:
+    w.writerow(["survey_code", "lesson", "item", "first_attempt_is_correct", "answered_at_utc", "hints_used",
+                "max_hint_level", "chat_asks", "used_explain", "blocked_count"])
+    for code, snap, item_id, ok, at, student_id in rows:
+        hints, top, asks, expl, blocked = chat.get((student_id, item_id), (0, 0, 0, False, 0))
         items: list[dict[str, Any]] = [b for b in snap["blocks"] if b["kind"] == "worksheet_item"]
         n = next((i for i, b in enumerate(items, start=1) if b["id"] == str(item_id)), 0)
         w.writerow([code, _safe(str(snap["title"])), f"Câu {n}", "" if ok is None else str(ok).lower(),
-                    at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")])
+                    at.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    hints, top, asks, str(bool(expl)).lower(), blocked])
     return out.getvalue()
