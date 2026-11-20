@@ -65,3 +65,12 @@ test("guest: /thu?bai=dan-so-vung opens the lesson directly", async ({ page }) =
   await expect(page.locator(".guest-banner")).toContainText(CODE);
   await expect(page.locator("section.item").first()).toBeVisible({ timeout: 30_000 });
 });
+
+test("guest: a brand-new guest sees only the seed lessons, never an [E2E] test lesson", async ({ page }) => {
+  await enter(page);
+  const r = await page.request.get("/v1/student/assignments");
+  expect(r.ok()).toBeTruthy();
+  const titles = ((await r.json()).items as { title: string }[]).map((i) => i.title);
+  expect(titles.filter((t) => t.startsWith("[E2E]")), "test lessons must stay in the private E2E class").toEqual([]);
+  expect(titles).toEqual(["Phân bố dân cư theo vùng"]); // the seed's one published lesson
+});

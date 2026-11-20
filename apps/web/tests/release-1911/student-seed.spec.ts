@@ -1,5 +1,5 @@
 import { appendFileSync, mkdirSync } from "node:fs";
-import { openAccountForm, passwordFor } from "../e2e/helpers";
+import { E2E_MODE, openAccountForm, passwordFor } from "../e2e/helpers";
 import { expect, test, type Page } from "@playwright/test";
 
 // Student flow on the SEEDED published lesson (no publish/assign). Env: STUDENT_<vp> ids, BLOCK_ID.
@@ -15,6 +15,7 @@ async function noHScroll(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
 }
 
+test.skip(E2E_MODE, "seed students have no password on the cloud demo: guest.spec covers the seed lesson");
 test("seeded: student answers 2 questions, sees explanation, provenance blocked", async ({ page }, info) => {
   const vp = info.project.name;
   const errs: string[] = [];
