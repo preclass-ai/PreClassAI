@@ -1,4 +1,10 @@
-const dateTime = new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" });
+// dd/mm/yyyy with a 4-digit year ("20/11/2027"): the short style prints a 2-digit year that students misread.
+const dateTime = new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const dateOnly = new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+export function fmtDate(iso: string | null | undefined): string {
+  return iso ? dateOnly.format(new Date(iso)) : "—";
+}
 const number = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 });
 
 export function fmtDateTime(iso: string | null | undefined): string {

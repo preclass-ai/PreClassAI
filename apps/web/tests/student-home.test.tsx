@@ -1,7 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import StudentHome from "../app/(student)/student/page";
+
+vi.mock("@/lib/auth", () => ({ useAuth: () => ({ user: { isGuest: false }, loading: false }) }));
 
 afterEach(cleanup);
 
