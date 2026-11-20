@@ -185,3 +185,15 @@ Bật bằng env `GUEST_ACCESS_ENABLED=true` (mặc định tắt → mọi endp
 - **`/docs` và `/v1/openapi.json`:** `DOCS_ACCESS=open|staff|off`. Mặc định `open`, riêng `APP_ENV=production` mặc định `off`. `staff` = chỉ GV/người duyệt/admin đã đăng nhập (người khác: 404, chưa đăng nhập: 401).
 - **Header API:** mọi phản hồi `X-Content-Type-Options: nosniff`; mọi `/v1/*` trừ health `Cache-Control: no-store`.
 - **DOCX:** ≤ 10 MB tải lên, ≤ 20 MB giải nén, ≤ 1000 thành phần, tỉ lệ nén ≤ 100:1; từ chối macro (`.docm`, `vbaProject`), đối tượng nhúng/ActiveX và liên kết tới nội dung ngoài (chỉ cho phép hyperlink): `422 EXTERNAL_CONTENT_REJECTED`.
+
+## 12. Habit (CHAT_ENABLED, mặc định tắt; ADR-0012)
+
+Khi tắt: mọi route dưới đây trả 404 và `GET /v1/auth/config` có `chatEnabled:false` (UI ẩn Habit). Chỉ STUDENT, chỉ bài của lớp mình (khác → 404).
+
+- `GET /v1/student/assignments/{id}/habit` → `{streak, todayGoal, todayDone, badges[{code,label}], hintsAvailable[{itemId,hintsUsed,hintsMax}]}`. Streak = số ngày liên tiếp (giờ Asia/Ho_Chi_Minh) có ≥ 1 câu đã nộp; hôm nay chưa nộp thì streak vẫn tính đến hôm qua.
+- `POST /v1/student/assignments/{id}/chat` `{itemId, action: hint|ask|explain, message?, requestId}` → `{reply, hintLevel, sourceRefs[{blockId,label,excerpt}], blockedReason?}`.
+  - `hint`: bậc 1→2→3 rồi giữ 3. Sau khi nộp câu đó → 409 `ALREADY_ANSWERED`.
+  - `ask`: `message` bắt buộc, ≤ 300 ký tự (422). Từ chối bằng câu mẫu kèm `blockedReason` ∈ `INJECTION | ANSWER_REQUEST | CONFIRM_OPTION | UNSAFE | OFFTOPIC`.
+  - `explain`: chỉ sau khi chính học sinh đã nộp câu đó, nếu không 409 `NOT_ANSWERED`.
+  - 429 `CHAT_LIMIT` khi quá `CHAT_MAX_PER_ITEM` (6) hoặc `CHAT_MAX_PER_DAY_PER_STUDENT` (30). Gửi lại cùng `requestId` trả phản hồi đã lưu, không tính hạn mức (`sourceRefs` rỗng khi phát lại).
+- `GET /v1/admin/survey/export.csv` thêm cột `hints_used, max_hint_level, chat_asks, used_explain, blocked_count` (chỉ số đếm). `GET /v1/admin/survey/stats` thêm `chatTotal, chatFallbackRate, chatBlocked{reason:n}, chatTokensIn, chatTokensOut`.

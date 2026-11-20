@@ -45,3 +45,18 @@ python ../scripts/smoke.py --base https://localhost --insecure --password "<SEED
 - Quay lui: `git checkout pre-merge-2026-11-19` (hoặc revert merge PR #8), build lại web, khởi động lại preview.
 - Khôi phục DB từ backup: `docker exec -i infra-postgres-1 psql -U preclass -d preclass -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"` rồi `docker exec -i infra-postgres-1 psql -U preclass -d preclass < apps/api/data/backup/predeploy-1911.sql`. Thử khôi phục vào DB tạm `preclass_restore_check` trước. Chỉ đụng database `preclass`, không xoá volume.
 - Reset về seed sạch: `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` trên `preclass`, rồi migrate + seed như trên.
+
+## Habit (chat và thói quen học)
+
+| Biến môi trường | Mặc định | Ý nghĩa |
+|---|---|---|
+| `CHAT_ENABLED` | `false` | Bật Habit. Tắt: route 404, UI ẩn, hệ thống như cũ. Đổi cần restart API. |
+| `CHAT_MODE` | `rule` | `rule` = 0đ, không gọi LLM. `llm` = rule vẫn quyết định và hậu kiểm, LLM chỉ viết lại. |
+| `CHAT_LLM_BASE_URL`, `CHAT_LLM_API_KEY`, `CHAT_LLM_MODEL` | rỗng | Chỉ khi `llm`. Thiếu một biến thì tự dùng rule. Khóa đặt trên Render, không commit. |
+| `CHAT_MAX_OUTPUT_TOKENS` / `CHAT_DAILY_TOKEN_BUDGET` | 220 / 300000 | Hết ngân sách ngày thì tự dùng rule (học sinh không thấy lỗi). |
+| `CHAT_MAX_PER_DAY_PER_STUDENT` / `CHAT_MAX_PER_ITEM` | 30 / 6 | Quá hạn mức → 429 thân thiện. |
+| `HABIT_DAILY_GOAL` | 3 | Mục tiêu câu/ngày. |
+
+Giá trị đề xuất trên Render cho đợt thử: `CHAT_ENABLED=true`, `CHAT_MODE=rule`, còn lại mặc định. Tắt khẩn cấp: `CHAT_ENABLED=false` rồi restart. Cần migration `alembic upgrade head` (0003) trước khi bật.
+
+Xem tokens và số lần bị chặn: đăng nhập ADMIN rồi `GET /v1/admin/survey/stats` (`chatTotal, chatFallbackRate, chatBlocked, chatTokensIn/Out`). Red team trước khi bật `llm`: `cd apps/api && PYTHONPATH=. uv run python ../../scripts/ops/habit_redteam.py` (0 vi phạm). Giữ uvicorn `--workers 1`: cache và giới hạn dùng bộ nhớ một tiến trình.

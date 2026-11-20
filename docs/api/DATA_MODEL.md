@@ -138,3 +138,13 @@ Chạy: `uv run alembic upgrade head && uv run python -m seed.seed` trong `apps/
 Id seed cố định (uuid5), nên trùng với ví dụ trong `openapi.json`: lesson `dan-so-vung` = `712030dc-698a-5be5-9781-5d7a907b3628`, lớp 10A1 = `d97fbc44-edb6-5333-b65d-1427e836354c`, lớp 11A1 = `cf4d05fd-9a71-57a0-9eaa-421c08c3c74c`.
 
 Mỗi bài có: 1 nguồn văn bản (tiêu đề, 2 đoạn, bảng 4 hàng × 2 cột → 11 anchor) và ~19 block: `heading`, 2 `paragraph`, `instruction`, `data_fact`, 1 câu MCQ (4 `option`, `answer_key`, `explanation`), 1 câu NUMERIC (`answer_key` có `derivation`, `explanation`).
+
+## Habit (migration 0003, chỉ thêm)
+
+| Bảng | Cột chính | Ghi chú |
+|---|---|---|
+| `chat_session` | `id, assignment_id, student_id, item_block_id, created_at` | duy nhất theo (assignment, student, item) |
+| `chat_message` | `id, session_id, role user/assistant, action hint/ask/explain, text, hint_level 0..3, mode rule/llm, blocked_reason, tokens_in, tokens_out, request_id, created_at` | **append-only** (trigger `tg_append_only`); `text` đã che PII; duy nhất (session, request_id) cho dòng assistant |
+| `study_activity` | `student_id, day, items_answered, hints_used` | khóa chính (student, day); chỉ cập nhật khi `CHAT_ENABLED=true` |
+
+`blocked_reason` ghi cả từ chối (INJECTION, ANSWER_REQUEST, CONFIRM_OPTION, UNSAFE, OFFTOPIC) lẫn lý do rơi về rule của LLM (`LLM_ANSWER, LLM_NUMBER, LLM_PII, LLM_PROMPT, LLM_ERROR, LLM_BUDGET`).
