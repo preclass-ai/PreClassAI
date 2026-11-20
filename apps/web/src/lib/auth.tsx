@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, type ReactNode } from "react";
 import { api, ApiError, setUnauthenticatedHandler, unwrap, type Schemas } from "./api";
+import { useAfter } from "./http";
 
 export type User = Schemas["UserOut"];
 export type Role = User["role"];
@@ -99,6 +100,17 @@ export function RequireRole({ roles, children }: { roles: readonly Role[]; child
     else if (!roles.includes(user.role)) router.replace(homeFor(user.role));
   }, [loading, user, roles, router, pathname]);
 
+  const stuck = useAfter(!allowed, 20_000); // never an endless spinner: after 20 s offer a retry
+  if (!allowed && stuck) {
+    return (
+      <div className="page-loading" role="alert">
+        <p>Không tải được trang. Máy chủ có thể đang khởi động, thử lại sau ít giây.</p>
+        <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
+          Thử lại
+        </button>
+      </div>
+    );
+  }
   if (!allowed) return <div className="page-loading" aria-busy="true">Đang tải…</div>;
   return <>{children}</>;
 }
