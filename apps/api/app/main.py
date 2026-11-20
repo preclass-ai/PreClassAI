@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
@@ -76,6 +76,11 @@ app.include_router(api_router)
 @app.get("/v1/health", tags=["system"], operation_id="getHealth", openapi_extra={"security": []})
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.head("/v1/health", include_in_schema=False)  # UptimeRobot (free) probes with HEAD; kept out of the schema: one operationId
+async def health_head() -> Response:
+    return Response(status_code=200)
 
 
 def custom_openapi() -> dict[str, Any]:
