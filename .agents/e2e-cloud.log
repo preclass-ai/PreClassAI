@@ -1,0 +1,22 @@
+
+Running 20 tests using 1 worker
+
+  ✓   1 [390] › tests\release-1911\flow.spec.ts:103:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history (36.5s)
+  ✓   2 [390] › tests\release-1911\flow.spec.ts:169:1 › T2 student: answer 2 questions, explanation after submit, provenance blocked (6.0s)
+  ✓   3 [390] › tests\release-1911\flow.spec.ts:205:1 › T3 teacher: withdraw (and republish on 1280) (4.3s)
+  ✓   4 [390] › tests\release-1911\flow.spec.ts:226:1 › T4 student: sees withdrawn notice (3.3s)
+  ✘   5 [390] › tests\release-1911\student-seed.spec.ts:18:1 › seeded: student answers 2 questions, sees explanation, provenance blocked (5.3s)
+  ✓   6 [768] › tests\release-1911\flow.spec.ts:103:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history (22.5s)
+  ✓   7 [768] › tests\release-1911\flow.spec.ts:169:1 › T2 student: answer 2 questions, explanation after submit, provenance blocked (5.0s)
+  ✓   8 [768] › tests\release-1911\flow.spec.ts:205:1 › T3 teacher: withdraw (and republish on 1280) (3.8s)
+  ✓   9 [768] › tests\release-1911\flow.spec.ts:226:1 › T4 student: sees withdrawn notice (3.8s)
+  ✘  10 [768] › tests\release-1911\student-seed.spec.ts:18:1 › seeded: student answers 2 questions, sees explanation, provenance blocked (5.2s)
+  ✘  11 [1280] › tests\release-1911\flow.spec.ts:103:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history (20.7s)
+  -  12 [1280] › tests\release-1911\flow.spec.ts:169:1 › T2 student: answer 2 questions, explanation after submit, provenance blocked
+  -  13 [1280] › tests\release-1911\flow.spec.ts:205:1 › T3 teacher: withdraw (and republish on 1280)
+  -  14 [1280] › tests\release-1911\flow.spec.ts:226:1 › T4 student: sees withdrawn notice
+  ✘  15 [1280] › tests\release-1911\student-seed.spec.ts:18:1 › seeded: student answers 2 questions, sees explanation, provenance blocked (5.7s)
+  ✓  16 [webkit] › tests\release-1911\flow.spec.ts:103:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history (58.0s)
+  ✓  17 [webkit] › tests\release-1911\flow.spec.ts:169:1 › T2 student: answer 2 questions, explanation after submit, provenance blocked (9.9s)
+  ✓  18 [webkit] › tests\release-1911\flow.spec.ts:205:1 › T3 teacher: withdraw (and republish on 1280) (6.7s)
+  ✓  19 [webkit] › tests\release-1911\flow.spec.ts:226:1 › T4 student: sees withdrawn notice (5.4s)

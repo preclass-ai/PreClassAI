@@ -1,0 +1,105 @@
+
+Running 28 tests using 1 worker
+
+  ✓   1 [390] › tests\release-1911\flow.spec.ts:113:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history (39.0s)
+  ✓   2 [390] › tests\release-1911\flow.spec.ts:179:1 › T2 student: answer 2 questions, explanation after submit, provenance blocked (5.8s)
+  ✓   3 [390] › tests\release-1911\flow.spec.ts:215:1 › T3 teacher: withdraw (and republish on 1280) (4.5s)
+  ✓   4 [390] › tests\release-1911\flow.spec.ts:238:1 › T4 student: sees withdrawn notice (3.4s)
+  ✓   5 [390] › tests\release-1911\guest.spec.ts:21:1 › guest: enter, answer 2 questions, see explanations and the survey code (3.4s)
+  ✓   6 [390] › tests\release-1911\guest.spec.ts:43:1 › guest: a second private window is a different guest; the first can come back with its code (4.5s)
+  ✓   7 [390] › tests\release-1911\guest.spec.ts:62:1 › guest: /thu?bai=dan-so-vung opens the lesson directly (1.8s)
+  ✓   8 [768] › tests\release-1911\flow.spec.ts:113:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history (29.8s)
+  ✓   9 [768] › tests\release-1911\flow.spec.ts:179:1 › T2 student: answer 2 questions, explanation after submit, provenance blocked (5.5s)
+  ✓  10 [768] › tests\release-1911\flow.spec.ts:215:1 › T3 teacher: withdraw (and republish on 1280) (4.5s)
+  ✓  11 [768] › tests\release-1911\flow.spec.ts:238:1 › T4 student: sees withdrawn notice (3.7s)
+  ✓  12 [768] › tests\release-1911\guest.spec.ts:21:1 › guest: enter, answer 2 questions, see explanations and the survey code (3.5s)
+  ✓  13 [768] › tests\release-1911\guest.spec.ts:43:1 › guest: a second private window is a different guest; the first can come back with its code (4.8s)
+  ✓  14 [768] › tests\release-1911\guest.spec.ts:62:1 › guest: /thu?bai=dan-so-vung opens the lesson directly (1.7s)
+  ✓  15 [1280] › tests\release-1911\flow.spec.ts:113:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history (28.6s)
+  ✓  16 [1280] › tests\release-1911\flow.spec.ts:179:1 › T2 student: answer 2 questions, explanation after submit, provenance blocked (5.4s)
+  ✘  17 [1280] › tests\release-1911\flow.spec.ts:215:1 › T3 teacher: withdraw (and republish on 1280) (14.1s)
+  -  18 [1280] › tests\release-1911\flow.spec.ts:238:1 › T4 student: sees withdrawn notice
+  ✓  19 [1280] › tests\release-1911\guest.spec.ts:21:1 › guest: enter, answer 2 questions, see explanations and the survey code (3.9s)
+  ✓  20 [1280] › tests\release-1911\guest.spec.ts:43:1 › guest: a second private window is a different guest; the first can come back with its code (4.8s)
+  ✓  21 [1280] › tests\release-1911\guest.spec.ts:62:1 › guest: /thu?bai=dan-so-vung opens the lesson directly (1.6s)
+  ✘  22 [webkit] › tests\release-1911\flow.spec.ts:113:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history (3.0m)
+  -  23 [webkit] › tests\release-1911\flow.spec.ts:179:1 › T2 student: answer 2 questions, explanation after submit, provenance blocked
+  -  24 [webkit] › tests\release-1911\flow.spec.ts:215:1 › T3 teacher: withdraw (and republish on 1280)
+  -  25 [webkit] › tests\release-1911\flow.spec.ts:238:1 › T4 student: sees withdrawn notice
+  ✓  26 [webkit] › tests\release-1911\guest.spec.ts:21:1 › guest: enter, answer 2 questions, see explanations and the survey code (8.9s)
+  ✓  27 [webkit] › tests\release-1911\guest.spec.ts:43:1 › guest: a second private window is a different guest; the first can come back with its code (10.4s)
+  ✓  28 [webkit] › tests\release-1911\guest.spec.ts:62:1 › guest: /thu?bai=dan-so-vung opens the lesson directly (2.1s)
+
+
+  1) [1280] › tests\release-1911\flow.spec.ts:215:1 › T3 teacher: withdraw (and republish on 1280) ─
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.checklist li.fail')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.checklist li.fail')[22m
+    [2m    14 × locator resolved to 1 element[22m
+    [2m       - unexpected value "1"[22m
+
+
+      82 |     await expect(page.locator(".checklist li").first()).toBeVisible({ timeout: 30_000 });
+      83 |   }
+    > 84 |   await expect(page.locator(".checklist li.fail")).toHaveCount(0);
+         |                                                    ^
+      85 |   await page.getByText("Tôi đã đọc từng khối").click();
+      86 |   await page.getByRole("button", { name: "Xuất bản", exact: true }).click({ timeout: 20_000 });
+      87 |   await expect(page.getByText(/đã xuất bản\./)).toBeVisible({ timeout: 30_000 });
+        at publishAssign (D:\vscode_repo\NCKHTHPT\PreClass\PreClassAI\apps\web\tests\release-1911\flow.spec.ts:84:52)
+        at D:\vscode_repo\NCKHTHPT\PreClass\PreClassAI\apps\web\tests\release-1911\flow.spec.ts:233:7
+        at S (D:\vscode_repo\NCKHTHPT\PreClass\PreClassAI\apps\web\tests\release-1911\flow.spec.ts:28:5)
+        at D:\vscode_repo\NCKHTHPT\PreClass\PreClassAI\apps\web\tests\release-1911\flow.spec.ts:226:5
+
+    Error Context: test-results\pw-output-1911\flow-T3-teacher-withdraw-and-republish-on-1280--1280\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pw-output-1911\flow-T3-teacher-withdraw-and-republish-on-1280--1280\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pw-output-1911\flow-T3-teacher-withdraw-and-republish-on-1280--1280\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [webkit] › tests\release-1911\flow.spec.ts:113:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history 
+
+    [31mTest timeout of 180000ms exceeded.[39m
+
+    Error: locator.count: Target page, context or browser has been closed
+
+      62 |   // Either there is something to approve, or the queue is already empty (e.g. a fresh revision with carried-over approvals).
+      63 |   await expect(approve.first().or(empty)).toBeVisible({ timeout: 30_000 });
+    > 64 |   for (let i = 0; i < 120 && (await approve.count()) > 0; i++) {
+         |                                             ^
+      65 |     const before = await approve.count();
+      66 |     // Wait for the review request itself: a click that did not fire (seen on WebKit) is simply retried.
+      67 |     const sent = page.waitForResponse((r) => /\/reviews$/.test(r.url()) && r.request().method() === "POST", { timeout: 15_000 });
+        at approveAll (D:\vscode_repo\NCKHTHPT\PreClass\PreClassAI\apps\web\tests\release-1911\flow.spec.ts:64:45)
+        at D:\vscode_repo\NCKHTHPT\PreClass\PreClassAI\apps\web\tests\release-1911\flow.spec.ts:164:5
+        at S (D:\vscode_repo\NCKHTHPT\PreClass\PreClassAI\apps\web\tests\release-1911\flow.spec.ts:28:5)
+        at D:\vscode_repo\NCKHTHPT\PreClass\PreClassAI\apps\web\tests\release-1911\flow.spec.ts:163:3
+
+    Error Context: test-results\pw-output-1911\flow-T1-teacher-login-sour-4cf38-view-publish-assign-history-webkit\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pw-output-1911\flow-T1-teacher-login-sour-4cf38-view-publish-assign-history-webkit\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pw-output-1911\flow-T1-teacher-login-sour-4cf38-view-publish-assign-history-webkit\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [1280] › tests\release-1911\flow.spec.ts:215:1 › T3 teacher: withdraw (and republish on 1280) ──
+    [webkit] › tests\release-1911\flow.spec.ts:113:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history 
+  4 did not run
+  22 passed (6.5m)
+FINISHED

@@ -9,7 +9,8 @@ import { use, useRef, useState, type FormEvent } from "react";
 import { Button, DataNotice, ErrorBox, Loading, Notice } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api";
 import { errorCode, errorMessage } from "@/lib/errors";
-import { fmtDateTime, fmtNumber } from "@/lib/format";
+import { useAuth } from "@/lib/auth";
+import { fmtDate, fmtNumber } from "@/lib/format";
 import { SKILL } from "@/lib/labels";
 import { newRequestId } from "@/lib/uuid";
 
@@ -18,6 +19,7 @@ type ContentBlock = Schemas["StudentContentBlock"];
 
 export default function StudentAssignmentPage({ params }: { params: Promise<{ assignmentId: string }> }) {
   const { assignmentId } = use(params);
+  const { user } = useAuth();
   const key = ["student-assignment", assignmentId];
   const qc = useQueryClient();
   const [closed, setClosed] = useState(false);
@@ -65,7 +67,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
         <p className="eyebrow">BÀI KHÁM PHÁ ĐỊA LÍ</p>
         <h1>{data.title}</h1>
         <p>Quan sát, suy nghĩ và chọn câu trả lời của riêng em.</p>
-        <div className="lesson-hero-meta"><span>◷ Hạn nộp {fmtDateTime(data.dueAt)}</span><strong>{answered}/{data.items.length} câu đã làm</strong></div>
+        <div className="lesson-hero-meta">{user?.isGuest ? null : <span>◷ Hạn nộp {fmtDate(data.dueAt)}</span>}<strong>{answered}/{data.items.length} câu đã làm</strong></div>
         <div className="bar" aria-label={`Đã làm ${answered}/${data.items.length} câu`}><span style={{ width: `${data.items.length ? (100 * answered) / data.items.length : 0}%` }} /></div>
       </header>
       <DataNotice />

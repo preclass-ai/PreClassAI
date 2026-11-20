@@ -186,7 +186,16 @@ Bật bằng env `GUEST_ACCESS_ENABLED=true` (mặc định tắt → mọi endp
 - **Header API:** mọi phản hồi `X-Content-Type-Options: nosniff`; mọi `/v1/*` trừ health `Cache-Control: no-store`.
 - **DOCX:** ≤ 10 MB tải lên, ≤ 20 MB giải nén, ≤ 1000 thành phần, tỉ lệ nén ≤ 100:1; từ chối macro (`.docm`, `vbaProject`), đối tượng nhúng/ActiveX và liên kết tới nội dung ngoài (chỉ cho phép hyperlink): `422 EXTERNAL_CONTENT_REJECTED`.
 
-## 12. Habit (CHAT_ENABLED, mặc định tắt; ADR-0012)
+## 12. Nạp nguồn từ tệp DOCX, PDF, XLSX, PPTX
+
+`POST /v1/sources/file` (multipart: `file`, `title`, `licenseNote?`, `visibility?`; TEACHER). Loại tệp lấy từ **magic bytes** và `[Content_Types].xml`, bỏ qua tên và `Content-Type` do client gửi. `/sources/docx` cũ vẫn dùng được.
+
+- Giới hạn (env `SOURCE_*`, xem RUNBOOK): 10 MB; ≤ 1000 entry, ≤ 20 MB giải nén, tỉ lệ nén ≤ 100; PDF ≤ 50 trang; XLSX ≤ 5 sheet × 2000 ô; PPTX ≤ 60 slide; parse trong tiến trình con, tối đa 30 s.
+- Locator của anchor: PDF `{page, para}` (đều bắt đầu từ 1); XLSX `{sheet, row, col, header?}` (row/col bắt đầu từ 0, `header` là tiêu đề cột của ô số); PPTX `{slide, shape, para}` hoặc `{slide, shape, row, col}` (slide từ 1, còn lại từ 0). Số trong ô Excel chuẩn hóa thành chữ dạng Việt ("23,2"), `numbers[]` vẫn là số.
+- Excel: chỉ đọc giá trị đã lưu, không bao giờ tính công thức.
+- Lỗi 422 (`code`): `FILE_TOO_LARGE`, `SOURCE_TOO_LARGE`, `INVALID_FILE`, `MACRO_REJECTED`, `EXTERNAL_CONTENT_REJECTED`, `ACTIVE_CONTENT_REJECTED` (PDF có JavaScript/đính kèm), `PARSE_TIMEOUT`, `EMPTY_SOURCE`, `LICENSE_REQUIRED`.
+- PDF scan (không có lớp chữ, không OCR): **201** với `latestRevision.extractStatus = "FAILED"`, `extractError = "SCANNED_PDF"`, `anchorCount = 0`. Dùng nguồn FAILED để tạo bài / đổi nguồn → 422 `SOURCE_NOT_READABLE`.
+## 13. Habit (CHAT_ENABLED, mặc định tắt; ADR-0012)
 
 Khi tắt: mọi route dưới đây trả 404 và `GET /v1/auth/config` có `chatEnabled:false` (UI ẩn Habit). Chỉ STUDENT, chỉ bài của lớp mình (khác → 404).
 

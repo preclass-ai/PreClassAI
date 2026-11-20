@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     chat_max_output_tokens: int = 220
     chat_daily_token_budget: int = 300_000
     habit_daily_goal: int = 3
+    source_max_pdf_pages: int = 50  # uploaded PDF / XLSX / PPTX limits (docs/security/THREAT-MODEL-upload.md)
+    source_max_xlsx_sheets: int = 5
+    source_max_xlsx_cells: int = 2000  # non-empty cells per sheet
+    source_max_pptx_slides: int = 60
+    source_parse_timeout_s: int = 30  # parser child process is killed after this
+    source_parse_mem_mb: int = 600  # RLIMIT_AS of the parser child (Linux only; 0 = no limit)
     docs_access: str = ""  # who may open /docs and /v1/openapi.json: open | staff (logged-in teacher/reviewer/admin) | off.
     # Unset: "open" everywhere except APP_ENV=production, where it is "off".
 

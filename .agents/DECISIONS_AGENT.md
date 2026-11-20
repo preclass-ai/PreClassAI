@@ -32,3 +32,12 @@
 - **web-design-guidelines**: tải luật qua agent web-fetch (không có WebFetch trực tiếp), audit tay các file Habit.
 - **PHIEU-KHAO-SAT-HOC-SINH.md không có trên nhánh này** (ở docs/proposal): câu hỏi để ở `docs/CAU-HOI-KHAO-SAT-HABIT.md`.
 - **`git push` bị chặn** bởi classifier: lệnh để Khải chạy: `git push -u origin feat/habit-chat`.
+## Upload nhiều định dạng (feat/lesson-plan-upload, 2026-11-21)
+- **Không thêm cột `extract_error` / migration**: nhánh Habit cũng thêm migration 0003 nên một migration nữa sẽ xung đột chuỗi revision khi gộp. PDF scan lưu `extract_status=FAILED` (0 anchor) và API suy ra `extractError=SCANNED_PDF` (lỗi duy nhất được lưu; lỗi khác bị từ chối, không lưu).
+- **Parse trong tiến trình con (spawn) thay vì thread**: thread không kill được khi quá 30 s. Đổi lại ~0,5–1 s mỗi tệp. Một parse mỗi lúc (semaphore) cho Render 512 MB.
+- **`RLIMIT_AS` chỉ Linux**: không kiểm thử được trên Windows dev; mặc định 600 MB, chỉnh bằng `SOURCE_PARSE_MEM_MB`.
+- **Số Excel chuẩn hóa thành chữ "23,2" không dấu phân nhóm** để `parse_numbers` không mơ hồ; `numbers[]` vẫn là số.
+- **Chỉ `POST /sources/file` cho nguồn mới**; chưa làm `/revisions/file` (ngoài yêu cầu), DOCX cũ giữ nguyên.
+- **PDF: đoạn = khối cách dòng trống, nếu không có thì mỗi dòng một đoạn**; đoạn đầu trang 1 là HEADING (PDF không có style).
+- **docs/Proposal.md không có trên nhánh này** (ở docs/proposal): chưa cập nhật mục Giải pháp.
+- **Nguồn FAILED không dùng để tạo/đổi nguồn của bài** (422 `SOURCE_NOT_READABLE`): ngoài đề nhưng cần để không sinh bài rỗng.

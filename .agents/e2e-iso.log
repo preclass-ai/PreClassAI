@@ -1,0 +1,46 @@
+
+Running 36 tests using 1 worker
+
+  ✓   1 [390] › tests\release-1911\flow.spec.ts:120:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history (20.5s)
+  ✓   2 [390] › tests\release-1911\flow.spec.ts:188:1 › T2 student: answer 2 questions, explanation after submit, provenance blocked (3.0s)
+  ✓   3 [390] › tests\release-1911\flow.spec.ts:226:1 › T3 teacher: withdraw (and republish on 1280) (2.4s)
+  ✓   4 [390] › tests\release-1911\flow.spec.ts:250:1 › T4 student: sees withdrawn notice (1.7s)
+  ✓   5 [390] › tests\release-1911\guest.spec.ts:21:1 › guest: enter, answer 2 questions, see explanations and the survey code (1.9s)
+  ✓   6 [390] › tests\release-1911\guest.spec.ts:43:1 › guest: a second private window is a different guest; the first can come back with its code (3.3s)
+  ✓   7 [390] › tests\release-1911\guest.spec.ts:62:1 › guest: /thu?bai=dan-so-vung opens the lesson directly (830ms)
+  ✓   8 [390] › tests\release-1911\guest.spec.ts:69:1 › guest: a brand-new guest sees only the seed lessons, never an [E2E] test lesson (1.3s)
+  -   9 [390] › tests\release-1911\student-seed.spec.ts:19:1 › seeded: student answers 2 questions, sees explanation, provenance blocked
+  ✓  10 [768] › tests\release-1911\flow.spec.ts:120:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history (21.4s)
+  ✓  11 [768] › tests\release-1911\flow.spec.ts:188:1 › T2 student: answer 2 questions, explanation after submit, provenance blocked (3.7s)
+  ✓  12 [768] › tests\release-1911\flow.spec.ts:226:1 › T3 teacher: withdraw (and republish on 1280) (2.5s)
+  ✓  13 [768] › tests\release-1911\flow.spec.ts:250:1 › T4 student: sees withdrawn notice (2.0s)
+  ✓  14 [768] › tests\release-1911\guest.spec.ts:21:1 › guest: enter, answer 2 questions, see explanations and the survey code (2.3s)
+  ✓  15 [768] › tests\release-1911\guest.spec.ts:43:1 › guest: a second private window is a different guest; the first can come back with its code (3.2s)
+  ✓  16 [768] › tests\release-1911\guest.spec.ts:62:1 › guest: /thu?bai=dan-so-vung opens the lesson directly (1.0s)
+  ✓  17 [768] › tests\release-1911\guest.spec.ts:69:1 › guest: a brand-new guest sees only the seed lessons, never an [E2E] test lesson (1.4s)
+  -  18 [768] › tests\release-1911\student-seed.spec.ts:19:1 › seeded: student answers 2 questions, sees explanation, provenance blocked
+  ✓  19 [1280] › tests\release-1911\flow.spec.ts:120:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history (22.8s)
+  ✓  20 [1280] › tests\release-1911\flow.spec.ts:188:1 › T2 student: answer 2 questions, explanation after submit, provenance blocked (3.4s)
+  ✓  21 [1280] › tests\release-1911\flow.spec.ts:226:1 › T3 teacher: withdraw (and republish on 1280) (17.1s)
+  ✓  22 [1280] › tests\release-1911\flow.spec.ts:250:1 › T4 student: sees withdrawn notice (1.9s)
+  ✓  23 [1280] › tests\release-1911\guest.spec.ts:21:1 › guest: enter, answer 2 questions, see explanations and the survey code (2.2s)
+  ✓  24 [1280] › tests\release-1911\guest.spec.ts:43:1 › guest: a second private window is a different guest; the first can come back with its code (3.2s)
+  ✓  25 [1280] › tests\release-1911\guest.spec.ts:62:1 › guest: /thu?bai=dan-so-vung opens the lesson directly (949ms)
+  ✓  26 [1280] › tests\release-1911\guest.spec.ts:69:1 › guest: a brand-new guest sees only the seed lessons, never an [E2E] test lesson (1.2s)
+  -  27 [1280] › tests\release-1911\student-seed.spec.ts:19:1 › seeded: student answers 2 questions, sees explanation, provenance blocked
+  ✓  28 [webkit] › tests\release-1911\flow.spec.ts:120:1 › T1 teacher: login, source, generate, edit, review, publish, assign, history (58.7s)
+  ✓  29 [webkit] › tests\release-1911\flow.spec.ts:188:1 › T2 student: answer 2 questions, explanation after submit, provenance blocked (10.8s)
+  ✓  30 [webkit] › tests\release-1911\flow.spec.ts:226:1 › T3 teacher: withdraw (and republish on 1280) (7.2s)
+  ✓  31 [webkit] › tests\release-1911\flow.spec.ts:250:1 › T4 student: sees withdrawn notice (6.5s)
+  ✓  32 [webkit] › tests\release-1911\guest.spec.ts:21:1 › guest: enter, answer 2 questions, see explanations and the survey code (5.9s)
+  ✓  33 [webkit] › tests\release-1911\guest.spec.ts:43:1 › guest: a second private window is a different guest; the first can come back with its code (11.5s)
+  ✓  34 [webkit] › tests\release-1911\guest.spec.ts:62:1 › guest: /thu?bai=dan-so-vung opens the lesson directly (1.7s)
+  ✓  35 [webkit] › tests\release-1911\guest.spec.ts:69:1 › guest: a brand-new guest sees only the seed lessons, never an [E2E] test lesson (3.2s)
+  -  36 [webkit] › tests\release-1911\student-seed.spec.ts:19:1 › seeded: student answers 2 questions, sees explanation, provenance blocked
+Error: worker-3 process did not exit within 300000ms after stop, force-killed it
+[e2e-cleanup] withdrew 1 [E2E] lesson(s)
+
+  4 skipped
+  32 passed (9.0m)
+  1 error was not a part of any test, see above for details
+FINISHED

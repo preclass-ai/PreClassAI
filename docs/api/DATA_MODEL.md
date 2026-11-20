@@ -148,3 +148,6 @@ Mỗi bài có: 1 nguồn văn bản (tiêu đề, 2 đoạn, bảng 4 hàng × 
 | `study_activity` | `student_id, day, items_answered, hints_used` | khóa chính (student, day); chỉ cập nhật khi `CHAT_ENABLED=true` |
 
 `blocked_reason` ghi cả từ chối (INJECTION, ANSWER_REQUEST, CONFIRM_OPTION, UNSAFE, OFFTOPIC) lẫn lý do rơi về rule của LLM (`LLM_ANSWER, LLM_NUMBER, LLM_PII, LLM_PROMPT, LLM_ERROR, LLM_BUDGET`).
+## Nguồn từ nhiều định dạng (không đổi schema DB)
+
+`source_revision.mime` nhận thêm `application/pdf`, `...spreadsheetml.sheet`, `...presentationml.presentation`; `extract_status = FAILED` (kèm 0 anchor) là bản PDF scan, và API suy ra `extractError = SCANNED_PDF` (đó là lỗi duy nhất được lưu; các lỗi khác bị từ chối, không lưu gì). `source_anchor.locator` là JSON tự do theo định dạng, xem API_GUIDE mục 12. Tệp gốc lưu dưới `UPLOAD_DIR` với tên `uuid.<ext>`.

@@ -57,6 +57,26 @@ async def create_source_docx(
     return await service.create_source(db, cu, title, license_note, visibility, docx=await _read_upload(file))
 
 
+_FILE = ("Accepts DOCX, PDF, XLSX, PPTX; the type is read from the file's magic bytes, the client's name and Content-Type are "
+         "ignored. Limits: 10 MB; ≤ 1000 zip entries, ≤ 20 MB unzipped; ≤ 50 PDF pages, ≤ 5 sheets × 2000 cells, ≤ 60 slides "
+         "(env `SOURCE_*`). Rejected with 422: `FILE_TOO_LARGE`, `SOURCE_TOO_LARGE`, `INVALID_FILE`, `MACRO_REJECTED`, "
+         "`EXTERNAL_CONTENT_REJECTED`, `ACTIVE_CONTENT_REJECTED` (PDF JavaScript/attachments), `PARSE_TIMEOUT` (30 s), "
+         "`EMPTY_SOURCE`. A PDF without a text layer returns 201 with `extractStatus=FAILED`, `extractError=SCANNED_PDF` (no OCR). "
+         "Anchor locators: PDF `{page, para}`, XLSX `{sheet, row, col, header?}` (0-based row/col, stored values only, formulas "
+         "are never evaluated), PPTX `{slide, shape, para}` or `{slide, shape, row, col}`.")
+
+
+@router.post("/sources/file", status_code=201, operation_id="createSourceFromFile", response_model=SourceOut,
+             summary="Create a source from a DOCX, PDF, XLSX or PPTX file (TEACHER, multipart)", description=_FILE,
+             responses=errs(401, 403, 422))
+async def create_source_file(
+    cu: Teacher, db: Db, file: Annotated[UploadFile, File()], title: Annotated[str, Form()],
+    license_note: Annotated[str | None, Form(alias="licenseNote")] = None,
+    visibility: Annotated[Visibility, Form()] = "PRIVATE",
+) -> SourceOut:
+    return await service.create_file_source(db, cu, title, license_note, visibility, await _read_upload(file))
+
+
 @router.get("/sources", operation_id="listSources", response_model=SourceList,
             summary="Own sources plus SCHOOL-visible ones", responses=errs(401, 403))
 async def list_sources(cu: Reader, db: Db) -> SourceList:
