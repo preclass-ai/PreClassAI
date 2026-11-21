@@ -7,10 +7,10 @@ export function HabitMark() {
   );
 }
 
-export function SourceRef({ label, excerpt }: { label: string; excerpt: string }) {
+export function SourceRef({ excerpt }: { label?: string; excerpt: string }) {
   return (
     <blockquote className="habit-source">
-      <span className="habit-source-label">Nguồn đã được thầy cô duyệt · {label}</span>
+      <span className="habit-source-label">Tài liệu giáo viên đã duyệt</span>
       {excerpt}
     </blockquote>
   );

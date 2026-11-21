@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     chat_max_output_tokens: int = 220
     chat_daily_token_budget: int = 300_000
     habit_daily_goal: int = 3
+    chat_ai_extra: bool = False  # CHAT_MODE=llm only: a second, clearly labelled part with general knowledge (unverified)
     personalization_enabled: bool = False  # student-chosen options, focus mode, behaviour-based hints; 404 when off
     source_max_pdf_pages: int = 50  # uploaded PDF / XLSX / PPTX limits (docs/security/THREAT-MODEL-upload.md)
     source_max_xlsx_sheets: int = 5

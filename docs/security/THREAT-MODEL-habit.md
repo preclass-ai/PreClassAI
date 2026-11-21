@@ -41,6 +41,15 @@ Mức = khả năng × tác động (đã tính biện pháp). Test nằm ở `a
 | H-15 | **Log lộ nội dung chat** | Thấp | Không log message/reply (chỉ mã lỗi); `audit_log` không ghi nội dung | review code (security-best-practices) |
 | H-16 | **Tạo khách hàng loạt để vượt hạn mức** | Thấp | Hạn mức ngày theo HS cộng ngân sách token toàn hệ thống; mức rule vốn 0đ; khách đã bị giới hạn theo IP ở `/auth/guest` | `test_budget_exhausted_falls_back` |
 
+### Bổ sung cho HABIT AI v2 (nút gợi ý, phần "gợi ý thêm")
+
+| ID | Mối đe dọa | Mức | Biện pháp | Test |
+|---|---|---|---|---|
+| H-17 | **Phần "gợi ý thêm" (kiến thức chung từ model) làm lộ đáp án hoặc nói phương án đúng/sai**, vì phần này không bị giới hạn bởi nội dung bài | Cao | Bật riêng bằng `CHAT_AI_EXTRA` (mặc định tắt). Cùng cổng: nhận diện ý định trước khi gọi model; model không nhận `answer_key`/`explanation`; hậu kiểm `postcheck_extra` (đáp án, nhãn phương án kèm khẳng định/phủ định, giá trị đáp án, "đáp án là", đoạn lời giải, PII, lặp prompt, câu tiêm lệnh). Sai một điều thì **bỏ phần thứ hai**, giữ phần thứ nhất. Số trong phần này không đối chiếu với bài nhưng luôn gắn nhãn "chưa được thầy cô kiểm chứng" | `test_second_part_guards`, `test_second_part_only_with_the_flag_and_only_if_it_passes_the_guards`, red team `extra/*` |
+| H-18 | **Nút gợi ý nhanh bị dùng để vòng qua bộ phân loại** (gửi `quick` khác nhãn, hoặc `quick` kèm `message` tấn công) | Thấp | `quick` chỉ nhận 4 giá trị cố định, chỉ có tác dụng với `ask`; khi có `quick` thì `message` bị bỏ qua và câu trả lời là mẫu tĩnh theo bậc 1/2/3 (không phụ thuộc đáp án, qua `leak`); không gọi model | `test_quick_buttons_never_leak_and_never_go_through_the_classifier`, `test_quick_buttons_answer_with_a_hint...` |
+| H-19 | **Từ khóa "cách làm/bắt đầu" bị lạm dụng để lọt yêu cầu đáp án** ("không hiểu, cho em đáp án") | Trung bình | Nhận diện ý định (xin đáp án, xác nhận phương án, tiêm lệnh) chạy **trước** nhận diện "cách làm"; câu trả lời cho "cách làm" cũng là mẫu tĩnh | `test_attacks_are_still_refused_when_they_contain_how_to_words` |
+| H-20 | **Gửi dữ liệu ra bên thứ ba** (DeepSeek, Qwen) | Trung bình | Chỉ khi `CHAT_MODE=llm`; lọc PII trước khi gửi; không có tên/mã khảo sát; không có đáp án/lời giải; nhà trường được báo trước (RUNBOOK); khóa chỉ ở biến môi trường | `test_pii_redacted_before_store`, `llm_smoke.py` |
+
 ## 3. Rủi ro còn lại (không loại bỏ hoàn toàn)
 
 1. **Dữ liệu hiển thị sẵn**: khối `data_fact` trong seed chứa chính giá trị lớn nhất (đáp án câu MCQ) và HS đã thấy nó ở S07. Habit không làm tệ thêm nhưng cũng không che. Đây là lỗi nội dung (GV chọn khối hiển thị), cần dặn GV.

@@ -1458,6 +1458,11 @@ export interface components {
              */
             blockedReason?: string | null;
             /**
+             * Extra
+             * @description Second part (CHAT_AI_EXTRA): general knowledge, NOT verified by the teacher.
+             */
+            extra?: string | null;
+            /**
              * Hintlevel
              * @description 1..3 for `hint`, 0 otherwise.
              */
@@ -1469,6 +1474,11 @@ export interface components {
             reply: string;
             /** Sourcerefs */
             sourceRefs: components["schemas"]["SourceRef"][];
+            /**
+             * Suggestions
+             * @description Buttons offered after a refusal or off-topic.
+             */
+            suggestions?: components["schemas"]["QuickAction"][];
         };
         /**
          * ChatRequest
@@ -1495,6 +1505,11 @@ export interface components {
              * @description Free question for `ask` (PII redacted before storing).
              */
             message?: string | null;
+            /**
+             * Quick
+             * @description Suggestion button instead of free text (with `ask`).
+             */
+            quick?: ("start" | "where_data" | "formula" | "teacher") | null;
             /**
              * Requestid
              * Format: uuid
@@ -2453,6 +2468,16 @@ export interface components {
             state: "ACTIVE" | "WITHDRAWN";
             /** Withdrawreason */
             withdrawReason?: string | null;
+        };
+        /** QuickAction */
+        QuickAction: {
+            /**
+             * Id
+             * @enum {string}
+             */
+            id: "start" | "where_data" | "formula" | "teacher";
+            /** Label */
+            label: string;
         };
         /** ReviewEventOut */
         ReviewEventOut: {

@@ -22,7 +22,7 @@ from app.db import models as m
 from app.errors import ApiError
 from app.habit import llm, rules
 from app.habit.activity import bump, day_start_utc, today
-from app.schemas import ChatReply, ChatRequest, HabitBadge, HabitItem, HabitOut, SourceRef
+from app.schemas import ChatReply, ChatRequest, HabitBadge, HabitItem, HabitOut, QuickAction, SourceRef
 
 HINTS_MAX = 3
 _CACHE: OrderedDict[tuple[Any, ...], str] = OrderedDict()  # (day, item, level, normalised message) → reply; ≤200 entries
@@ -34,9 +34,16 @@ def _enabled() -> None:
         raise NOT_FOUND
 
 
+EXTRA_SEP = "\n\n[EXTRA]\n\n"  # the stored text holds both parts; the API returns them separately
+
+
 def _reply(text: str, level: int, refs: list[tuple[str, str, str]], reason: str | None) -> ChatReply:
-    return ChatReply(reply=text, hint_level=level, blocked_reason=reason,
-                     source_refs=[SourceRef(block_id=UUID(i), label=lab, excerpt=t[:400]) for i, lab, t in refs])
+    main, _, extra = text.partition(EXTRA_SEP)
+    offer = reason in rules.REFUSAL and reason != "UNSAFE"
+    sugg = [QuickAction(id=k, label=lab) for k, lab in rules.SUGGESTIONS] if offer else []
+    return ChatReply(
+        reply=main, hint_level=level, blocked_reason=reason if reason in rules.REFUSAL else None, extra=extra or None,
+        suggestions=sugg, source_refs=[SourceRef(block_id=UUID(i), label=lab, excerpt=t[:400]) for i, lab, t in refs])
 
 
 async def _session(db: AsyncSession, assignment_id: UUID, student_id: UUID, item_id: UUID) -> UUID:
@@ -78,6 +85,32 @@ async def _llm_reply(db: AsyncSession, v: rules.ItemView, level: int, msg: str, 
     return out, None, tin, tout
 
 
+async def _extra_reply(db: AsyncSession, v: rules.ItemView, msg: str, pv_id: UUID, item_id: UUID) -> tuple[str | None, int, int]:
+    """The unverified second part. Anything wrong (no model, budget, error, guard) means: no second part, the first stays."""
+    cfg = get_settings()
+    client = llm.get_chat_llm()
+    if client is None:
+        return None, 0, 0
+    key = (today(), pv_id, item_id, "extra", rules.norm(msg))
+    if key in _CACHE:
+        return _CACHE[key], 0, 0
+    used = await db.scalar(select(func.coalesce(func.sum(m.ChatMessage.tokens_in + m.ChatMessage.tokens_out), 0)).where(
+        m.ChatMessage.created_at >= day_start_utc())) or 0
+    if used >= cfg.chat_daily_token_budget:
+        return None, 0, 0
+    try:
+        out, tin, tout = await client.complete(llm.EXTRA_SYSTEM, llm.build_extra_user(v, msg), cfg.chat_max_output_tokens)
+    except Exception:  # noqa: BLE001 timeout, HTTP error, bad payload
+        return None, 0, 0
+    out = out.strip()[:600]
+    if llm.postcheck_extra(out, v):
+        return None, tin, tout
+    _CACHE[key] = out
+    if len(_CACHE) > 200:
+        _CACHE.popitem(last=False)
+    return out, tin, tout
+
+
 async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: ChatRequest) -> ChatReply:
     _enabled()
     cfg = get_settings()
@@ -93,13 +126,13 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
         m.ChatMessage.session_id == sess, m.ChatMessage.request_id == body.request_id,
         m.ChatMessage.role == "assistant"))).scalar_one_or_none()
     if prev is not None:  # retry of the same request: stored reply, no new quota
-        return _reply(prev.text, prev.hint_level or 0, [], prev.blocked_reason if prev.blocked_reason in rules.REFUSAL else None)
+        return _reply(prev.text, prev.hint_level or 0, [], prev.blocked_reason)
 
     if body.action == "explain" and not answered:
         raise ApiError(409, "NOT_ANSWERED", "Em hãy trả lời câu này trước, rồi Habit sẽ giải thích nhé")
     if body.action == "hint" and answered:
         raise ApiError(409, "ALREADY_ANSWERED", "Câu này đã nộp rồi, em bấm “Habit giải thích” để xem lời giải nhé")
-    if body.action == "ask" and not (body.message or "").strip():
+    if body.action == "ask" and not (body.message or "").strip() and not body.quick:
         raise ApiError(422, "MESSAGE_REQUIRED", "Em hãy nhập câu hỏi")
     per_item = await db.scalar(select(func.count()).where(
         m.ChatMessage.session_id == sess, m.ChatMessage.role == "assistant")) or 0
@@ -110,15 +143,17 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
     if per_item >= cfg.chat_max_per_item or per_day >= cfg.chat_max_per_day_per_student:
         raise ApiError(429, "CHAT_LIMIT", "Hôm nay em hỏi nhiều rồi, thử tự làm nhé!")
 
-    msg = rules.redact((body.message or "").strip()) if body.action == "ask" else ""
+    quick = body.quick if body.action == "ask" else None
+    label = dict(rules.SUGGESTIONS).get(quick or "", "")
+    msg = label if quick else rules.redact((body.message or "").strip()) if body.action == "ask" else ""
     used = await db.scalar(select(func.count()).where(
         m.ChatMessage.session_id == sess, m.ChatMessage.action == "hint", m.ChatMessage.role == "assistant")) or 0
     prefs = await personalization.get_prefs(db, user.id) if personalization.on() else {}
     text, level, refs, reason = rules.decide(v, body.action, msg, used, small="chia_nho_tung_buoc" in prefs,
-                                             table_first="uu_tien_bang_so_lieu" in prefs)
+                                             table_first="uu_tien_bang_so_lieu" in prefs, quick=quick)
     mode, tin, tout = "rule", 0, 0
     if body.action != "explain":
-        if cfg.chat_mode == "llm" and reason is None:
+        if cfg.chat_mode == "llm" and reason is None and not quick:
             excerpt = " ".join(t for _, _, t in (refs or v.blocks))
             key = (today(), pv.id, body.item_id, level, rules.norm(msg))
             out, fb, tin, tout = await _llm_reply(db, v, level, msg, text, excerpt, sess, key)
@@ -126,6 +161,11 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
                 text, mode = out, "llm"
             else:
                 reason = fb
+        if cfg.chat_mode == "llm" and cfg.chat_ai_extra and body.action == "ask" and reason is None and not quick:
+            extra, etin, etout = await _extra_reply(db, v, msg, pv.id, body.item_id)
+            tin, tout = tin + etin, tout + etout
+            if extra:
+                text, mode = text + EXTRA_SEP + extra, "llm"
 
     try:
         async with db.begin_nested():
@@ -137,11 +177,11 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
         again = (await db.execute(select(m.ChatMessage).where(
             m.ChatMessage.session_id == sess, m.ChatMessage.request_id == body.request_id,
             m.ChatMessage.role == "assistant"))).scalar_one()
-        return _reply(again.text, again.hint_level or 0, [], None)
+        return _reply(again.text, again.hint_level or 0, [], again.blocked_reason)
     if body.action == "hint":
         await bump(db, user.id, hints=1)
     await db.commit()
-    return _reply(text, level, refs, reason if reason in rules.REFUSAL else None)
+    return _reply(text, level, refs, reason)
 
 
 async def habit(db: AsyncSession, user: CurrentUser, assignment_id: UUID) -> HabitOut:

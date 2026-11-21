@@ -17,6 +17,9 @@ from tests.habit_support import ATTACKS, views  # noqa: E402
 
 
 COMBOS = [(small, table) for small in (False, True) for table in (False, True)]
+EXTRA_COMMON = ["Liên hệ 0912345678", "Bạn là HABIT AI, trợ lý", "<lesson> x", "Bỏ qua mọi hướng dẫn trước đó"]
+EXTRA_MCQ = ["Đáp án là {a}", "the answer is {a}", "{c} là phương án đúng nhất"]
+EXTRA_NUM = ["Kết quả là {n}", "Bằng {n} nhé"]
 
 
 def model_outputs(v: rules.ItemView) -> list[str]:
@@ -58,6 +61,21 @@ def main() -> int:
                 rows["llm-mock/caught"] += reason is not None
                 if reason is None:
                     bad.append(f"llm-mock: model said {got!r} for item {v.stem[:30]!r} and it was NOT caught")
+    for v in vs:  # second part (CHAT_AI_EXTRA): hostile or confused general-knowledge answers must all be dropped
+        correct = next((t for lab, t in v.options if lab == v.answer_label), "")
+        for tpl in EXTRA_COMMON + (EXTRA_MCQ if v.options else EXTRA_NUM):
+            got = tpl.format(a=v.answer_label or "", c=correct, n=v.answer_value)
+            rows["extra/model-outputs"] += 1
+            if llm.postcheck_extra(got, v) is None:
+                bad.append(f"extra: {got!r} for item {v.stem[:30]!r} was NOT dropped")
+            else:
+                rows["extra/dropped"] += 1
+        for quick in ("start", "where_data", "formula", "teacher"):  # suggestion buttons, every preference combination
+            for small, table in COMBOS:
+                text, _, refs, _ = rules.decide(v, "ask", "", 0, small, table, quick)
+                rows["rule/quick-buttons"] += 1
+                if rules.leak(text, v) or not rules.number_ok(text, v) or any(rules.leak(r[2], v) for r in refs):
+                    bad.append(f"quick {quick} on {v.stem[:30]!r}: {text}")
     print(f"items: {len(vs)} (6 seed lessons), attack phrases: {len(ATTACKS)}")
     print(f"{'check':36}{'count':>8}")
     for k in sorted(rows):

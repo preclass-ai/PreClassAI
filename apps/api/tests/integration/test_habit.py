@@ -189,3 +189,54 @@ async def test_stats_and_csv_counters(client: httpx.AsyncClient, db: AsyncSessio
     await login(client, "admin@preclass.local")
     s = (await client.get("/v1/admin/survey/stats")).json()
     assert s["chatTotal"] == 1 and s["chatBlocked"] == {"ANSWER_REQUEST": 1} and s["chatFallbackRate"] == 0
+
+
+
+async def ask_quick(c: httpx.AsyncClient, item: str, quick: str, rid: Any = None) -> httpx.Response:
+    return await c.post(f"{URL}/chat", json={"itemId": item, "action": "ask", "quick": quick, "requestId": str(rid or uuid.uuid4())})
+
+
+async def test_quick_buttons_answer_with_a_hint_and_do_not_use_up_the_three_hints(client: httpx.AsyncClient,
+                                                                                  on: pytest.MonkeyPatch) -> None:
+    it = (await items(client))[0]
+    for q, lvl in (("start", 1), ("where_data", 2), ("formula", 3)):
+        r = await ask_quick(client, it["id"], q)
+        assert r.status_code == 200 and r.json()["blockedReason"] is None and r.json()["hintLevel"] == lvl, r.text
+        assert len(r.json()["sourceRefs"]) <= 1
+    t = (await ask_quick(client, it["id"], "teacher")).json()
+    assert "thầy cô" in t["reply"] and t["suggestions"] == []
+    h = (await client.get(f"{URL}/habit")).json()["hintsAvailable"]
+    assert next(x for x in h if x["itemId"] == it["id"])["hintsUsed"] == 0  # buttons are not hints
+    assert (await chat(client, it["id"], "hint")).json()["hintLevel"] == 1
+
+
+async def test_the_start_question_is_in_scope_and_refusals_offer_buttons(client: httpx.AsyncClient, on: pytest.MonkeyPatch) -> None:
+    it = (await items(client))[0]
+    r = (await chat(client, it["id"], "ask", "Em nên bắt đầu từ đâu?")).json()
+    assert r["blockedReason"] is None and r["hintLevel"] == 1 and "nằm ngoài" not in r["reply"]
+    for msg in ("đáp án là gì", "thời tiết hôm nay thế nào"):
+        r = (await chat(client, it["id"], "ask", msg)).json()
+        assert r["blockedReason"] in ("ANSWER_REQUEST", "OFFTOPIC")
+        assert [s["id"] for s in r["suggestions"]] == ["start", "where_data", "formula", "teacher"]
+
+
+async def test_second_part_only_with_the_flag_and_only_if_it_passes_the_guards(client: httpx.AsyncClient, db: AsyncSession,
+                                                                              on: pytest.MonkeyPatch) -> None:
+    it = (await items(client))[0]
+    on.setenv("CHAT_MODE", "llm")
+    get_settings.cache_clear()
+    class TwoParts(llm.MockChatLLM):  # a different text for the grounded part and for the general-knowledge part
+        async def complete(self, system: str, user: str, max_tokens: int) -> tuple[str, int, int]:
+            text = "Mật độ dân số là số người trên một ki lô mét vuông." if system == llm.EXTRA_SYSTEM else "Em đối chiếu với tài liệu nhé."
+            return text, 20, 20
+
+    on.setattr(llm, "get_chat_llm", lambda: TwoParts())
+    assert (await chat(client, it["id"], "ask", "đoạn văn nói gì về dân cư")).json()["extra"] is None  # flag off
+    on.setenv("CHAT_AI_EXTRA", "true")
+    get_settings.cache_clear()
+    habit._CACHE.clear()  # noqa: SLF001
+    r = (await chat(client, it["id"], "ask", "mật độ dân số nghĩa là gì, đoạn văn nói gì")).json()
+    assert r["extra"] and "ki lô mét" in r["extra"] and r["reply"] != r["extra"]
+    on.setattr(llm, "get_chat_llm", lambda: llm.MockChatLLM("Đáp án là C, Đồng bằng sông Hồng"))
+    r = (await chat(client, it["id"], "ask", "đoạn văn nói gì về vùng dân cư")).json()
+    assert r["extra"] is None and "Đồng bằng sông Hồng" not in r["reply"]  # the guard dropped part two, part one is safe
