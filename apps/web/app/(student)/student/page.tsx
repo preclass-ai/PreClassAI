@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { Badge, DataNotice, Empty, ErrorBox, Loading } from "@/components/ui";
+import { Badge, Empty, ErrorBox, Loading } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fmtDate } from "@/lib/format";
@@ -28,24 +28,23 @@ export default function StudentHome() {
     <div className="student-home stack">
       <header className="student-hero">
         <div className="student-hero-copy">
-          <p className="eyebrow">HÀNH TRÌNH ĐỊA LÍ</p>
-          <h1>Mỗi bài học là một vùng đất mới</h1>
-          <p>Khám phá số liệu, tự tìm câu trả lời rồi xem lời giải thích đã được thầy cô duyệt.</p>
+          <p className="eyebrow">Hành trình học tập</p>
+          <h1>Hôm nay em học gì?</h1>
+          <p>Tự làm trước, rồi xem lời giải thầy cô đã duyệt.</p>
         </div>
         <div className="student-hero-art" aria-hidden="true"><span className="hero-orbit hero-orbit-one" /><span className="hero-orbit hero-orbit-two" /><span className="hero-pin">⌖</span></div>
       </header>
-      <DataNotice />
       <ErrorBox error={list.error} />
       {list.isPending ? (
         <Loading />
       ) : (
         <>
           <div className="student-stats" aria-label="Tổng quan bài học">
-            <div className="stat-card"><strong>{assignments.length} bài được giao</strong><span>Kho bài Địa lí của em</span></div>
-            <div className="stat-card"><strong>{unfinished} bài cần làm</strong><span>Tiếp tục hành trình</span></div>
-            <div className="stat-card"><strong>{completed} bài hoàn thành</strong><span>Những nơi đã khám phá</span></div>
+            <div className="stat-card"><strong>{assignments.length} bài được giao</strong><span>Bài tập của em</span></div>
+            <div className="stat-card"><strong>{unfinished} bài cần làm</strong><span>Cần làm tiếp</span></div>
+            <div className="stat-card"><strong>{completed} bài hoàn thành</strong><span>Đã xong</span></div>
           </div>
-          <div className="section-heading"><div><p className="eyebrow">BẢN ĐỒ BÀI HỌC</p><h2>Bài được giao</h2></div><span className="muted small">Chọn một bài để bắt đầu</span></div>
+          <div className="section-heading"><div><h2>Bài được giao</h2></div><span className="muted small">Chọn một bài để bắt đầu</span></div>
           {assignments.length === 0 ? <Empty>Hiện chưa có bài nào được giao. Khi thầy cô giao bài, em sẽ thấy ở đây.</Empty> : null}
           <ul className="assignment-grid plain">
           {assignments.map((a) => {
@@ -53,7 +52,7 @@ export default function StudentHome() {
             return (
               <li key={a.id}>
                 <Link href={`/student/assignments/${a.id}`} className="card assignment-card">
-                  <div className="assignment-top"><span className="assignment-kicker">ĐỊA LÍ · LỚP {a.classCode}</span><Badge tone={s.tone}>{s.label}</Badge></div>
+                  <div className="assignment-top"><span className="assignment-kicker">Địa lí · {a.className ?? a.classCode}</span><Badge tone={s.tone}>{s.label}</Badge></div>
                   <strong className="assignment-title">{a.title}</strong>
                   {showDue(a.classCode) ? <div className="muted small">Hạn nộp {fmtDate(a.dueAt)}</div> : null}
                   <div className="bar" aria-label={`Đã làm ${a.answeredCount}/${a.itemCount} câu`}>

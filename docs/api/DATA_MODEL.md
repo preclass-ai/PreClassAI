@@ -162,3 +162,7 @@ Mỗi bài có: 1 nguồn văn bản (tiêu đề, 2 đoạn, bảng 4 hàng × 
 ## VAL-10 (migration 0005)
 
 `ck_validation_rule` rộng từ `VAL-01..09` sang `VAL-01..19` (đổi CHECK, không đổi dữ liệu cũ; downgrade dùng `NOT VALID` vì bảng chỉ thêm). VAL-10 chạy trên `worksheet_item`, kết quả `evidence.findings[{kind, block, in}]` với `kind` ∈ `NUMBER`, `OPTION_WITH_CUE`, `SINGLED_OUT` (Chặn) hoặc `CUE_TOKEN`, `NARROWS` (Cảnh báo). Seed: mỗi hàng bảng là một `data_fact` (khối `df`, `df1`, `df2`, `df3`), đáp án đúng ở các vị trí A–D khác nhau giữa các bài.
+
+## Tên lớp (migration 0006)
+
+`class.name` (TEXT, nullable): tên hiển thị như `10A1`; NULL thì hiện mã. Mã nội bộ `code` (ví dụ `KS`) giữ nguyên, mã khảo sát `KS-XXXX` của học sinh không đổi. `GET /v1/student/assignments` trả thêm `className` (tên hoặc mã).

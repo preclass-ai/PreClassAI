@@ -43,7 +43,7 @@ export function AppShell({ children, narrow }: { children: ReactNode; narrow?: b
             <path d="M6 24h36M24 6c6 5 9 11 9 18s-3 13-9 18M24 6c-6 5-9 11-9 18s3 13 9 18" stroke="currentColor" strokeWidth="2" />
             <circle cx="32" cy="15" r="4" fill="currentColor" />
           </svg>
-          <span className="brand-copy"><strong>PreClass <em>AI</em></strong><small>Khám phá Địa lí</small></span>
+          <span className="brand-copy"><strong>PreClass <em>AI</em></strong><small>Học trước, hiểu sâu</small></span>
         </Link>
         <nav aria-label="Điều hướng chính">
           {links.map((l) => (

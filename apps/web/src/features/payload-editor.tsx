@@ -104,7 +104,7 @@ export function PayloadEditor({ kind, value, onChange }: {
           <div className="row">
             <Field label="Đáp án trắc nghiệm">
               <select value={s(p, "correct")} onChange={(e) => set("correct", e.target.value || null)}>
-                <option value="">—</option>
+                <option value="">Chọn</option>
                 {["A", "B", "C", "D"].map((l) => (
                   <option key={l}>{l}</option>
                 ))}

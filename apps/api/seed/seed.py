@@ -74,6 +74,7 @@ def build_blocks(spec: dict[str, Any], vals: list[Decimal], code: dict[str, str]
                       "period": spec["period"], "region": spec["area"] or lab},
                      "PARAPHRASED", True, links=[(f"r{i + 1}c0", "derived_from"), (cell(i), "derived_from")]))
     out += [
+        B("p3", "paragraph", None, {"text": spec["paras"][2]}, "ORIGINAL", True, links=[("p3", "quotes")]),  # the one practice-data note
         B("q1", "worksheet_item", None,
           {"stem": f"Theo bảng số liệu, {spec['ent'].lower()} nào có {metric} cao nhất?",
            "itemType": "MCQ", "skill": "COMPARE"}, "AI_PROPOSED", reason=AI_REASON),
@@ -144,7 +145,7 @@ async def seed(conn: AsyncConnection, pw_by_role: dict[str, str]) -> None:
             members.append({"class_id": uid(f"class:{code}"), "user_id": uid(f"user:{login}"),
                             "role_in_class": "STUDENT"})
     await ins(conn, m.AppUser, users)
-    await ins(conn, m.Class, [{"id": uid(f"class:{c}"), "code": c, "grade": g} for c, g in classes.items()])
+    await ins(conn, m.Class, [{"id": uid(f"class:{c}"), "code": c, "grade": g, "name": c} for c, g in classes.items()])
     await ins(conn, m.ClassMember, members)
 
     for li, spec in enumerate(LESSONS):
@@ -156,6 +157,7 @@ async def seed(conn: AsyncConnection, pw_by_role: dict[str, str]) -> None:
             "h": ("HEADING", spec["heading"], {"para_index": 0}),
             "p1": ("PARAGRAPH", spec["paras"][0], {"para_index": 1}),
             "p2": ("PARAGRAPH", spec["paras"][1], {"para_index": 2}),
+            "p3": ("PARAGRAPH", spec["paras"][2], {"para_index": 3}),
             "r0c0": ("TABLE_CELL", spec["ent"], {"table": 0, "row": 0, "col": 0}),
             "r0c1": ("TABLE_CELL", f"Giá trị ({spec['unit']})", {"table": 0, "row": 0, "col": 1}),
         }

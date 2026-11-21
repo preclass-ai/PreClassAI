@@ -45,7 +45,7 @@ export default function AuditPage() {
                     {l.resourceType}
                     {l.resourceId ? <span className="muted small mono"> {l.resourceId.slice(0, 8)}</span> : null}
                   </td>
-                  <td className="mono small">{l.actorId?.slice(0, 8) ?? "—"}</td>
+                  <td className="mono small">{l.actorId?.slice(0, 8) ?? "Hệ thống"}</td>
                 </tr>
               ))}
             </tbody>

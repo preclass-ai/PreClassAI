@@ -7,7 +7,7 @@ import { FocusTimer, PersonalizationBar, usePersonalizationOn, usePrefs } from "
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { use, useRef, useState, type FormEvent } from "react";
-import { Button, DataNotice, ErrorBox, Loading, Notice } from "@/components/ui";
+import { Button, ErrorBox, Loading, Notice } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api";
 import { errorCode, errorMessage } from "@/lib/errors";
 import { useAuth } from "@/lib/auth";
@@ -87,14 +87,13 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
       )}
       {inFocus ? null : (
         <header className="lesson-hero">
-          <p className="eyebrow">BÀI KHÁM PHÁ ĐỊA LÍ</p>
+          <p className="eyebrow">Bài tập</p>
           <h1>{data.title}</h1>
           <p>Quan sát, suy nghĩ và chọn câu trả lời của riêng em.</p>
           <div className="lesson-hero-meta">{user?.isGuest ? null : <span>◷ Hạn nộp {fmtDate(data.dueAt)}</span>}<strong>{answered}/{data.items.length} câu đã làm</strong></div>
           <div className="bar" aria-label={`Đã làm ${answered}/${data.items.length} câu`}><span style={{ width: `${data.items.length ? (100 * answered) / data.items.length : 0}%` }} /></div>
         </header>
       )}
-      {inFocus ? null : <DataNotice />}
       {inFocus ? null : <HabitBar assignmentId={assignmentId} />}
       <PersonalizationBar focus={focus} onFocus={(on) => { setFocus(on); setIdx(0); }} />
       {prefs.nhac_tien_do && !inFocus ? (

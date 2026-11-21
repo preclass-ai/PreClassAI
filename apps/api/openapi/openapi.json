@@ -3819,6 +3819,7 @@
               {
                 "answeredCount": 0,
                 "classCode": "10A1",
+                "className": "10A1",
                 "dueAt": "2026-11-30T23:59:00+07:00",
                 "id": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
                 "itemCount": 2,
@@ -3940,6 +3941,7 @@
           {
             "answeredCount": 0,
             "classCode": "10A1",
+            "className": "10A1",
             "dueAt": "2026-11-30T23:59:00+07:00",
             "id": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
             "itemCount": 2,
@@ -3956,6 +3958,18 @@
           "classCode": {
             "title": "Classcode",
             "type": "string"
+          },
+          "className": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Class display name, e.g. 10A1 (falls back to the code).",
+            "title": "Classname"
           },
           "dueAt": {
             "format": "date-time",

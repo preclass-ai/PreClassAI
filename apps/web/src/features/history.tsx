@@ -90,7 +90,7 @@ export function History({ lesson, canEdit }: { lesson: Schemas["LessonOut"]; can
                   <td>
                     {r.diffSummary
                       ? `+${r.diffSummary.added ?? 0} thêm · ${r.diffSummary.changed ?? 0} sửa · −${r.diffSummary.removed ?? 0} xóa`
-                      : "—"}
+                      : "Chưa có"}
                   </td>
                   <td>{fmtDateTime(r.publishedAt)}</td>
                   <td>

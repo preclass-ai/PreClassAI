@@ -790,13 +790,14 @@ class StudentAssignmentSummary(ApiModel):
     id: UUID
     title: str
     class_code: str
+    class_name: str | None = Field(None, description="Class display name, e.g. 10A1 (falls back to the code).")
     open_at: datetime
     due_at: datetime
     status: Literal["NOT_STARTED", "IN_PROGRESS", "DONE", "CLOSED"]
     answered_count: int
     item_count: int
-    model_config = ex({"id": I["assign"], "title": "Phân bố dân cư theo vùng", "classCode": "10A1", "openAt": T1,
-                       "dueAt": "2026-11-30T23:59:00+07:00", "status": "NOT_STARTED", "answeredCount": 0,
+    model_config = ex({"id": I["assign"], "title": "Phân bố dân cư theo vùng", "classCode": "10A1", "className": "10A1",
+                       "openAt": T1, "dueAt": "2026-11-30T23:59:00+07:00", "status": "NOT_STARTED", "answeredCount": 0,
                        "itemCount": 2})
 
 

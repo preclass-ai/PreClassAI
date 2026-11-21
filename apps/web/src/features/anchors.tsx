@@ -78,7 +78,7 @@ export function AnchorTable({ anchors }: { anchors: Anchor[] }) {
                 <div className="muted small">{locatorText(a.locator)}</div>
               </td>
               <td className="excerpt">{a.excerpt}</td>
-              <td>{a.numbers?.length ? a.numbers.map((x) => fmtNumber(x)).join("; ") : "—"}</td>
+              <td>{a.numbers?.length ? a.numbers.map((x) => fmtNumber(x)).join("; ") : "Không có"}</td>
             </tr>
           ))}
         </tbody>

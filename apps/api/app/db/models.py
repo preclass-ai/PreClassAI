@@ -84,6 +84,7 @@ class Class(Base):
     id: Mapped[uuid.UUID] = pk()
     code: Mapped[str] = mapped_column(Text, unique=True)
     grade: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str | None] = mapped_column(Text)  # display name, e.g. "10A1"; NULL = show the code
     created_at: Mapped[datetime] = ts()
 
 

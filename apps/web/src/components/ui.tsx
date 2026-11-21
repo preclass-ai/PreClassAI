@@ -83,5 +83,5 @@ export function PageHeader({ title, sub, actions }: { title: ReactNode; sub?: Re
 }
 
 export function DataNotice() {
-  return <p className="data-notice"><span aria-hidden="true">ⓘ</span> DỮ LIỆU MINH HỌA — số liệu trong môi trường thử nghiệm là giả.</p>;
+  return <p className="data-notice"><span aria-hidden="true">ⓘ</span> Môi trường thử nghiệm. Số liệu trong bài chỉ để luyện tập.</p>;
 }
