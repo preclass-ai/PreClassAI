@@ -29,11 +29,11 @@ const mount = () => render(<HabitChat assignmentId="a" itemId="i" answered={fals
 describe("Habit chat", () => {
   it("shows the no-answer and no-personal-data notes and a 300 character counter", () => {
     mount();
-    expect(screen.getByText(/Habit không đưa đáp án/)).toBeInTheDocument();
+    expect(screen.getByText(/HABIT AI không đưa đáp án/)).toBeInTheDocument();
     expect(screen.getByText(/Không nhập thông tin cá nhân/)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Câu hỏi cho Habit"), { target: { value: "abc" } });
+    fireEvent.change(screen.getByLabelText("Câu hỏi cho HABIT AI"), { target: { value: "abc" } });
     expect(screen.getByText("3/300")).toBeInTheDocument();
-    expect(screen.getByLabelText("Câu hỏi cho Habit")).toHaveAttribute("maxlength", "300");
+    expect(screen.getByLabelText("Câu hỏi cho HABIT AI")).toHaveAttribute("maxlength", "300");
   });
 
   it("renders a reply as plain text, never as HTML", async () => {
@@ -46,10 +46,10 @@ describe("Habit chat", () => {
   });
 
   it("shows the source label and marks a refusal", async () => {
-    ask.mockResolvedValue({ reply: "Habit không đưa đáp án — em tự làm nhé!", hintLevel: 0, blockedReason: "ANSWER_REQUEST",
+    ask.mockResolvedValue({ reply: "HABIT AI không đưa đáp án, em tự làm nhé.", hintLevel: 0, blockedReason: "ANSWER_REQUEST",
       sourceRefs: [{ blockId: "b", label: "Đoạn văn", excerpt: "Dân cư phân bố không đều" }] });
     mount();
-    fireEvent.change(screen.getByLabelText("Câu hỏi cho Habit"), { target: { value: "đáp án là gì" } });
+    fireEvent.change(screen.getByLabelText("Câu hỏi cho HABIT AI"), { target: { value: "đáp án là gì" } });
     fireEvent.click(screen.getByText("Gửi"));
     expect(await screen.findByText(/Nguồn đã được thầy cô duyệt · Đoạn văn/)).toBeInTheDocument();
     expect(document.querySelector(".habit-msg.refused")).not.toBeNull();
@@ -59,7 +59,7 @@ describe("Habit chat", () => {
     ask.mockRejectedValueOnce(new ApiError({ type: "x", title: "t", detail: "t", status: 0, code: "NETWORK" }));
     ask.mockResolvedValue({ reply: "ok", hintLevel: 0, sourceRefs: [], blockedReason: null });
     mount();
-    fireEvent.change(screen.getByLabelText("Câu hỏi cho Habit"), { target: { value: "số liệu ở đâu" } });
+    fireEvent.change(screen.getByLabelText("Câu hỏi cho HABIT AI"), { target: { value: "số liệu ở đâu" } });
     fireEvent.click(screen.getByText("Gửi"));
     fireEvent.click(await screen.findByText("Thử lại"));
     await waitFor(() => expect(ask).toHaveBeenCalledTimes(2));
@@ -71,6 +71,6 @@ describe("Habit chat", () => {
     mount();
     fireEvent.click(screen.getByText("Công thức tính là gì?"));
     expect(await screen.findByText("Hôm nay em hỏi nhiều rồi, thử tự làm nhé!")).toBeInTheDocument();
-    expect(screen.getByLabelText("Câu hỏi cho Habit")).toBeDisabled();
+    expect(screen.getByLabelText("Câu hỏi cho HABIT AI")).toBeDisabled();
   });
 });

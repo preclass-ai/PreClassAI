@@ -25,4 +25,15 @@ describe("UI copy", () => {
     }
     expect(bad).toEqual([]);
   });
+
+  it("calls the assistant HABIT AI everywhere students can read it", () => {
+    const bad: string[] = [];
+    for (const f of ROOTS.flatMap(files)) {
+      readFileSync(f, "utf8").split("\n").forEach((line, i) => {
+        if (/^\s*(\*|\/\/|\/\*)/.test(line)) return;
+        if (/\bHabit\b/.test(strip(line))) bad.push(`${path.relative(path.join(import.meta.dirname, ".."), f)}:${i + 1}`);
+      });
+    }
+    expect(bad).toEqual([]);
+  });
 });

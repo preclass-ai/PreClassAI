@@ -1,6 +1,6 @@
 "use client";
 
-import { GuestSurveyCard } from "@/features/guest";
+import { GuestBanner, GuestSurveyCard } from "@/features/guest";
 import { HabitBar, HabitItem } from "@/features/habit";
 import { habitKey } from "@/features/habit-api";
 import { FocusTimer, PersonalizationBar, usePersonalizationOn, usePrefs } from "@/features/personalization";
@@ -94,6 +94,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
           <div className="bar" aria-label={`Đã làm ${answered}/${data.items.length} câu`}><span style={{ width: `${data.items.length ? (100 * answered) / data.items.length : 0}%` }} /></div>
         </header>
       )}
+      {inFocus ? null : <GuestBanner />}
       {inFocus ? null : <HabitBar assignmentId={assignmentId} />}
       <PersonalizationBar focus={focus} onFocus={(on) => { setFocus(on); setIdx(0); }} />
       {prefs.nhac_tien_do && !inFocus ? (
@@ -210,7 +211,7 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
 
   return (
     <section className="card item" aria-labelledby={`q-${item.id}`}>
-      <div className="item-top"><span className="question-number">Câu {no}</span><span className="muted small">{SKILL[item.skill]}</span></div>
+      <div className="item-top"><span className="question-number">Câu {no}</span><span className={`skill-chip skill-${item.skill}`}>{SKILL[item.skill]}</span></div>
       <p id={`q-${item.id}`} className="stem">
         {item.stem}
       </p>
@@ -257,10 +258,14 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
             />
           )}
           {error ? <div className="alert alert-danger" role="alert">{errorMessage(error)}</div> : null}
-          <p className="muted small">Em chỉ nộp một lần. Lời giải xuất hiện sau khi nộp.</p>
-          <Button type="submit" variant="primary" busy={busy} disabled={disabled || !ready}>
-            Nộp câu trả lời
-          </Button>
+          <div className="submit-row">
+            <Button type="submit" variant="primary" className="submit-btn" busy={busy} disabled={disabled || !ready}>
+              Nộp câu trả lời
+            </Button>
+            <span className="submit-note" id={`note-${item.id}`}>
+              {ready ? "Em chỉ nộp một lần. Lời giải hiện sau khi nộp." : item.itemType === "MCQ" ? "Chọn một đáp án để nộp." : item.itemType === "NUMERIC" ? "Nhập đáp số để nộp." : "Viết câu trả lời để nộp."}
+            </span>
+          </div>
         </form>
       )}
     </section>

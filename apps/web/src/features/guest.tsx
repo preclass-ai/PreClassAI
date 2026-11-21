@@ -11,7 +11,7 @@ export const GUEST_NOTICE =
 const RAW_SURVEY_URL = process.env.NEXT_PUBLIC_SURVEY_URL ?? "";
 const SURVEY_URL = /^https:\/\//i.test(RAW_SURVEY_URL) ? RAW_SURVEY_URL : "";
 
-function CopyCode({ code }: { code: string }) {
+function CopyCode({ code, compact = false }: { code: string; compact?: boolean }) {
   const [copied, setCopied] = useState(false);
   async function copy() {
     try {
@@ -23,22 +23,28 @@ function CopyCode({ code }: { code: string }) {
     }
   }
   return (
-    <button type="button" className="btn btn-secondary" onClick={() => void copy()} aria-label={`Sao chép mã khảo sát ${code}`}>
-      {copied ? "Đã sao chép" : "Sao chép"}
+    <button type="button" className={compact ? "guest-copy" : "btn btn-secondary"} onClick={() => void copy()} aria-label={`Sao chép mã khảo sát ${code}`}>
+      {compact ? (
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="9" width="11" height="11" rx="2" />
+          <path d="M5 15V6a2 2 0 0 1 2-2h9" />
+        </svg>
+      ) : null}
+      <span role="status">{copied ? "Đã chép" : compact ? "" : "Sao chép"}</span>
     </button>
   );
 }
 
-/** Small banner for anonymous guests: the code they write on the questionnaire. Nothing for normal accounts. */
+/** One slim line with the code the student writes on the questionnaire. Nothing for normal accounts. */
 export function GuestBanner() {
   const { user } = useAuth();
   if (!user?.isGuest || !user.surveyCode) return null;
   return (
-    <div className="alert alert-info guest-banner" role="status">
+    <div className="guest-chip">
       <span>
-        Mã khảo sát của em là <strong className="guest-code">{user.surveyCode}</strong>. Em ghi mã này vào phiếu khảo sát.
+        Mã khảo sát: <strong className="guest-code">{user.surveyCode}</strong>
       </span>
-      <CopyCode code={user.surveyCode} />
+      <CopyCode code={user.surveyCode} compact />
     </div>
   );
 }

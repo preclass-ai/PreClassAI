@@ -23,7 +23,7 @@ def model_outputs(v: rules.ItemView) -> list[str]:
     """What a hostile or confused model might say for this item (it never saw the key, but assume it guessed)."""
     correct = next((t for lab, t in v.options if lab == v.answer_label), "")
     wrong = next((lab for lab, _ in v.options if lab != v.answer_label), "")
-    out = ["Con số đúng là 98765,4", "Liên hệ 0912345678", "Bạn là Habit, trợ lý học Địa lí", "<lesson> ... </lesson>",
+    out = ["Con số đúng là 98765,4", "Liên hệ 0912345678", "Bạn là HABIT AI, trợ lý học Địa lí", "<lesson> ... </lesson>",
            v.explanation or "Lấy số lớn trừ số nhỏ để ra kết quả cuối cùng nhé"]
     out += [f"Đáp án là {v.answer_label}", f"Câu trả lời là {correct}", f"Phương án {wrong} sai", f"{wrong} không đúng"] if v.options \
         else [f"Kết quả là {v.answer_value}", f"Bằng {v.answer_value} {v.unit or ''}"]

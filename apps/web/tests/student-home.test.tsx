@@ -18,8 +18,8 @@ it("summarizes assigned and unfinished Geography lessons from the returned list"
   });
   render(<QueryClientProvider client={client}><StudentHome /></QueryClientProvider>);
 
-  expect(screen.getByText("2 bài được giao")).toBeInTheDocument();
   expect(screen.getByText("1 bài cần làm")).toBeInTheDocument();
+  expect(screen.getByText(/1 bài đã xong/)).toBeInTheDocument();
   expect(screen.queryByText(/DỮ LIỆU MINH HỌA/)).toBeNull(); // no label on every page
   expect(screen.getAllByText("Địa lí · 10A1")).toHaveLength(2); // subject and class name stay on the card
 });

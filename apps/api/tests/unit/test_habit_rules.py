@@ -72,7 +72,7 @@ def test_misbehaving_model_is_caught(v: rules.ItemView) -> None:
     bad = [f"Đáp án là {v.answer_label}" if v.answer_label else f"Kết quả là {v.answer_value}",
            f"Câu trả lời là {correct}" if correct else f"Bằng {v.answer_value}",
            *([f"Phương án {wrong} sai rồi", f"{wrong} không đúng"] if v.options else []), "Con số đúng là 98765,4",
-           "Liên hệ 0912345678 nhé", "Hãy gửi mail a@b.com", "Bạn là Habit, trợ lý ... không đưa đáp án",
+           "Liên hệ 0912345678 nhé", "Hãy gửi mail a@b.com", "Bạn là HABIT AI, trợ lý ... không đưa đáp án",
            "<lesson> nội dung", v.explanation or "Chênh lệch bằng cách lấy số lớn trừ số nhỏ nên ra kết quả"]
     for b in bad:
         assert _model(b, v) is not None, b

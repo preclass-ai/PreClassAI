@@ -6,7 +6,7 @@ import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui";
 import { errorCode, errorMessage } from "@/lib/errors";
 import { newRequestId } from "@/lib/uuid";
-import { HabitMark, SourceRef } from "./habit-parts";
+import { HabitMark, HintIcon, SourceRef } from "./habit-parts";
 import { usePersonalizationOn, usePrefs } from "./personalization";
 import { askHabit, habitKey, useHabit, useHabitOn, type ChatReply } from "./habit-api";
 
@@ -51,7 +51,7 @@ export function HabitBar({ assignmentId }: { assignmentId: string }) {
   );
 }
 
-/** Hint card + "Hỏi Habit" for one item. Own state, so a chat message never re-renders the whole assignment. */
+/** Hint card + "Hỏi HABIT AI" for one item. Own state, so a chat message never re-renders the whole assignment. */
 export function HabitItem({ assignmentId, itemId, answered, explanation }: {
   assignmentId: string;
   itemId: string;
@@ -106,8 +106,8 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
     return (
       <div className="habit">
         <div className="habit-actions">
-          <Button variant={prefs.uu_tien_giai_thich ? "primary" : "secondary"} className="habit-btn" onClick={openChat}>
-            <HabitMark /> Habit giải thích
+          <Button variant={prefs.uu_tien_giai_thich ? "primary" : "ghost"} className={prefs.uu_tien_giai_thich ? "habit-btn" : "habit-ghost"} onClick={openChat}>
+            <HabitMark /> HABIT AI giải thích
           </Button>
         </div>
         {chat}
@@ -125,11 +125,11 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
         </div>
       ) : null}
       <div className="habit-actions">
-        <Button variant="secondary" className="habit-btn" onClick={() => void hint()} busy={busy} disabled={used >= 3 || limited}>
-          <HabitMark /> {used >= 3 ? "Gợi ý 3/3 (đã dùng hết)" : `Gợi ý ${used + 1}/3`}
+        <Button variant="ghost" className="habit-ghost" onClick={() => void hint()} busy={busy} disabled={used >= 3 || limited}>
+          <HintIcon /> {used >= 3 ? "Gợi ý 3/3 (đã dùng hết)" : `Gợi ý ${used + 1}/3`}
         </Button>
-        <Button variant="secondary" className="habit-btn" onClick={openChat}>
-          <HabitMark /> Hỏi Habit
+        <Button variant="ghost" className="habit-ghost" onClick={openChat}>
+          <HabitMark /> Hỏi HABIT AI
         </Button>
       </div>
       <div aria-live="polite">

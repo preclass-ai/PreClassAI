@@ -22,7 +22,7 @@ const MESSAGES: Record<string, string> = {
   ASSIGNMENT_CLOSED: "Bài đã hết hạn nộp.",
   ALREADY_ANSWERED: "Câu này đã được trả lời.",
   CHAT_LIMIT: "Hôm nay em hỏi nhiều rồi, thử tự làm nhé!",
-  NOT_ANSWERED: "Em hãy trả lời câu này trước, rồi Habit sẽ giải thích nhé.",
+  NOT_ANSWERED: "Em hãy trả lời câu này trước, rồi HABIT AI sẽ giải thích nhé.",
   MESSAGE_REQUIRED: "Em hãy nhập câu hỏi.",
   ANCHOR_NOT_IN_LESSON: "Đoạn nguồn không thuộc các nguồn của bài.",
   WITHDRAWN: "Bài này đã bị giáo viên thu hồi.",

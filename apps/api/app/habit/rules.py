@@ -29,11 +29,11 @@ UNSAFE = {"dm", "dmm", "dcm", "vcl", "vl", "cc", "concac", "deo", "fuck", "shit"
 UNSAFE_PHRASES = ("khieu dam", "ma tuy", "tu tu", "dit me", "du ma", "con cac")
 
 REFUSAL = {
-    "INJECTION": "Habit chỉ giúp em học bài này thôi, không đổi cách làm việc được. Em thử hỏi: “Em nên bắt đầu từ đâu?” nhé.",
-    "ANSWER_REQUEST": "Habit không đưa đáp án, em tự làm nhé. Em có thể xin gợi ý hoặc hỏi cách đọc số liệu.",
-    "CONFIRM_OPTION": "Habit không nói phương án nào đúng hay sai, em tự làm nhé. Em thử đọc lại đề rồi xin gợi ý.",
+    "INJECTION": "HABIT AI chỉ giúp em học bài này thôi, không đổi cách làm việc được. Em thử hỏi: “Em nên bắt đầu từ đâu?” nhé.",
+    "ANSWER_REQUEST": "HABIT AI không đưa đáp án, em tự làm nhé. Em có thể xin gợi ý hoặc hỏi cách đọc số liệu.",
+    "CONFIRM_OPTION": "HABIT AI không nói phương án nào đúng hay sai, em tự làm nhé. Em thử đọc lại đề rồi xin gợi ý.",
     "UNSAFE": "Mình chỉ hỗ trợ việc học thôi nhé. Nếu cần giúp việc khác, em hỏi thầy cô giúp em nha.",
-    "OFFTOPIC": "Câu này nằm ngoài bài học này, Habit chưa trả lời được. Em hỏi thầy cô giúp em nhé!",
+    "OFFTOPIC": "Câu này nằm ngoài bài học này, HABIT AI chưa trả lời được. Em hỏi thầy cô giúp em nhé!",
 }
 
 _PHONE = re.compile(r"(?<!\d)(?:\+?84|0)[\d .\-]{8,12}\d(?!\d)")
