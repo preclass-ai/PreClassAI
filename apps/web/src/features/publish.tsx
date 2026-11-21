@@ -6,7 +6,7 @@ import { useState, type FormEvent } from "react";
 import { Badge, Button, ErrorBox, Field, Loading, Notice } from "@/components/ui";
 import { api, ApiError, unwrap, type Schemas } from "@/lib/api";
 import { isLocked, summarize } from "@/lib/blocks";
-import { fmtDateTime, localInputToIso, toLocalInput } from "@/lib/format";
+import { dueDayBefore, fmtDateTime, localInputToIso, toLocalInput } from "@/lib/format";
 import { CHECK } from "@/lib/labels";
 import { keys, useBlocks, useRefreshLesson } from "./lesson-data";
 
@@ -125,6 +125,7 @@ function AssignPanel({ lesson, publishedId }: { lesson: Lesson; publishedId: str
   const [classId, setClassId] = useState("");
   const [openAt, setOpenAt] = useState(() => toLocalInput(new Date()));
   const [dueAt, setDueAt] = useState(() => toLocalInput(new Date(Date.now() + 7 * 86_400_000)));
+  const [lessonDay, setLessonDay] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [done, setDone] = useState<Schemas["AssignmentOut"] | null>(null);
@@ -182,7 +183,11 @@ function AssignPanel({ lesson, publishedId }: { lesson: Lesson; publishedId: str
             <Field label="Hạn nộp">
               <input type="datetime-local" required value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
             </Field>
+            <Field label="Ngày học (không bắt buộc)" hint="Chọn ngày học để đặt hạn nộp vào 23:59 của ngày trước đó.">
+              <input type="date" value={lessonDay} onChange={(e) => { setLessonDay(e.target.value); if (e.target.value) setDueAt(dueDayBefore(e.target.value)); }} />
+            </Field>
           </div>
+          {lessonDay ? <p className="muted small">Hạn nộp đã đặt trước buổi học 1 ngày. Thầy cô vẫn sửa được ô "Hạn nộp".</p> : null}
           <div>
             <Button type="submit" variant="primary" busy={busy}>
               Giao bài

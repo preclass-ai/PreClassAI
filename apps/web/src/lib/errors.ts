@@ -20,6 +20,7 @@ const MESSAGES: Record<string, string> = {
   NOT_PUBLISHED: "Bản này chưa xuất bản.",
   DRAFT_EXISTS: "Bài đã có một bản nháp đang soạn.",
   ASSIGNMENT_CLOSED: "Bài đã hết hạn nộp.",
+  PAST_DUE: "Bài đã hết hạn nộp. Em vẫn xem lại được bài và lời giải.",
   ALREADY_ANSWERED: "Câu này đã được trả lời.",
   CHAT_LIMIT: "Hôm nay em hỏi nhiều rồi, thử tự làm nhé!",
   NOT_ANSWERED: "Em hãy trả lời câu này trước, rồi HABIT AI sẽ giải thích nhé.",

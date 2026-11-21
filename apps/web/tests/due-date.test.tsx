@@ -29,15 +29,14 @@ it("dates read dd/mm/yyyy with a four-digit year", () => {
   expect(fmtDateTime("2027-11-20T12:00:00+07:00")).toContain("20/11/2027");
 });
 
-it("a normal student sees the due date of a class assignment, but never one for the survey class KS", () => {
+it("every student sees the due date of each assignment, including the survey class", () => {
   guest = false;
   renderHome();
-  expect(screen.getAllByText(/Hạn nộp/)).toHaveLength(1); // 10A1 only: KS has none
-  expect(screen.getByText(/Hạn nộp 20\/11\/2027/)).toBeTruthy();
+  expect(screen.getAllByText(/Hạn nộp 20\/11\/2027/)).toHaveLength(2);
 });
 
-it("an anonymous guest sees no due date at all", () => {
+it("a guest sees it too, as dd/mm/yyyy", () => {
   guest = true;
   renderHome();
-  expect(screen.queryByText(/Hạn nộp/)).toBeNull();
+  expect(screen.getAllByText(/Hạn nộp 20\/11\/2027/).length).toBeGreaterThan(0);
 });

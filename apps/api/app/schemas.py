@@ -895,3 +895,47 @@ class PreferencesIn(ApiModel):
     preferences: dict[PreferenceKey, Literal["on", "off", "5", "10"]] = Field(
         description="Partial update: `off` removes the option. `hen_gio_tap_trung` takes `5`, `10` or `off`; others `on`/`off`.")
     model_config = ex({"preferences": {"chia_nho_tung_buoc": "on", "hen_gio_tap_trung": "off"}})
+
+
+# ---------------------------------------------------------------- teacher insights (class teacher only, anonymous)
+class InsightItem(ApiModel):
+    item_block_id: UUID
+    position: int
+    stem: str
+    skill: Skill
+    answered_count: int
+    first_attempt_correct_rate: float | None = Field(None, description="0..1; null when nobody answered.")
+    hints_used: int = Field(description="HABIT AI hints asked for this item, all students together.")
+    asks: int = Field(description="Questions typed or tapped in HABIT AI for this item, all students together.")
+
+
+class InsightTheme(ApiModel):
+    key: str = Field(description="answer, start, data, formula, unit, concept, compare or other.")
+    label: str
+    count: int
+    examples: list[str] = Field(description="Up to 3 most repeated questions (personal data already removed).")
+
+
+class InsightsOut(ApiModel):
+    assignment_id: UUID
+    lesson_id: UUID
+    published_revision_id: UUID = Field(description="Revision this assignment was published from.")
+    can_practice: bool = Field(description="True when the caller wrote the lesson, so extra practice can be drafted from it.")
+    student_count: int
+    asking_students: int = Field(description="How many different students asked something (never who).")
+    total_questions: int
+    items: list[InsightItem]
+    themes: list[InsightTheme]
+    focus_skills: list[Skill] = Field(description="Skills of the items with the lowest first-attempt correct rate (up to 2).")
+    llm_available: bool
+    model_config = ex({"assignmentId": I["assign"], "lessonId": I["lesson"], "publishedRevisionId": I["lrev"],
+                       "canPractice": True, "studentCount": 15, "askingStudents": 6, "totalQuestions": 14, "items": [],
+                       "focusSkills": ["COMPARE"],
+                       "themes": [{"key": "start", "label": "Chưa biết bắt đầu từ đâu", "count": 5,
+                                   "examples": ["Em nên bắt đầu từ đâu?"]}], "llmAvailable": False})
+
+
+class AnalyzeOut(ApiModel):
+    topics: list[str] = Field(description="3 to 5 short topics students get stuck on (empty when there is no data).")
+    generated_by: Literal["rule", "llm"]
+    model_config = ex({"topics": ["Chưa biết bắt đầu từ đâu: 5 lượt hỏi"], "generatedBy": "rule"})

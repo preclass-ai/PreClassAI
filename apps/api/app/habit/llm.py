@@ -62,6 +62,11 @@ def get_chat_llm() -> ChatLLM | None:
     return None
 
 
+def defang(t: str) -> str:
+    """A student (or any text we quote) must not be able to close our data fence."""
+    return t.replace("<", "‹").replace(">", "›")
+
+
 def build_user(v: ItemView, level: int, msg: str, history: list[str], excerpt: str) -> str:
     def defang(t: str) -> str:  # a student must not be able to close our data fence
         return t.replace("<", "‹").replace(">", "›")

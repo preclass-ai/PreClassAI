@@ -119,7 +119,7 @@ async def test_window_open_closed_and_withdrawn(client: httpx.AsyncClient, db: A
                           "WHERE id=:a"), {"a": ASSIGN})
     assert (await client.get(f"/v1/student/assignments/{ASSIGN}")).status_code == 200
     closed = await attempt(client, item, {"choice": "A"})
-    assert closed.status_code == 409 and closed.json()["code"] == "ASSIGNMENT_CLOSED"
+    assert closed.status_code == 409 and closed.json()["code"] == "PAST_DUE"
     assert (await client.get("/v1/student/assignments")).json()["items"][0]["status"] == "CLOSED"
     await db.execute(text("UPDATE published_version SET state='WITHDRAWN' WHERE id=:p"), {"p": PUB})
     for r in (await client.get(f"/v1/student/assignments/{ASSIGN}"), await attempt(client, item, {"choice": "A"})):

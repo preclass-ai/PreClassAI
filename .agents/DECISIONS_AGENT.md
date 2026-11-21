@@ -64,3 +64,11 @@
 - **Nhãn "DỮ LIỆU MINH HỌA" bỏ khỏi trang học sinh**, thay bằng đúng một dòng dưới bảng ("Số liệu dùng để luyện tập."), là một khối `paragraph` ORIGINAL có nguồn nên không phá bất biến "mọi nội dung đều truy được nguồn". Trang giáo viên giữ một dòng "Môi trường thử nghiệm".
 - **`class.name` là cột mới (migration 0006)**: bảng class chỉ có `code`, đề bài nói "class.name = 10A1" nhưng chưa có cột. Thêm cột nullable; lớp KS đặt tên "10A1", mã `KS` giữ nguyên.
 - **Dấu gạch dài**: ô trống từng hiện "—" nay hiện "Chưa có" hoặc "Không có". Test quét: `apps/web/tests/copy.test.ts` (chuỗi UI), `apps/api/tests/unit/test_copy.py` (mẫu trả lời Habit).
+
+## Góc nhìn giáo viên (feat/teacher-insights, 2026-11-22)
+- **Không có endpoint riêng cho "AI gợi ý bài tập thêm"**: giao diện nối hai endpoint có sẵn (bản mới, rồi `generate` chế độ `append`), nên khối AI đi đúng pipeline hiện có (AI_PROPOSED, VAL, giáo viên duyệt). Chỉ tác giả bài được dùng (cần quyền sửa bài).
+- **Nhóm câu hỏi bằng luật, đã có cả dấu và không dấu**; thứ tự chủ đề quyết định ("dap an" thắng "tinh"). Chủ đề "Câu hỏi khác" gom phần còn lại.
+- **Cache phân tích trong RAM (10 phút) và đếm token qua `chat_message`**: phân tích không ghi hàng nào, nên ngân sách chỉ tính được lượt chat; chấp nhận vì mỗi lần phân tích chỉ 1 lời gọi nhỏ và có cache. Mất khi restart.
+- **Đổi mã lỗi `ASSIGNMENT_CLOSED` thành `PAST_DUE`** theo yêu cầu; giao diện chấp nhận cả hai để không vỡ nếu backend chưa lên.
+- **Hạn nộp hiện cho mọi học sinh, kể cả lớp khảo sát/khách** (bỏ ẩn): đổi test cũ `due-date.test.tsx`. Hạn của lớp KS trong seed là +365 ngày; đặt lại khi cần.
+- **"Ngày học" chỉ ở giao diện**: API không đổi, hạn vẫn là `dueAt` (23:59 ngày trước ngày học, giờ máy giáo viên).

@@ -6,7 +6,6 @@ import { GuestBanner } from "@/features/guest";
 import { useHabit, useHabitOn } from "@/features/habit-api";
 import { Badge, Empty, ErrorBox, Loading } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 import { fmtDate } from "@/lib/format";
 import type { Tone } from "@/lib/labels";
 
@@ -37,9 +36,6 @@ function StudyStrip({ todo, done, firstId }: { todo: number; done: number; first
 
 export default function StudentHome() {
   const list = useQuery({ queryKey: ["student-assignments"], queryFn: () => unwrap(api.GET("/v1/student/assignments")) });
-  const { user } = useAuth();
-  // Anonymous survey guests (class KS) have no deadline: do not show the far-future date the class was created with.
-  const showDue = (classCode: string) => !user?.isGuest && classCode !== "KS";
   const assignments = list.data?.items ?? [];
   const unfinished = assignments.filter((a) => a.status === "NOT_STARTED" || a.status === "IN_PROGRESS").length;
   const completed = assignments.filter((a) => a.status === "DONE").length;
@@ -71,7 +67,7 @@ export default function StudentHome() {
                 <Link href={`/student/assignments/${a.id}`} className="card assignment-card">
                   <div className="assignment-top"><span className="assignment-kicker">Địa lí · {a.className ?? a.classCode}</span><Badge tone={s.tone}>{s.label}</Badge></div>
                   <strong className="assignment-title">{a.title}</strong>
-                  {showDue(a.classCode) ? <div className="muted small">Hạn nộp {fmtDate(a.dueAt)}</div> : null}
+                  <div className="muted small">Hạn nộp {fmtDate(a.dueAt)}</div>
                   <div className="assignment-progress">
                     <div className="bar" role="progressbar" aria-valuemin={0} aria-valuemax={a.itemCount} aria-valuenow={a.answeredCount} aria-label="Tiến độ">
                       <span style={{ width: `${a.itemCount ? (100 * a.answeredCount) / a.itemCount : 0}%` }} />

@@ -34,6 +34,6 @@ async def get_assignment(assignment_id: UUID, cu: Annotated[CurrentUser, Depends
              summary="Answer one item; the result and explanation come back now",
              description="One attempt per item. Repeating the same `requestId` returns the stored result.",
              responses=errs(401, 403, 404, 410, 422,
-                            (409, "ASSIGNMENT_CLOSED (sau hạn) hoặc ALREADY_ANSWERED (câu này đã trả lời).")))
+                            (409, "PAST_DUE (sau hạn, vẫn xem lại được bài) hoặc ALREADY_ANSWERED (câu này đã trả lời).")))
 async def submit_attempt(assignment_id: UUID, body: AttemptRequest, cu: Annotated[CurrentUser, Depends(require_role("STUDENT"))], db: Annotated[AsyncSession, Depends(get_db)]) -> AttemptResult:
     return await svc.submit_attempt(db, cu, assignment_id, body)

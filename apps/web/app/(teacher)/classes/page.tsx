@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Empty, ErrorBox, Loading, PageHeader } from "@/components/ui";
 import { api, unwrap } from "@/lib/api";
+import { Insights } from "@/features/insights";
 import { RequireRole } from "@/lib/auth";
 import { fmtDateTime, fmtPercent } from "@/lib/format";
 
@@ -60,10 +61,15 @@ function ClassesView() {
                   </p>
                 </div>
                 <button type="button" className="link-btn" onClick={() => setOpen(open === a.id ? null : a.id)}>
-                  {open === a.id ? "Ẩn tiến độ" : "Xem tiến độ"}
+                  {open === a.id ? "Ẩn tiến độ" : "Xem tiến độ và câu hỏi"}
                 </button>
               </div>
-              {open === a.id && classId ? <Progress classId={classId} assignmentId={a.id} /> : null}
+              {open === a.id && classId ? (
+                <>
+                  <Progress classId={classId} assignmentId={a.id} />
+                  <Insights classId={classId} assignmentId={a.id} />
+                </>
+              ) : null}
             </li>
           ))}
         </ul>

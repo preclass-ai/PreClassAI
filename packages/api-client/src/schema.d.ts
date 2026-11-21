@@ -254,6 +254,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/classes/{class_id}/assignments/{assignment_id}/insights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What students ask HABIT AI and where they struggle (class teacher)
+         * @description Only a TEACHER of the class; anything else is 404. Anonymous: no student id, name or survey code in the answer. Questions are grouped by rules (0đ) into themes; items carry first-attempt rate and hint use.
+         */
+        get: operations["getAssignmentInsights"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/classes/{class_id}/assignments/{assignment_id}/insights/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 3 to 5 topics students get stuck on (rules, or one model call when CHAT_MODE=llm)
+         * @description Only a TEACHER of the class; anything else is 404. Anonymous: no student id, name or survey code in the answer. Pressed by the teacher only. The model call is cached for 10 minutes and counts against `CHAT_DAILY_TOKEN_BUDGET`; any failure falls back to the rule topics.
+         */
+        post: operations["analyzeAssignmentInsights"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/classes/{class_id}/assignments/{assignment_id}/progress": {
         parameters: {
             query?: never;
@@ -821,6 +861,27 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AnalyzeOut
+         * @example {
+         *       "generatedBy": "rule",
+         *       "topics": [
+         *         "Chưa biết bắt đầu từ đâu: 5 lượt hỏi"
+         *       ]
+         *     }
+         */
+        AnalyzeOut: {
+            /**
+             * Generatedby
+             * @enum {string}
+             */
+            generatedBy: "rule" | "llm";
+            /**
+             * Topics
+             * @description 3 to 5 short topics students get stuck on (empty when there is no data).
+             */
+            topics: string[];
+        };
         /**
          * AnchorList
          * @example {
@@ -1827,6 +1888,127 @@ export interface components {
              * @enum {string}
              */
             state: "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "SUPERSEDED";
+        };
+        /** InsightItem */
+        InsightItem: {
+            /** Answeredcount */
+            answeredCount: number;
+            /**
+             * Asks
+             * @description Questions typed or tapped in HABIT AI for this item, all students together.
+             */
+            asks: number;
+            /**
+             * Firstattemptcorrectrate
+             * @description 0..1; null when nobody answered.
+             */
+            firstAttemptCorrectRate?: number | null;
+            /**
+             * Hintsused
+             * @description HABIT AI hints asked for this item, all students together.
+             */
+            hintsUsed: number;
+            /**
+             * Itemblockid
+             * Format: uuid
+             */
+            itemBlockId: string;
+            /** Position */
+            position: number;
+            /**
+             * Skill
+             * @enum {string}
+             */
+            skill: "READ_TABLE" | "COMPARE" | "CALCULATE" | "EXPLAIN";
+            /** Stem */
+            stem: string;
+        };
+        /** InsightTheme */
+        InsightTheme: {
+            /** Count */
+            count: number;
+            /**
+             * Examples
+             * @description Up to 3 most repeated questions (personal data already removed).
+             */
+            examples: string[];
+            /**
+             * Key
+             * @description answer, start, data, formula, unit, concept, compare or other.
+             */
+            key: string;
+            /** Label */
+            label: string;
+        };
+        /**
+         * InsightsOut
+         * @example {
+         *       "askingStudents": 6,
+         *       "assignmentId": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
+         *       "canPractice": true,
+         *       "focusSkills": [
+         *         "COMPARE"
+         *       ],
+         *       "items": [],
+         *       "lessonId": "712030dc-698a-5be5-9781-5d7a907b3628",
+         *       "llmAvailable": false,
+         *       "publishedRevisionId": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+         *       "studentCount": 15,
+         *       "themes": [
+         *         {
+         *           "count": 5,
+         *           "examples": [
+         *             "Em nên bắt đầu từ đâu?"
+         *           ],
+         *           "key": "start",
+         *           "label": "Chưa biết bắt đầu từ đâu"
+         *         }
+         *       ],
+         *       "totalQuestions": 14
+         *     }
+         */
+        InsightsOut: {
+            /**
+             * Askingstudents
+             * @description How many different students asked something (never who).
+             */
+            askingStudents: number;
+            /**
+             * Assignmentid
+             * Format: uuid
+             */
+            assignmentId: string;
+            /**
+             * Canpractice
+             * @description True when the caller wrote the lesson, so extra practice can be drafted from it.
+             */
+            canPractice: boolean;
+            /**
+             * Focusskills
+             * @description Skills of the items with the lowest first-attempt correct rate (up to 2).
+             */
+            focusSkills: ("READ_TABLE" | "COMPARE" | "CALCULATE" | "EXPLAIN")[];
+            /** Items */
+            items: components["schemas"]["InsightItem"][];
+            /**
+             * Lessonid
+             * Format: uuid
+             */
+            lessonId: string;
+            /** Llmavailable */
+            llmAvailable: boolean;
+            /**
+             * Publishedrevisionid
+             * Format: uuid
+             * @description Revision this assignment was published from.
+             */
+            publishedRevisionId: string;
+            /** Studentcount */
+            studentCount: number;
+            /** Themes */
+            themes: components["schemas"]["InsightTheme"][];
+            /** Totalquestions */
+            totalQuestions: number;
         };
         /** InstructionPayload */
         InstructionPayload: {
@@ -4080,6 +4262,124 @@ export interface operations {
             };
         };
     };
+    getAssignmentInsights: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: string;
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsightsOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyzeAssignmentInsights: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: string;
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyzeOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getAssignmentProgress: {
         parameters: {
             query?: never;
@@ -5668,7 +5968,7 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
-            /** @description ASSIGNMENT_CLOSED (sau hạn) hoặc ALREADY_ANSWERED (câu này đã trả lời). */
+            /** @description PAST_DUE (sau hạn, vẫn xem lại được bài) hoặc ALREADY_ANSWERED (câu này đã trả lời). */
             409: {
                 headers: {
                     [name: string]: unknown;

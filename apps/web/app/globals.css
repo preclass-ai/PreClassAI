@@ -595,3 +595,10 @@ fieldset { border: 0; padding: 0; margin: 0; }
   body:has(.habit-sheet[open]) { padding-right: 0; }
   body:has(.habit-sheet[open]) .content { padding-right: 414px; }
 }
+
+/* Teacher insights ("Học sinh hỏi gì") */
+.insights { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.insights h3 { margin: 0; color: var(--text); font-size: 1.08rem; }
+.insight-themes { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; }
+.insight-themes li { list-style: none; }
+.insights .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
