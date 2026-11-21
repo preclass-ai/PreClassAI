@@ -54,13 +54,13 @@ async def answer_first_mcq(c: httpx.AsyncClient, assignment: str) -> dict[str, A
 
 
 async def test_flag_off_means_404_everywhere(client: httpx.AsyncClient) -> None:
-    assert (await client.get("/v1/auth/config")).json() == {"guestEnabled": False, "chatEnabled": False, "personalizationEnabled": False}
+    assert (await client.get("/v1/auth/config")).json() == {"guestEnabled": False, "chatEnabled": False, "personalizationEnabled": False, "chatMode": "rule", "aiProvider": None}
     assert (await client.post("/v1/auth/guest", json={})).status_code == 404
     assert (await client.post("/v1/auth/guest/resume", json={"surveyCode": "KS-ABCD"})).status_code == 404
 
 
 async def test_guest_gets_code_cookie_and_the_survey_assignment(client: httpx.AsyncClient, guests_on: None) -> None:
-    assert (await client.get("/v1/auth/config")).json() == {"guestEnabled": True, "chatEnabled": False, "personalizationEnabled": False}
+    assert (await client.get("/v1/auth/config")).json() == {"guestEnabled": True, "chatEnabled": False, "personalizationEnabled": False, "chatMode": "rule", "aiProvider": None}
     g = await new_guest(client, lessonKey="dan-so-vung")
     assert CODE.match(g["surveyCode"]) and g["assignmentId"] == str(KS_ASSIGN)
     assert g["user"]["isGuest"] and g["user"]["role"] == "STUDENT" and g["user"]["email"] is None
@@ -149,3 +149,21 @@ async def test_export_has_only_survey_columns(client: httpx.AsyncClient, guests_
     cells = lines[1].split(",")
     assert len(lines) == 2 and cells[0] == g["surveyCode"] and cells[2].startswith("Câu ") and cells[3] in ("true", "false")
     assert g["user"]["id"] not in r.text and "Khách" not in r.text and "@" not in r.text
+
+
+async def test_config_names_the_ai_host_only_when_the_model_is_in_use(client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.config import get_settings
+
+    for k, v in (("CHAT_ENABLED", "true"), ("CHAT_MODE", "llm"), ("CHAT_LLM_BASE_URL", "https://api.example.test/openai/v1?key=secret")):
+        monkeypatch.setenv(k, v)
+    get_settings.cache_clear()
+    try:
+        c = (await client.get("/v1/auth/config")).json()
+        assert c["chatMode"] == "llm" and c["aiProvider"] == "api.example.test"  # the host only, never the path or a key
+        monkeypatch.setenv("CHAT_MODE", "rule")
+        get_settings.cache_clear()
+        c = (await client.get("/v1/auth/config")).json()
+        assert c["chatMode"] == "rule" and c["aiProvider"] is None
+    finally:
+        monkeypatch.undo()
+        get_settings.cache_clear()

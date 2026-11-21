@@ -210,6 +210,8 @@ Khi tắt: mọi route dưới đây trả 404 và `GET /v1/auth/config` có `ch
 
 ## 14. Cá nhân hóa do học sinh chọn (PERSONALIZATION_ENABLED, mặc định tắt; ADR-0013)
 
+`GET /v1/auth/config` còn có `chatMode` (rule|llm) và `aiProvider` (tên máy chủ AI khi dùng llm, không bao giờ có khóa hay đường dẫn) cho trang `/du-lieu`.
+
 Khi tắt: các route dưới đây trả 404 và `GET /v1/auth/config` có `personalizationEnabled:false` (UI ẩn). Chỉ STUDENT, chỉ dữ liệu của chính em. Hệ thống **không** có trường nào về tâm lý, sức khỏe hay tính cách.
 
 - `GET /v1/student/preferences` → `{preferences: {key: value}}` (chỉ các lựa chọn đang bật; thiếu khóa = tắt).

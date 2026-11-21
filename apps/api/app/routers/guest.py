@@ -1,6 +1,7 @@
 """Anonymous survey access (off unless GUEST_ACCESS_ENABLED=true) and the survey data export."""
 
 from typing import Annotated, Any
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,8 +39,12 @@ async def _start(db: AsyncSession, response: Response, user: Any, lesson_key: st
 @router.get("/auth/config", tags=["auth"], operation_id="getAuthConfig", response_model=AuthConfig, openapi_extra=_PUBLIC,
             summary="Public sign-in options (is anonymous guest access on?)")
 async def auth_config() -> AuthConfig:
-    return AuthConfig(guest_enabled=get_settings().guest_access_enabled, chat_enabled=get_settings().chat_enabled,
-                      personalization_enabled=get_settings().personalization_enabled)
+    cfg = get_settings()
+    llm_on = cfg.chat_enabled and cfg.chat_mode == "llm" and bool(cfg.chat_llm_base_url)
+    host = urlparse(cfg.chat_llm_base_url).hostname if llm_on else None  # the host only: never the key or the path
+    return AuthConfig(guest_enabled=cfg.guest_access_enabled, chat_enabled=cfg.chat_enabled,
+                      personalization_enabled=cfg.personalization_enabled,
+                      chat_mode="llm" if llm_on else "rule", ai_provider=host)
 
 
 @router.post("/auth/guest", tags=["auth"], operation_id="createGuest", status_code=201, response_model=GuestOut,

@@ -109,7 +109,11 @@ class AuthConfig(ApiModel):
     guest_enabled: bool = Field(description="True when anonymous guest access is switched on (GUEST_ACCESS_ENABLED).")
     chat_enabled: bool = Field(False, description="True when Habit (hints + chat) is on (CHAT_ENABLED).")
     personalization_enabled: bool = Field(False, description="True when student-chosen options and focus mode are on.")
-    model_config = ex({"guestEnabled": True, "chatEnabled": False, "personalizationEnabled": False})
+    chat_mode: Literal["rule", "llm"] = Field(
+        "rule", description="rule: nothing leaves the server; llm: filtered text goes to aiProvider.")
+    ai_provider: str | None = Field(None, description="Host of the AI service when chatMode is llm, else null.")
+    model_config = ex({"guestEnabled": True, "chatEnabled": False, "personalizationEnabled": False,
+                       "chatMode": "rule", "aiProvider": None})
 
 
 class GuestRequest(ApiModel):

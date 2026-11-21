@@ -1406,17 +1406,30 @@ export interface components {
          * AuthConfig
          * @example {
          *       "chatEnabled": false,
+         *       "chatMode": "rule",
          *       "guestEnabled": true,
          *       "personalizationEnabled": false
          *     }
          */
         AuthConfig: {
             /**
+             * Aiprovider
+             * @description Host of the AI service when chatMode is llm, else null.
+             */
+            aiProvider?: string | null;
+            /**
              * Chatenabled
              * @description True when Habit (hints + chat) is on (CHAT_ENABLED).
              * @default false
              */
             chatEnabled: boolean;
+            /**
+             * Chatmode
+             * @description rule: nothing leaves the server; llm: filtered text goes to aiProvider.
+             * @default rule
+             * @enum {string}
+             */
+            chatMode: "rule" | "llm";
             /**
              * Guestenabled
              * @description True when anonymous guest access is switched on (GUEST_ACCESS_ENABLED).
