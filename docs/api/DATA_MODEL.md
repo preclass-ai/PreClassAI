@@ -139,6 +139,10 @@ Id seed cố định (uuid5), nên trùng với ví dụ trong `openapi.json`: l
 
 Mỗi bài có: 1 nguồn văn bản (tiêu đề, 2 đoạn, bảng 4 hàng × 2 cột → 11 anchor) và ~19 block: `heading`, 2 `paragraph`, `instruction`, `data_fact`, 1 câu MCQ (4 `option`, `answer_key`, `explanation`), 1 câu NUMERIC (`answer_key` có `derivation`, `explanation`).
 
+## Nguồn từ nhiều định dạng (không đổi schema DB)
+
+`source_revision.mime` nhận thêm `application/pdf`, `...spreadsheetml.sheet`, `...presentationml.presentation`; `extract_status = FAILED` (kèm 0 anchor) là bản PDF scan, và API suy ra `extractError = SCANNED_PDF` (đó là lỗi duy nhất được lưu; các lỗi khác bị từ chối, không lưu gì). `source_anchor.locator` là JSON tự do theo định dạng, xem API_GUIDE mục 12. Tệp gốc lưu dưới `UPLOAD_DIR` với tên `uuid.<ext>`.
+
 ## Habit (migration 0003, chỉ thêm)
 
 | Bảng | Cột chính | Ghi chú |
