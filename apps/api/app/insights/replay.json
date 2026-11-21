@@ -1,0 +1,9 @@
+{
+  "note": "Sample recorded for demos (DEMO_REPLAY=true). It is not the output of a real model run; replace it after one.",
+  "topics": [
+    "Nhiều em chưa biết bắt đầu từ đâu: nên cho một ví dụ đọc bảng số liệu mẫu ở đầu giờ",
+    "Hay hỏi nơi tìm số liệu cần dùng: chỉ rõ cột và hàng cần đọc trên bảng",
+    "Câu so sánh có nhiều em sai ngay lần đầu: cho một câu so sánh hai vùng làm cùng cả lớp",
+    "Một số em xin đáp án: nhắc lại cách tự kiểm tra kết quả bằng đơn vị và thứ tự lớn nhỏ"
+  ]
+}

@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     guest_max_active: int = 500  # guests seen in the last 14 days; beyond it new guests get 503
     guest_create_per_hour: int = 60  # per real client IP; a classroom shares one Wi-Fi (NAT), so keep it generous
     guest_session_days: int = 14
+    demo_replay: bool = False  # DEMO_REPLAY: teacher analysis answers with a recorded sample (no network), labelled "replay"
     chat_enabled: bool = False  # Habit (hints + chat) for students; every Habit route is 404 when off
     chat_mode: str = "rule"  # rule (free, deterministic) | llm (rule guards + LLM wording; falls back to rule)
     chat_max_per_day_per_student: int = 30

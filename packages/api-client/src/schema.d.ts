@@ -294,6 +294,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/classes/{class_id}/assignments/{assignment_id}/insights/reteach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft blocks to re-teach the items most students missed (lesson author only)
+         * @description Only a TEACHER of the class; anything else is 404. Anonymous: no student id, name or survey code in the answer. Quotes up to 3 approved source passages behind the flagged items into a DRAFT revision (a new one when the current revision is published). VAL-01..10 run; nothing is approved or published. 409 `NOTHING_TO_RETEACH` when no item is flagged.
+         */
+        post: operations["createReteachDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/classes/{class_id}/assignments/{assignment_id}/progress": {
         parameters: {
             query?: never;
@@ -338,6 +358,81 @@ export interface paths {
         /** Generation job status (author) */
         get: operations["getJob"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/lesson-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My lesson plans (TEACHER) */
+        get: operations["listLessonPlans"];
+        put?: never;
+        /**
+         * Read a lesson plan (DOCX or PDF with a text layer) into lessons, activities and MCQ (TEACHER, multipart)
+         * @description One file can hold several lessons: one plan per lesson. Signature blocks and teacher names are removed; an MCQ answer comes from an underline or from the teacher, never from a model. 422: `UNSUPPORTED_FILE`, `SCANNED_PDF`, `PARSE_TIMEOUT` (120 s), `FILE_TOO_LARGE`, `EMPTY_SOURCE`, plus the upload codes of `/sources/file`.
+         */
+        post: operations["uploadLessonPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/lesson-plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What was read from one lesson plan (owner only) */
+        get: operations["getLessonPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/lesson-plans/{plan_id}/lesson": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create the pre-class lesson draft (DRAFT blocks, validated, never approved or published)
+         * @description Mapping: opening -> 1 trigger question; knowledge boxes -> up to 2 reading cards and 1 flashcard quoted verbatim; up to 5 teacher-confirmed MCQ with a templated explanation; application -> 1 after-class task. MCQ without a confirmed answer are skipped (`skippedUnconfirmed`). 409 `LESSON_EXISTS` when it was already created. Review and publish with the usual lesson workspace.
+         */
+        post: operations["createLessonFromPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/lesson-plans/{plan_id}/mcqs/{mcq_id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** The teacher confirms the correct option of an MCQ (answer source = teacher) */
+        put: operations["confirmPlanMcqAnswer"];
         post?: never;
         delete?: never;
         options?: never;
@@ -875,7 +970,7 @@ export interface components {
              * Generatedby
              * @enum {string}
              */
-            generatedBy: "rule" | "llm";
+            generatedBy: "rule" | "llm" | "replay";
             /**
              * Topics
              * @description 3 to 5 short topics students get stuck on (empty when there is no data).
@@ -1464,6 +1559,16 @@ export interface components {
              */
             reviewStatus: "UNREVIEWED" | "AUTO_CHECKED" | "FLAGGED" | "APPROVED" | "REVIEW_AGAIN" | "REJECTED";
         };
+        /** BlockedReason */
+        BlockedReason: {
+            /** Count */
+            count: number;
+            /**
+             * Reason
+             * @description Why HABIT AI declined: answer_request, injection, off_topic, rate_limit ...
+             */
+            reason: string;
+        };
         /** Body_createSourceFromDocx */
         Body_createSourceFromDocx: {
             /** File */
@@ -1496,6 +1601,11 @@ export interface components {
         };
         /** Body_createSourceRevisionFromDocx */
         Body_createSourceRevisionFromDocx: {
+            /** File */
+            file: string;
+        };
+        /** Body_uploadLessonPlan */
+        Body_uploadLessonPlan: {
             /** File */
             file: string;
         };
@@ -1913,8 +2023,25 @@ export interface components {
              * Format: uuid
              */
             itemBlockId: string;
+            /**
+             * Maxhintlevel
+             * @description Highest HABIT AI hint level used on this item (0 to 3).
+             * @default 0
+             */
+            maxHintLevel: number;
+            /**
+             * Needsreteach
+             * @description More than 30% of the students who answered got it wrong, or asked about it.
+             * @default false
+             */
+            needsReteach: boolean;
             /** Position */
             position: number;
+            /**
+             * Questions
+             * @description Top 2 question themes, 2 anonymous examples each.
+             */
+            questions?: components["schemas"]["InsightTheme"][];
             /**
              * Skill
              * @enum {string}
@@ -1922,6 +2049,16 @@ export interface components {
             skill: "READ_TABLE" | "COMPARE" | "CALCULATE" | "EXPLAIN";
             /** Stem */
             stem: string;
+            /**
+             * Topwrongoption
+             * @description MCQ: the wrong option chosen most often (A to D), null when none.
+             */
+            topWrongOption?: string | null;
+            /**
+             * Topwrongshare
+             * @description Share (0..1) of the students who answered that chose it.
+             */
+            topWrongShare?: number | null;
         };
         /** InsightTheme */
         InsightTheme: {
@@ -1979,6 +2116,11 @@ export interface components {
              */
             assignmentId: string;
             /**
+             * Blockedreasons
+             * @description How often HABIT AI declined, by reason.
+             */
+            blockedReasons?: components["schemas"]["BlockedReason"][];
+            /**
              * Canpractice
              * @description True when the caller wrote the lesson, so extra practice can be drafted from it.
              */
@@ -2003,6 +2145,11 @@ export interface components {
              * @description Revision this assignment was published from.
              */
             publishedRevisionId: string;
+            /**
+             * Reteachitemids
+             * @description Items with needsReteach = true.
+             */
+            reteachItemIds?: string[];
             /** Studentcount */
             studentCount: number;
             /** Themes */
@@ -2284,6 +2431,194 @@ export interface components {
         ParagraphPayload: {
             /** Text */
             text: string;
+        };
+        /** PlanDetail */
+        PlanDetail: {
+            /** Activities */
+            activities: string[];
+            /** Grade */
+            grade: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Lessonid
+             * @description Set once 'Tạo bài chuẩn bị' has been used.
+             */
+            lessonId: string | null;
+            /** Mcqcount */
+            mcqCount: number;
+            /** Mcqs */
+            mcqs: components["schemas"]["PlanMcq"][];
+            /** Needsconfirmationcount */
+            needsConfirmationCount: number;
+            /** Objectives */
+            objectives: components["schemas"]["PlanObjective"][];
+            /** Ppctperiod */
+            ppctPeriod: string | null;
+            /** Redactedcount */
+            redactedCount: number;
+            /** Sections */
+            sections: components["schemas"]["PlanSection"][];
+            /** Subject */
+            subject: string;
+            /**
+             * Suggesteddueat
+             * @description Day before the first teaching day, 23:59 (UTC+7).
+             */
+            suggestedDueAt: string | null;
+            /** Taughtfrom */
+            taughtFrom: string | null;
+            /** Taughtto */
+            taughtTo: string | null;
+            /** Title */
+            title: string;
+            /** Week */
+            week: string | null;
+        };
+        /** PlanItem */
+        PlanItem: {
+            /**
+             * Anchorid
+             * Format: uuid
+             */
+            anchorId: string;
+            /** Page */
+            page: number | null;
+            /** Text */
+            text: string;
+            /**
+             * Type
+             * @description paragraph, heading, knowledge_box, table_cell or figure_caption.
+             */
+            type: string;
+        };
+        /** PlanLessonOut */
+        PlanLessonOut: {
+            /** Blocks */
+            blocks: number;
+            /**
+             * Leftforafterclass
+             * @description Confirmed MCQ beyond the first 5 (not turned into blocks yet).
+             */
+            leftForAfterClass: number;
+            /**
+             * Lessonid
+             * Format: uuid
+             */
+            lessonId: string;
+            /** Practiceitems */
+            practiceItems: number;
+            /**
+             * Skippedunconfirmed
+             * @description MCQ left out because the teacher has not confirmed the answer.
+             */
+            skippedUnconfirmed: number;
+        };
+        /** PlanList */
+        PlanList: {
+            /** Items */
+            items: components["schemas"]["PlanOut"][];
+        };
+        /** PlanMcq */
+        PlanMcq: {
+            /** Answersource */
+            answerSource: ("underline" | "docx_underline" | "teacher") | null;
+            /** Correctoption */
+            correctOption: ("A" | "B" | "C" | "D") | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Needsconfirmation */
+            needsConfirmation: boolean;
+            /** Options */
+            options: components["schemas"]["PlanMcqOption"][];
+            /** Position */
+            position: number;
+            /** Stem */
+            stem: string;
+        };
+        /** PlanMcqAnswer */
+        PlanMcqAnswer: {
+            /**
+             * Correctoption
+             * @enum {string}
+             */
+            correctOption: "A" | "B" | "C" | "D";
+        };
+        /** PlanMcqOption */
+        PlanMcqOption: {
+            /**
+             * Label
+             * @enum {string}
+             */
+            label: "A" | "B" | "C" | "D";
+            /** Text */
+            text: string;
+        };
+        /** PlanObjective */
+        PlanObjective: {
+            /** Competencycode */
+            competencyCode: string | null;
+            /** Competencyname */
+            competencyName: string | null;
+            /** Text */
+            text: string;
+        };
+        /** PlanOut */
+        PlanOut: {
+            /** Activities */
+            activities: string[];
+            /** Grade */
+            grade: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Lessonid
+             * @description Set once 'Tạo bài chuẩn bị' has been used.
+             */
+            lessonId: string | null;
+            /** Mcqcount */
+            mcqCount: number;
+            /** Needsconfirmationcount */
+            needsConfirmationCount: number;
+            /** Ppctperiod */
+            ppctPeriod: string | null;
+            /** Redactedcount */
+            redactedCount: number;
+            /** Subject */
+            subject: string;
+            /**
+             * Suggesteddueat
+             * @description Day before the first teaching day, 23:59 (UTC+7).
+             */
+            suggestedDueAt: string | null;
+            /** Taughtfrom */
+            taughtFrom: string | null;
+            /** Taughtto */
+            taughtTo: string | null;
+            /** Title */
+            title: string;
+            /** Week */
+            week: string | null;
+        };
+        /** PlanSection */
+        PlanSection: {
+            /** Activitytype */
+            activityType: ("mo_dau" | "hinh_thanh" | "luyen_tap" | "van_dung") | null;
+            /** Items */
+            items: components["schemas"]["PlanItem"][];
+            /** Kind */
+            kind: string;
+            /** Sub */
+            sub: string | null;
         };
         /**
          * PreferencesIn
@@ -2660,6 +2995,24 @@ export interface components {
             id: "start" | "where_data" | "formula" | "teacher";
             /** Label */
             label: string;
+        };
+        /** ReteachOut */
+        ReteachOut: {
+            /**
+             * Blocks
+             * @description Draft blocks added (source passages to re-teach with). Nothing is approved or published.
+             */
+            blocks: number;
+            /**
+             * Lessonid
+             * Format: uuid
+             */
+            lessonId: string;
+            /**
+             * Revisionid
+             * Format: uuid
+             */
+            revisionId: string;
         };
         /** ReviewEventOut */
         ReviewEventOut: {
@@ -4380,6 +4733,74 @@ export interface operations {
             };
         };
     };
+    createReteachDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: string;
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReteachOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description NOTHING_TO_RETEACH, DRAFT_EXISTS */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getAssignmentProgress: {
         parameters: {
             query?: never;
@@ -4506,6 +4927,283 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listLessonPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanList"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    uploadLessonPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_uploadLessonPlan"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanList"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getLessonPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDetail"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    createLessonFromPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanLessonOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description LESSON_EXISTS */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirmPlanMcqAnswer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                mcq_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanMcqAnswer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDetail"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };

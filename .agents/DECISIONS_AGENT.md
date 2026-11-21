@@ -89,3 +89,10 @@
 - **Mã năng lực chưa gắn vào khối bài** (khối không có trường này). Mã chỉ ở bước đọc (mục tiêu) và cần cột thêm ở PR sau.
 - **Hint bậc 1 đến 2 duyệt sẵn và câu ôn sau giờ (post_spaced) chưa làm**: cần cột hoặc loại khối mới và chỉnh HABIT AI.
 - **Lời giải mẫu theo khuôn** ("Đáp án đúng là X. <nội dung phương án>") vì chưa bật LLM; khi bật có thể thay bằng lời giải do AI viết có neo.
+
+## Bảng insight v2, PR D3 (feat/insights-v2)
+- **Không làm heatmap theo năng lực**: khối bài chưa có trường năng lực (xem D2), nên bảng theo câu, kèm kỹ năng của câu. Cần cột thêm ở PR sau.
+- **Nhóm câu hỏi theo câu dùng cùng bộ luật chủ đề của PR C** (0đ). Số học sinh mỗi cụm chưa hiện (chỉ số lượt hỏi) để tránh nhận diện trong lớp nhỏ.
+- **"Đề xuất dạy lại" = trích nguyên văn đoạn nguồn + câu luyện thêm qua Generate sẵn có**, không gọi LLM mới; khối tạo ra là `instruction` ORIGINAL, chưa có nhãn `remediation_draft` riêng (cần cột thêm).
+- **`replay.json` là mẫu viết tay, chưa phải kết quả của một lần chạy model thật**; phải ghi lại sau khi bật Groq. Giao diện gắn nhãn "bản ghi sẵn" để không bị hiểu là kết quả trực tiếp.
+- Gọi `reteach` hai lần sẽ thêm khối lần hai vào cùng bản nháp (chưa chống trùng).

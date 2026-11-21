@@ -907,6 +907,11 @@ class InsightItem(ApiModel):
     first_attempt_correct_rate: float | None = Field(None, description="0..1; null when nobody answered.")
     hints_used: int = Field(description="HABIT AI hints asked for this item, all students together.")
     asks: int = Field(description="Questions typed or tapped in HABIT AI for this item, all students together.")
+    top_wrong_option: str | None = Field(None, description="MCQ: the wrong option chosen most often (A to D), null when none.")
+    top_wrong_share: float | None = Field(None, description="Share (0..1) of the students who answered that chose it.")
+    max_hint_level: int = Field(0, description="Highest HABIT AI hint level used on this item (0 to 3).")
+    needs_reteach: bool = Field(False, description="More than 30% of the students who answered got it wrong, or asked about it.")
+    questions: list["InsightTheme"] = Field(default_factory=list, description="Top 2 question themes, 2 anonymous examples each.")
 
 
 class InsightTheme(ApiModel):
@@ -914,6 +919,11 @@ class InsightTheme(ApiModel):
     label: str
     count: int
     examples: list[str] = Field(description="Up to 3 most repeated questions (personal data already removed).")
+
+
+class BlockedReason(ApiModel):
+    reason: str = Field(description="Why HABIT AI declined: answer_request, injection, off_topic, rate_limit ...")
+    count: int
 
 
 class InsightsOut(ApiModel):
@@ -927,6 +937,8 @@ class InsightsOut(ApiModel):
     items: list[InsightItem]
     themes: list[InsightTheme]
     focus_skills: list[Skill] = Field(description="Skills of the items with the lowest first-attempt correct rate (up to 2).")
+    blocked_reasons: list[BlockedReason] = Field(default_factory=list, description="How often HABIT AI declined, by reason.")
+    reteach_item_ids: list[UUID] = Field(default_factory=list, description="Items with needsReteach = true.")
     llm_available: bool
     model_config = ex({"assignmentId": I["assign"], "lessonId": I["lesson"], "publishedRevisionId": I["lrev"],
                        "canPractice": True, "studentCount": 15, "askingStudents": 6, "totalQuestions": 14, "items": [],
@@ -937,7 +949,7 @@ class InsightsOut(ApiModel):
 
 class AnalyzeOut(ApiModel):
     topics: list[str] = Field(description="3 to 5 short topics students get stuck on (empty when there is no data).")
-    generated_by: Literal["rule", "llm"]
+    generated_by: Literal["rule", "llm", "replay"]
     model_config = ex({"topics": ["Chưa biết bắt đầu từ đâu: 5 lượt hỏi"], "generatedBy": "rule"})
 
 
@@ -1014,3 +1026,9 @@ class PlanLessonOut(ApiModel):
     practice_items: int
     skipped_unconfirmed: int = Field(description="MCQ left out because the teacher has not confirmed the answer.")
     left_for_after_class: int = Field(description="Confirmed MCQ beyond the first 5 (not turned into blocks yet).")
+
+
+class ReteachOut(ApiModel):
+    lesson_id: UUID
+    revision_id: UUID
+    blocks: int = Field(description="Draft blocks added (source passages to re-teach with). Nothing is approved or published.")

@@ -14,7 +14,8 @@
           "generatedBy": {
             "enum": [
               "rule",
-              "llm"
+              "llm",
+              "replay"
             ],
             "title": "Generatedby",
             "type": "string"
@@ -1162,6 +1163,25 @@
         "title": "BlockValidationSummary",
         "type": "object"
       },
+      "BlockedReason": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "reason": {
+            "description": "Why HABIT AI declined: answer_request, injection, off_topic, rate_limit ...",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "count"
+        ],
+        "title": "BlockedReason",
+        "type": "object"
+      },
       "Body_createSourceFromDocx": {
         "properties": {
           "file": {
@@ -2114,9 +2134,29 @@
             "title": "Itemblockid",
             "type": "string"
           },
+          "maxHintLevel": {
+            "default": 0,
+            "description": "Highest HABIT AI hint level used on this item (0 to 3).",
+            "title": "Maxhintlevel",
+            "type": "integer"
+          },
+          "needsReteach": {
+            "default": false,
+            "description": "More than 30% of the students who answered got it wrong, or asked about it.",
+            "title": "Needsreteach",
+            "type": "boolean"
+          },
           "position": {
             "title": "Position",
             "type": "integer"
+          },
+          "questions": {
+            "description": "Top 2 question themes, 2 anonymous examples each.",
+            "items": {
+              "$ref": "#/components/schemas/InsightTheme"
+            },
+            "title": "Questions",
+            "type": "array"
           },
           "skill": {
             "enum": [
@@ -2131,6 +2171,30 @@
           "stem": {
             "title": "Stem",
             "type": "string"
+          },
+          "topWrongOption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "MCQ: the wrong option chosen most often (A to D), null when none.",
+            "title": "Topwrongoption"
+          },
+          "topWrongShare": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Share (0..1) of the students who answered that chose it.",
+            "title": "Topwrongshare"
           }
         },
         "required": [
@@ -2216,6 +2280,14 @@
             "title": "Assignmentid",
             "type": "string"
           },
+          "blockedReasons": {
+            "description": "How often HABIT AI declined, by reason.",
+            "items": {
+              "$ref": "#/components/schemas/BlockedReason"
+            },
+            "title": "Blockedreasons",
+            "type": "array"
+          },
           "canPractice": {
             "description": "True when the caller wrote the lesson, so extra practice can be drafted from it.",
             "title": "Canpractice",
@@ -2256,6 +2328,15 @@
             "format": "uuid",
             "title": "Publishedrevisionid",
             "type": "string"
+          },
+          "reteachItemIds": {
+            "description": "Items with needsReteach = true.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Reteachitemids",
+            "type": "array"
           },
           "studentCount": {
             "title": "Studentcount",
@@ -4032,6 +4113,32 @@
           "label"
         ],
         "title": "QuickAction",
+        "type": "object"
+      },
+      "ReteachOut": {
+        "properties": {
+          "blocks": {
+            "description": "Draft blocks added (source passages to re-teach with). Nothing is approved or published.",
+            "title": "Blocks",
+            "type": "integer"
+          },
+          "lessonId": {
+            "format": "uuid",
+            "title": "Lessonid",
+            "type": "string"
+          },
+          "revisionId": {
+            "format": "uuid",
+            "title": "Revisionid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lessonId",
+          "revisionId",
+          "blocks"
+        ],
+        "title": "ReteachOut",
         "type": "object"
       },
       "ReviewEventOut": {
@@ -6614,6 +6721,100 @@
           }
         },
         "summary": "3 to 5 topics students get stuck on (rules, or one model call when CHAT_MODE=llm)",
+        "tags": [
+          "insights"
+        ]
+      }
+    },
+    "/v1/classes/{class_id}/assignments/{assignment_id}/insights/reteach": {
+      "post": {
+        "description": "Only a TEACHER of the class; anything else is 404. Anonymous: no student id, name or survey code in the answer. Quotes up to 3 approved source passages behind the flagged items into a DRAFT revision (a new one when the current revision is published). VAL-01..10 run; nothing is approved or published. 409 `NOTHING_TO_RETEACH` when no item is flagged.",
+        "operationId": "createReteachDraft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "class_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Class Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReteachOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "NOTHING_TO_RETEACH, DRAFT_EXISTS"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Draft blocks to re-teach the items most students missed (lesson author only)",
         "tags": [
           "insights"
         ]

@@ -8,7 +8,7 @@ from app import insights as svc
 from app.auth import CurrentUser, require_role
 from app.db.session import get_db
 from app.routers._base import errs
-from app.schemas import AnalyzeOut, InsightsOut
+from app.schemas import AnalyzeOut, InsightsOut, ReteachOut
 
 router = APIRouter(prefix="/classes/{class_id}/assignments/{assignment_id}/insights", tags=["insights"])
 Teacher = Annotated[CurrentUser, Depends(require_role("TEACHER"))]
@@ -31,3 +31,13 @@ async def get_insights(class_id: UUID, assignment_id: UUID, cu: Teacher, db: Db)
              responses=errs(401, 403, 404))
 async def analyze(class_id: UUID, assignment_id: UUID, cu: Teacher, db: Db) -> AnalyzeOut:
     return await svc.analyze(db, cu, class_id, assignment_id)
+
+
+@router.post("/reteach", status_code=201, operation_id="createReteachDraft", response_model=ReteachOut,
+             summary="Draft blocks to re-teach the items most students missed (lesson author only)",
+             description=_NOTE + " Quotes up to 3 approved source passages behind the flagged items into a DRAFT revision "
+             "(a new one when the current revision is published). VAL-01..10 run; nothing is approved or published. "
+             "409 `NOTHING_TO_RETEACH` when no item is flagged.",
+             responses=errs(401, 403, 404, (409, "NOTHING_TO_RETEACH, DRAFT_EXISTS")))
+async def reteach(class_id: UUID, assignment_id: UUID, cu: Teacher, db: Db) -> ReteachOut:
+    return await svc.reteach(db, cu, class_id, assignment_id)

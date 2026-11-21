@@ -235,3 +235,10 @@ Chỉ TEACHER là chủ giáo án (người khác 404, học sinh 403).
 - `GET /v1/lesson-plans`, `GET /v1/lesson-plans/{id}`: tiêu đề, tiết PPCT, tuần, ngày dạy, `suggestedDueAt` (23:59 ngày trước ngày dạy, giờ Việt Nam; null nếu giáo án không ghi ngày dạy), `activities` (4 hoạt động nhận ra được), mục tiêu kèm mã năng lực, các phần theo hoạt động, câu trắc nghiệm (`correctOption`, `answerSource` underline|docx_underline|teacher, `needsConfirmation`).
 - `PUT /v1/lesson-plans/{id}/mcqs/{mcqId}/answer` `{correctOption}`: giáo viên chọn đáp án (nguồn `teacher`). 422 `INVALID_OPTION`.
 - `POST /v1/lesson-plans/{id}/lesson`: tạo bản nháp bài chuẩn bị (câu khơi gợi, tối đa 2 thẻ đọc và 1 flashcard trích nguyên văn khung kiến thức, tối đa 5 câu luyện tập đã có đáp án kèm lời giải mẫu, 1 nhiệm vụ vận dụng). Khối đi qua VAL-01..10, không có khối nào được duyệt hay xuất bản. Câu chưa có đáp án bị bỏ (`skippedUnconfirmed`). 409 `LESSON_EXISTS`.
+
+## 17. Bảng insight v2 (chỉ thêm, giáo viên của lớp)
+
+- `GET .../insights` thêm trên mỗi câu: `topWrongOption` + `topWrongShare` (phương án sai được chọn nhiều nhất, tỉ lệ trên số em đã làm), `maxHintLevel` (bậc gợi ý cao nhất đã dùng), `needsReteach` (hơn 30% số em đã làm sai, tối thiểu 3 em, hoặc hơn 30% số em đã hỏi về câu đó), `questions` (2 chủ đề câu hỏi hay gặp, 2 ví dụ ẩn danh mỗi chủ đề). Ở mức bài: `blockedReasons` (số lần HABIT AI từ chối theo lý do, chỉ đếm), `reteachItemIds`.
+- `POST .../insights/reteach` (tác giả bài): trích tối đa 3 đoạn nguồn đã duyệt đứng sau các câu cần dạy lại vào một bản NHÁP (tạo bản mới nếu bản hiện tại đã xuất bản), chạy VAL-01..10, không duyệt hay xuất bản gì. 409 `NOTHING_TO_RETEACH`, hoặc `DRAFT_EXISTS` từ bước tạo bản mới. Giao diện nối thêm `generate` (chế độ append) để có 2 đến 3 câu luyện thêm, vẫn là AI_PROPOSED chờ duyệt.
+- `POST .../insights/analyze` có thêm `generatedBy: "replay"`: khi `DEMO_REPLAY=true` trả bản ghi sẵn (`app/insights/replay.json`), không gọi mạng; giao diện ghi rõ "bản ghi sẵn".
+- Không có bảng xếp hạng hay so sánh học sinh; mọi số liệu theo câu hoặc theo cả lớp (TT22).
