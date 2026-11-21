@@ -36,6 +36,8 @@ const MESSAGES: Record<string, string> = {
   SCANNED_PDF: "Tệp là ảnh scan, chưa có chữ. Thầy cô nạp bản DOCX hoặc PDF xuất từ Word.",
   LESSON_EXISTS: "Đã tạo bài chuẩn bị từ giáo án này rồi.",
   INVALID_OPTION: "Câu này không có phương án đó.",
+  PARSE_BUSY: "Đang có một giáo án được đọc. Đợi xong rồi tải tiếp nhé.",
+  INVALID_COMPETENCY: "Mã năng lực này không có trong danh mục.",
   PARSE_TIMEOUT: "Đọc tệp quá lâu nên bị hủy. Hãy thử tệp nhỏ hơn.",
   EXTERNAL_CONTENT_REJECTED: "Tệp có đối tượng nhúng hoặc liên kết ngoài nên bị từ chối.",
   SOURCE_NOT_READABLE: "Nguồn này chưa đọc được nội dung chữ (ví dụ PDF scan). Hãy nạp bản có chữ.",

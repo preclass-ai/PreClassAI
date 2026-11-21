@@ -136,7 +136,8 @@ async def blocks_out(db: AsyncSession, blocks: list[m.ContentBlock]) -> list[Blo
         id=b.id, revision_id=b.revision_id, kind=b.kind, parent_id=b.parent_id, position=b.position,
         payload=b.payload, content_hash=b.content_hash, transformation=b.transformation,
         review_status=b.review_status, no_source_reason=b.no_source_reason, is_factual=b.is_factual,
-        version=b.version, link_count=links.get(b.id, 0), blocker_count=blocker.get(b.id, 0),
+        competency_code=b.competency_code, objective_id=b.objective_id, version=b.version,
+        link_count=links.get(b.id, 0), blocker_count=blocker.get(b.id, 0),
         warning_count=warning.get(b.id, 0)) for b in blocks]
 
 
@@ -216,6 +217,18 @@ async def patch_block(db: AsyncSession, user: CurrentUser, block_id: UUID, raw_p
     if payload == block.payload:
         return (await blocks_out(db, [block]))[0]
     await _record_edit(db, user, block, payload=payload)
+    return (await blocks_out(db, [block]))[0]
+
+
+async def set_competency(db: AsyncSession, user: CurrentUser, block_id: UUID, code: str | None) -> BlockOut:
+    """Competency is metadata of the block: it is not part of the content hash, so no review is reset."""
+    block = await block_for(db, user, block_id, write=True)
+    known = await db.scalar(select(m.SubjectCompetency.code).where(m.SubjectCompetency.code == code).limit(1))
+    if code is not None and known is None:
+        raise ApiError(422, "INVALID_COMPETENCY", "Mã năng lực không có trong danh mục")
+    await db.execute(update(m.ContentBlock).where(m.ContentBlock.id == block.id).values(competency_code=code, objective_id=None))
+    await db.commit()
+    await db.refresh(block)
     return (await blocks_out(db, [block]))[0]
 
 

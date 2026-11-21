@@ -132,7 +132,7 @@ def _map_operands(payload: dict[str, Any], alias_code: dict[str, str]) -> dict[s
 
 
 async def _persist(db: AsyncSession, rev: m.LessonRevision, draft: Draft, views: list[AnchorView],
-                   alias_id: dict[str, UUID], generator: str) -> int:
+                   alias_id: dict[str, UUID], generator: str, meta: dict[str, dict[str, Any]] | None = None) -> int:
     alias_code = {v.alias: v.code for v in views}
     top = await db.scalar(select(func.coalesce(func.max(m.ContentBlock.position), 0)).where(
         m.ContentBlock.revision_id == rev.id, m.ContentBlock.deleted_at.is_(None))) or 0
@@ -154,7 +154,8 @@ async def _persist(db: AsyncSession, rev: m.LessonRevision, draft: Draft, views:
         top += 1
         rows.append({"id": bid, "revision_id": rev.id, "kind": db_.kind, "parent_id": parent, "position": top,
                      "payload": payload, "content_hash": h, "transformation": transformation,
-                     "no_source_reason": db_.noSourceReason, "is_factual": db_.isFactual})
+                     "no_source_reason": db_.noSourceReason, "is_factual": db_.isFactual,
+                     **(meta or {}).get(db_.key, {})})
         kept.append((db_, bid, h))
     if not rows:
         return 0

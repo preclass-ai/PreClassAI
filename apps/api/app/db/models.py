@@ -147,6 +147,7 @@ class Lesson(Base):
     grade: Mapped[int] = mapped_column(Integer)
     title: Mapped[str] = mapped_column(Text)
     goal: Mapped[str | None] = mapped_column(Text)
+    teach_date: Mapped[date | None] = mapped_column(Date)  # from the lesson plan; the assign form suggests a due date from it
     created_at: Mapped[datetime] = ts()
 
 
@@ -202,6 +203,8 @@ class ContentBlock(Base):
     review_status: Mapped[str] = mapped_column(Text, server_default="UNREVIEWED")
     no_source_reason: Mapped[str | None] = mapped_column(Text)
     is_factual: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    competency_code: Mapped[str | None] = mapped_column(Text)  # metadata, not part of content_hash
+    objective_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("objective.id"))
     version: Mapped[int] = mapped_column(Integer, server_default=text("1"))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = ts()
@@ -463,3 +466,20 @@ class ExtractedMcq(Base):
     answer_source: Mapped[str | None] = mapped_column(Text)  # underline | docx_underline | teacher
     confidence: Mapped[str] = mapped_column(Text, server_default="low")
     needs_confirmation: Mapped[bool] = mapped_column(server_default=text("true"))
+    competency_code: Mapped[str | None] = mapped_column(Text)
+
+
+class LessonPlanJob(Base):
+    """Background reading of one uploaded plan. The file itself is held in memory only: a restart fails the job."""
+
+    __tablename__ = "lesson_plan_job"
+    __table_args__ = (_in("state", "queued", "parsing", "done", "failed"),)
+    id: Mapped[uuid.UUID] = pk()
+    owner_id: Mapped[uuid.UUID] = fk("app_user.id")
+    state: Mapped[str] = mapped_column(Text, server_default="queued")
+    file_name: Mapped[str | None] = mapped_column(Text)
+    error_code: Mapped[str | None] = mapped_column(Text)
+    error_title: Mapped[str | None] = mapped_column(Text)
+    plan_ids: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(UUID(as_uuid=True)), server_default=text("'{}'"))
+    created_at: Mapped[datetime] = ts()
+    updated_at: Mapped[datetime] = ts()

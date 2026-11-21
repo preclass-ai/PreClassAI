@@ -12,7 +12,9 @@ import asyncio
 import io
 import multiprocessing
 import re
+import time
 import zipfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
@@ -199,8 +201,12 @@ PARSERS: dict[str, Any] = {"pdf": parse_pdf, "xlsx": parse_xlsx, "pptx": parse_p
 
 
 # ---------------------------------------------------------------- isolation
-def _child(kind: str, data: bytes, lim: Limits, conn: Any) -> None:
+def _child(kind: str, data: bytes, lim: Limits, conn: Any, prog: Any = None) -> None:
     try:
+        if kind == "plan" and prog is not None:
+            from app.lessonplan.readers import set_progress
+
+            set_progress(prog)
         if lim.mem_mb:
             try:
                 import resource as res_mod
@@ -219,15 +225,23 @@ def _child(kind: str, data: bytes, lim: Limits, conn: Any) -> None:
         conn.close()
 
 
-def _run(kind: str, data: bytes, lim: Limits) -> Any:
+Progress = Callable[[int, int], None]
+
+
+def _run(kind: str, data: bytes, lim: Limits, progress: Progress | None = None) -> Any:
     ctx = multiprocessing.get_context("spawn")
     recv, send = ctx.Pipe(duplex=False)
-    proc = ctx.Process(target=_child, args=(kind, data, lim, send), daemon=True)
+    prog = ctx.Array("i", 2, lock=False)  # (page, pages) written by the child for kind "plan"
+    proc = ctx.Process(target=_child, args=(kind, data, lim, send, prog), daemon=True)
     proc.start()
     send.close()
     try:
-        if not recv.poll(lim.timeout_s):
-            raise ApiError(422, "PARSE_TIMEOUT", f"Đọc tệp quá {lim.timeout_s} giây nên bị hủy")
+        deadline = time.monotonic() + lim.timeout_s
+        while not recv.poll(0.5):
+            if progress is not None:
+                progress(prog[0], prog[1])
+            if time.monotonic() > deadline:
+                raise ApiError(422, "PARSE_TIMEOUT", f"Đọc tệp quá {lim.timeout_s} giây nên bị hủy")
         try:
             msg = recv.recv()
         except EOFError as e:  # the child died (killed by the memory limit, crash)
@@ -244,6 +258,9 @@ def _run(kind: str, data: bytes, lim: Limits) -> Any:
     raise ApiError(422, "INVALID_FILE", "Không đọc được tệp")
 
 
-async def parse_isolated(kind: str, data: bytes, lim: Limits) -> Any:
+async def parse_isolated(kind: str, data: bytes, lim: Limits, progress: Progress | None = None,
+                         on_start: Callable[[], Any] | None = None) -> Any:
     async with _SLOT:
-        return await asyncio.to_thread(_run, kind, data, lim)
+        if on_start is not None:
+            await on_start()
+        return await asyncio.to_thread(_run, kind, data, lim, progress)

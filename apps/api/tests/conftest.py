@@ -88,6 +88,8 @@ async def client(db: AsyncSession) -> AsyncIterator[httpx.AsyncClient]:
     from app.auth import admin_login_limiter, login_limiter
     from app.db.session import get_db
     from app.generation import background_runner, run_job
+    from app.lessonplan.service import plan_runner
+    from app.lessonplan.service import run_job as run_plan_job
     from app.main import app
 
     async def _db() -> AsyncIterator[AsyncSession]:
@@ -99,6 +101,11 @@ async def client(db: AsyncSession) -> AsyncIterator[httpx.AsyncClient]:
         await run_job(db, job_id)  # type: ignore[arg-type]
 
     app.dependency_overrides[background_runner] = lambda: _inline
+
+    async def _plan_inline(job_id: object, data: bytes) -> None:  # the plan reading job runs inside the test transaction
+        await run_plan_job(db, job_id, data)  # type: ignore[arg-type]
+
+    app.dependency_overrides[plan_runner] = lambda: _plan_inline
     login_limiter.reset()
     admin_login_limiter.reset()
     async with httpx.AsyncClient(
