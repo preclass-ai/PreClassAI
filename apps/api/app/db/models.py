@@ -205,6 +205,7 @@ class ContentBlock(Base):
     is_factual: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     competency_code: Mapped[str | None] = mapped_column(Text)  # metadata, not part of content_hash
     objective_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("objective.id"))
+    remediation_draft: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     version: Mapped[int] = mapped_column(Integer, server_default=text("1"))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = ts()

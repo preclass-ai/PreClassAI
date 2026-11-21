@@ -492,6 +492,7 @@ class BlockOut(ApiModel):
     is_factual: bool
     competency_code: str | None = Field(None, description="Competency of the block (metadata; editing it does not reset review).")
     objective_id: UUID | None = None
+    remediation_draft: bool = Field(False, description="Added by 'Đề xuất dạy lại' from the insights board.")
     version: int = Field(description="Optimistic lock: send back in PATCH.")
     link_count: int = 0
     blocker_count: int = Field(0, description="Failed BLOCKER validations at the current hash.")
@@ -916,6 +917,7 @@ class InsightItem(ApiModel):
     max_hint_level: int = Field(0, description="Highest HABIT AI hint level used on this item (0 to 3).")
     needs_reteach: bool = Field(False, description="More than 30% of the students who answered got it wrong, or asked about it.")
     questions: list["InsightTheme"] = Field(default_factory=list, description="Top 2 question themes, 2 anonymous examples each.")
+    competency_code: str | None = Field(None, description="Competency of the item (from the lesson plan or the teacher).")
 
 
 class InsightTheme(ApiModel):
@@ -923,6 +925,14 @@ class InsightTheme(ApiModel):
     label: str
     count: int
     examples: list[str] = Field(description="Up to 3 most repeated questions (personal data already removed).")
+
+
+class CompetencyStat(ApiModel):
+    code: str
+    name: str
+    answered_count: int = Field(description="Answers to the items of this competency, all students together.")
+    first_attempt_correct_rate: float | None = Field(None, description="0..1 over those answers; null when none.")
+    item_ids: list[UUID]
 
 
 class BlockedReason(ApiModel):
@@ -943,6 +953,7 @@ class InsightsOut(ApiModel):
     focus_skills: list[Skill] = Field(description="Skills of the items with the lowest first-attempt correct rate (up to 2).")
     blocked_reasons: list[BlockedReason] = Field(default_factory=list, description="How often HABIT AI declined, by reason.")
     reteach_item_ids: list[UUID] = Field(default_factory=list, description="Items with needsReteach = true.")
+    competencies: list[CompetencyStat] = Field(default_factory=list, description="Rate per competency (heatmap).")
     llm_available: bool
     model_config = ex({"assignmentId": I["assign"], "lessonId": I["lesson"], "publishedRevisionId": I["lrev"],
                        "canPractice": True, "studentCount": 15, "askingStudents": 6, "totalQuestions": 14, "items": [],
@@ -1075,3 +1086,4 @@ class ReteachOut(ApiModel):
     lesson_id: UUID
     revision_id: UUID
     blocks: int = Field(description="Draft blocks added (source passages to re-teach with). Nothing is approved or published.")
+    already_exists: bool = Field(False, description="True when an unreviewed re-teach draft already covers them: nothing added.")

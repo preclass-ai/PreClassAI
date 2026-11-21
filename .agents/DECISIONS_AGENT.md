@@ -91,8 +91,8 @@
 - **Lời giải mẫu theo khuôn** ("Đáp án đúng là X. <nội dung phương án>") vì chưa bật LLM; khi bật có thể thay bằng lời giải do AI viết có neo.
 
 ## Bảng insight v2, PR D3 (feat/insights-v2)
-- **Không làm heatmap theo năng lực**: khối bài chưa có trường năng lực (xem D2), nên bảng theo câu, kèm kỹ năng của câu. Cần cột thêm ở PR sau.
+- **Heatmap theo năng lực** (bổ sung 21/11): có sau khi khối có `competency_code` (D2). Lưới câu x năng lực, mỗi câu thuộc một năng lực nên mỗi hàng một ô có màu; hàng đầu là tỉ lệ cả năng lực.
 - **Nhóm câu hỏi theo câu dùng cùng bộ luật chủ đề của PR C** (0đ). Số học sinh mỗi cụm chưa hiện (chỉ số lượt hỏi) để tránh nhận diện trong lớp nhỏ.
-- **"Đề xuất dạy lại" = trích nguyên văn đoạn nguồn + câu luyện thêm qua Generate sẵn có**, không gọi LLM mới; khối tạo ra là `instruction` ORIGINAL, chưa có nhãn `remediation_draft` riêng (cần cột thêm).
+- **"Đề xuất dạy lại" = trích nguyên văn đoạn nguồn + câu luyện thêm qua Generate sẵn có**, không gọi LLM mới; khối tạo ra là `instruction` ORIGINAL kèm cờ `remediation_draft` (migration 0009). Các câu luyện thêm sinh qua Generate chưa mang cờ này (Generate không biết ngữ cảnh dạy lại).
 - **`replay.json` là mẫu viết tay, chưa phải kết quả của một lần chạy model thật**; phải ghi lại sau khi bật Groq. Giao diện gắn nhãn "bản ghi sẵn" để không bị hiểu là kết quả trực tiếp.
-- Gọi `reteach` hai lần sẽ thêm khối lần hai vào cùng bản nháp (chưa chống trùng).
+- `reteach` idempotent theo đoạn nguồn: bản nháp dạy lại chưa xử lý thì mở lại, không thêm trùng; giao diện cũng không sinh thêm câu luyện khi `alreadyExists`.

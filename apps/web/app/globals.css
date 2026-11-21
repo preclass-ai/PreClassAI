@@ -601,4 +601,10 @@ fieldset { border: 0; padding: 0; margin: 0; }
 .insights h3 { margin: 0; color: var(--text); font-size: 1.08rem; }
 .insight-themes { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; }
 .insight-themes li { list-style: none; }
+.heat th, .heat td { text-align: center; font-size: 0.9rem; padding: 6px 8px; }
+.heat th[scope="row"] { text-align: left; white-space: nowrap; }
+.heat .heat-low { background: var(--danger-bg); color: var(--danger); font-weight: 600; }
+.heat .heat-mid { background: var(--warning-bg); color: var(--warning); font-weight: 600; }
+.heat .heat-high { background: var(--success-bg); color: var(--success); font-weight: 600; }
+.heat .heat-none, .heat .heat-empty { color: var(--muted, inherit); }
 .insights .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

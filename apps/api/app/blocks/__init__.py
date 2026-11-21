@@ -136,7 +136,8 @@ async def blocks_out(db: AsyncSession, blocks: list[m.ContentBlock]) -> list[Blo
         id=b.id, revision_id=b.revision_id, kind=b.kind, parent_id=b.parent_id, position=b.position,
         payload=b.payload, content_hash=b.content_hash, transformation=b.transformation,
         review_status=b.review_status, no_source_reason=b.no_source_reason, is_factual=b.is_factual,
-        competency_code=b.competency_code, objective_id=b.objective_id, version=b.version,
+        competency_code=b.competency_code, objective_id=b.objective_id,
+        remediation_draft=b.remediation_draft, version=b.version,
         link_count=links.get(b.id, 0), blocker_count=blocker.get(b.id, 0),
         warning_count=warning.get(b.id, 0)) for b in blocks]
 

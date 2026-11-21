@@ -1083,6 +1083,12 @@
             "title": "Position",
             "type": "integer"
           },
+          "remediationDraft": {
+            "default": false,
+            "description": "Added by 'Đề xuất dạy lại' from the insights board.",
+            "title": "Remediationdraft",
+            "type": "boolean"
+          },
           "reviewStatus": {
             "enum": [
               "UNREVIEWED",
@@ -1615,6 +1621,51 @@
           "items"
         ],
         "title": "CompetencyList",
+        "type": "object"
+      },
+      "CompetencyStat": {
+        "properties": {
+          "answeredCount": {
+            "description": "Answers to the items of this competency, all students together.",
+            "title": "Answeredcount",
+            "type": "integer"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "firstAttemptCorrectRate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0..1 over those answers; null when none.",
+            "title": "Firstattemptcorrectrate"
+          },
+          "itemIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Itemids",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "answeredCount",
+          "itemIds"
+        ],
+        "title": "CompetencyStat",
         "type": "object"
       },
       "DataFactPayload": {
@@ -2211,6 +2262,18 @@
             "title": "Asks",
             "type": "integer"
           },
+          "competencyCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Competency of the item (from the lesson plan or the teacher).",
+            "title": "Competencycode"
+          },
           "firstAttemptCorrectRate": {
             "anyOf": [
               {
@@ -2391,6 +2454,14 @@
             "description": "True when the caller wrote the lesson, so extra practice can be drafted from it.",
             "title": "Canpractice",
             "type": "boolean"
+          },
+          "competencies": {
+            "description": "Rate per competency (heatmap).",
+            "items": {
+              "$ref": "#/components/schemas/CompetencyStat"
+            },
+            "title": "Competencies",
+            "type": "array"
           },
           "focusSkills": {
             "description": "Skills of the items with the lowest first-attempt correct rate (up to 2).",
@@ -4386,6 +4457,12 @@
       },
       "ReteachOut": {
         "properties": {
+          "alreadyExists": {
+            "default": false,
+            "description": "True when an unreviewed re-teach draft already covers them: nothing added.",
+            "title": "Alreadyexists",
+            "type": "boolean"
+          },
           "blocks": {
             "description": "Draft blocks added (source passages to re-teach with). Nothing is approved or published.",
             "title": "Blocks",

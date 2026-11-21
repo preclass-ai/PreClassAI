@@ -1609,6 +1609,12 @@ export interface components {
             /** Position */
             position: number;
             /**
+             * Remediationdraft
+             * @description Added by 'Đề xuất dạy lại' from the insights board.
+             * @default false
+             */
+            remediationDraft: boolean;
+            /**
              * Reviewstatus
              * @enum {string}
              */
@@ -1848,6 +1854,25 @@ export interface components {
         CompetencyList: {
             /** Items */
             items: components["schemas"]["SubjectCompetencyOut"][];
+        };
+        /** CompetencyStat */
+        CompetencyStat: {
+            /**
+             * Answeredcount
+             * @description Answers to the items of this competency, all students together.
+             */
+            answeredCount: number;
+            /** Code */
+            code: string;
+            /**
+             * Firstattemptcorrectrate
+             * @description 0..1 over those answers; null when none.
+             */
+            firstAttemptCorrectRate?: number | null;
+            /** Itemids */
+            itemIds: string[];
+            /** Name */
+            name: string;
         };
         /** DataFactPayload */
         DataFactPayload: {
@@ -2126,6 +2151,11 @@ export interface components {
              */
             asks: number;
             /**
+             * Competencycode
+             * @description Competency of the item (from the lesson plan or the teacher).
+             */
+            competencyCode?: string | null;
+            /**
              * Firstattemptcorrectrate
              * @description 0..1; null when nobody answered.
              */
@@ -2242,6 +2272,11 @@ export interface components {
              * @description True when the caller wrote the lesson, so extra practice can be drafted from it.
              */
             canPractice: boolean;
+            /**
+             * Competencies
+             * @description Rate per competency (heatmap).
+             */
+            competencies?: components["schemas"]["CompetencyStat"][];
             /**
              * Focusskills
              * @description Skills of the items with the lowest first-attempt correct rate (up to 2).
@@ -3176,6 +3211,12 @@ export interface components {
         };
         /** ReteachOut */
         ReteachOut: {
+            /**
+             * Alreadyexists
+             * @description True when an unreviewed re-teach draft already covers them: nothing added.
+             * @default false
+             */
+            alreadyExists: boolean;
             /**
              * Blocks
              * @description Draft blocks added (source passages to re-teach with). Nothing is approved or published.

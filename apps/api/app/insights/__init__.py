@@ -24,7 +24,16 @@ from app.db import models as m
 from app.errors import ApiError
 from app.habit import llm, rules
 from app.habit.activity import day_start_utc
-from app.schemas import AnalyzeOut, BlockedReason, InsightItem, InsightsOut, InsightTheme, ProgressItem, ReteachOut
+from app.schemas import (
+    AnalyzeOut,
+    BlockedReason,
+    CompetencyStat,
+    InsightItem,
+    InsightsOut,
+    InsightTheme,
+    ProgressItem,
+    ReteachOut,
+)
 
 # (key, label, normalised cues): the first theme with a matching cue wins, so "dap an" beats a generic "tinh".
 THEMES = [
@@ -104,6 +113,19 @@ async def insights(db: AsyncSession, user: CurrentUser, class_id: UUID, assignme
         .where(S.assignment_id == a.id, M.blocked_reason.is_not(None)).group_by(M.blocked_reason).order_by(func.count().desc()))).all()
     items = [_item(n, i, skill, wrong, max_hint, per_item, hints, asks, labels, prog.student_count)
              for n, i in enumerate(prog.items, start=1)]
+    comp = dict((await db.execute(select(m.ContentBlock.id, m.ContentBlock.competency_code).where(
+        m.ContentBlock.id.in_([i.item_block_id for i in items])))).all())
+    names = {c: n for c, n in (await db.execute(select(m.SubjectCompetency.code, m.SubjectCompetency.name_vi))).all()}
+    agg: dict[str, list[Any]] = {}
+    for it in items:
+        it.competency_code = comp.get(it.item_block_id)
+        if it.competency_code:
+            row = agg.setdefault(it.competency_code, [0, 0.0, []])
+            row[0] += it.answered_count
+            row[1] += (it.first_attempt_correct_rate or 0.0) * it.answered_count
+            row[2].append(it.item_block_id)
+    competencies = [CompetencyStat(code=c, name=names.get(c, c), answered_count=n, item_ids=ids,
+                                   first_attempt_correct_rate=(ok / n) if n else None) for c, (n, ok, ids) in sorted(agg.items())]
     _ = key  # the correct option is only needed to tell wrong answers apart; it never leaves the server
     weak = sorted((i for i in items if i.first_attempt_correct_rate is not None and i.first_attempt_correct_rate < LOW_RATE),
                   key=lambda i: i.first_attempt_correct_rate or 0)
@@ -114,7 +136,7 @@ async def insights(db: AsyncSession, user: CurrentUser, class_id: UUID, assignme
         student_count=prog.student_count, asking_students=int(asking_students), total_questions=len(asked), items=items,
         themes=out_themes, focus_skills=focus, llm_available=cfg.chat_mode == "llm" and llm.get_chat_llm() is not None,
         blocked_reasons=[BlockedReason(reason=str(r), count=int(c)) for r, c in blocked],
-        reteach_item_ids=[i.item_block_id for i in items if i.needs_reteach])
+        reteach_item_ids=[i.item_block_id for i in items if i.needs_reteach], competencies=competencies)
 
 
 def _item(n: int, i: ProgressItem, skill: dict[str, str], wrong: dict[Any, Counter[str]], max_hint: dict[Any, Any],
@@ -177,6 +199,14 @@ async def reteach(db: AsyncSession, user: CurrentUser, class_id: UUID, assignmen
     anchors = list({x.id: x for x in rows}.values())[:3]
     if not anchors:
         raise ApiError(409, "NOTHING_TO_RETEACH", "Các câu cần dạy lại chưa có đoạn nguồn để trích")
+    # Idempotent: a passage that already has a re-teach block nobody has handled yet (not approved, not rejected) is not added again.
+    open_quotes = set(await db.scalars(
+        select(m.ProvenanceLink.anchor_id).join(m.ContentBlock, m.ContentBlock.id == m.ProvenanceLink.block_id)
+        .where(m.ContentBlock.revision_id == cur.id, m.ContentBlock.remediation_draft.is_(True), m.ContentBlock.deleted_at.is_(None),
+               m.ContentBlock.review_status.not_in(("APPROVED", "REJECTED")))))
+    anchors = [x for x in anchors if x.id not in open_quotes]
+    if not anchors:
+        return ReteachOut(lesson_id=data.lesson_id, revision_id=cur.id, blocks=0, already_exists=True)
     links = (await db.execute(
         select(m.LessonSource.source_revision_id).where(m.LessonSource.lesson_revision_id == cur.id))).scalars().all()
     for sr in {x.source_revision_id for x in anchors} - set(links):
@@ -184,7 +214,8 @@ async def reteach(db: AsyncSession, user: CurrentUser, class_id: UUID, assignmen
     views = [AnchorView(f"A{i}", x.code, x.kind, x.locator, x.excerpt, list(x.numbers)) for i, x in enumerate(anchors, 1)]
     draft = Draft(blocks=[DraftBlock(key=f"r{i}", kind="instruction", payload={"text": x.excerpt}, transformation="ORIGINAL",
                                      anchorAliases=[f"A{i}"]) for i, x in enumerate(anchors, 1)])
-    n = await _persist(db, cur, draft, views, {v.alias: x.id for v, x in zip(views, anchors, strict=True)}, "reteach/1")
+    n = await _persist(db, cur, draft, views, {v.alias: x.id for v, x in zip(views, anchors, strict=True)}, "reteach/1",
+                       {f"r{i}": {"remediation_draft": True} for i in range(1, len(anchors) + 1)})
     await db.commit()
     await validate_revision(db, cur.id)
     _ = uuid

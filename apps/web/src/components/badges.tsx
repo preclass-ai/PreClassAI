@@ -15,20 +15,27 @@ export function StateBadge({ state }: { state: RevisionState }) {
 /**
  * Source evidence, shown SEPARATELY from review status: having a source does not mean the block is correct.
  */
-export function SourceBadge({ block }: { block: Pick<Block, "linkCount" | "transformation" | "noSourceReason"> }) {
+export function SourceBadge({ block }: { block: Pick<Block, "linkCount" | "transformation" | "noSourceReason"> & Partial<Pick<Block, "remediationDraft" | "reviewStatus">> }) {
   const n = block.linkCount ?? 0;
   const label = TRANSFORMATION[block.transformation];
+  const redo = block.remediationDraft && block.reviewStatus !== "APPROVED" ? <Badge tone="info">Bản nháp dạy lại</Badge> : null;
   if (n === 0) {
     return (
-      <Badge tone={block.noSourceReason ? "neutral" : "warning"} title={block.noSourceReason ?? undefined}>
-        Không có nguồn · {label}
-      </Badge>
+      <>
+        {redo}
+        <Badge tone={block.noSourceReason ? "neutral" : "warning"} title={block.noSourceReason ?? undefined}>
+          Không có nguồn · {label}
+        </Badge>
+      </>
     );
   }
   return (
-    <Badge tone="neutral">
-      {n} đoạn nguồn · {label}
-    </Badge>
+    <>
+      {redo}
+      <Badge tone="neutral">
+        {n} đoạn nguồn · {label}
+      </Badge>
+    </>
   );
 }
 
