@@ -80,4 +80,26 @@ describe("Insights", () => {
     expect(post.mock.calls[0]![0]).toBe("/v1/classes/{class_id}/assignments/{assignment_id}/insights/reteach");
     expect(post.mock.calls[1]![0]).toBe("/v1/lessons/{lesson_id}/generate");
   });
+
+  it("reuses an existing re-teach draft: no extra practice is generated", async () => {
+    get.mockResolvedValue({ ...base, reteachItemIds: ["i"] });
+    post.mockResolvedValue({ alreadyExists: true, blocks: 0 });
+    wrap();
+    fireEvent.click(await screen.findByRole("button", { name: "Đề xuất dạy lại" }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(post.mock.calls[0]![0]).toContain("/insights/reteach");
+  });
+
+  it("draws the competency heatmap: item rows by competency columns", async () => {
+    get.mockResolvedValue({
+      ...base,
+      competencies: [{ code: "TIM_HIEU", name: "Tìm hiểu địa lí", answeredCount: 2, firstAttemptCorrectRate: 0.25, itemIds: ["i"] }],
+      items: [{ ...base.items[0], competencyCode: "TIM_HIEU", firstAttemptCorrectRate: 0.25 }],
+    });
+    wrap();
+    const grid = await screen.findByRole("region", { name: /Bản đồ nhiệt/ });
+    expect(grid).toHaveTextContent("Tìm hiểu địa lí");
+    expect(grid).toHaveTextContent("Câu 1");
+    expect(grid.querySelectorAll(".heat-low").length).toBe(2);
+  });
 });

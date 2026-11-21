@@ -83,7 +83,7 @@
 - **Fixture PDF cần phông có tiếng Việt** (DejaVu trên Linux, Arial trên Windows); test tự bỏ qua nếu máy không có.
 
 ## Giáo án 5512, PR D2 (feat/preclass-from-plan)
-- **Đọc đồng bộ thay vì job nền**: một tệp 25 đến 42 trang mất 20 đến 35 giây, trong giới hạn 120 giây của tiến trình con; giao diện hiện thông báo "có thể mất một phút". Job nền để sau.
+- **Đọc giáo án là job nền** (bổ sung theo yêu cầu 21/11): POST trả 202, trạng thái trong bảng `lesson_plan_job`, tiến độ trang từ tiến trình con qua mảng chia sẻ (bộ nhớ, mất khi khởi động lại thì job thành failed). File giữ trong bộ nhớ của tác vụ, không ghi đĩa cho tới khi đọc xong. Một job mỗi giáo viên; semaphore toàn cục vẫn là 1 (Render 512 MB).
 - **Chưa có ảnh trang có tô vùng**: màn kiểm tra hiện văn bản theo hoạt động kèm số trang. Cần render trang (pypdfium2 đã có sẵn) nếu muốn.
 - **`TEACHER_AUTHORED` bị `generation._persist` đổi thành `AI_PROPOSED`** (mô hình không được tự nhận). Vì vậy khối từ giáo án dùng `ORIGINAL` (trích nguyên văn, có neo) và `SYNTHESISED` (lời giải mẫu, thẻ hỏi); tiêu đề bài là tên bài, không tạo khối tiêu đề.
 - **Mã năng lực chưa gắn vào khối bài** (khối không có trường này). Mã chỉ ở bước đọc (mục tiêu) và cần cột thêm ở PR sau.
@@ -91,9 +91,9 @@
 - **Lời giải mẫu theo khuôn** ("Đáp án đúng là X. <nội dung phương án>") vì chưa bật LLM; khi bật có thể thay bằng lời giải do AI viết có neo.
 
 ## Bảng insight v2, PR D3 (feat/insights-v2)
-- **Không làm heatmap theo năng lực**: khối bài chưa có trường năng lực (xem D2), nên bảng theo câu, kèm kỹ năng của câu. Cần cột thêm ở PR sau.
+- **Heatmap theo năng lực** (bổ sung 21/11): có sau khi khối có `competency_code` (D2). Lưới câu x năng lực, mỗi câu thuộc một năng lực nên mỗi hàng một ô có màu; hàng đầu là tỉ lệ cả năng lực.
 - **Nhóm câu hỏi theo câu dùng cùng bộ luật chủ đề của PR C** (0đ). Số học sinh mỗi cụm chưa hiện (chỉ số lượt hỏi) để tránh nhận diện trong lớp nhỏ.
-- **"Đề xuất dạy lại" = trích nguyên văn đoạn nguồn + câu luyện thêm qua Generate sẵn có**, không gọi LLM mới; khối tạo ra là `instruction` ORIGINAL, chưa có nhãn `remediation_draft` riêng (cần cột thêm).
+- **"Đề xuất dạy lại" = trích nguyên văn đoạn nguồn + câu luyện thêm qua Generate sẵn có**, không gọi LLM mới; khối tạo ra là `instruction` ORIGINAL kèm cờ `remediation_draft` (migration 0009). Các câu luyện thêm sinh qua Generate chưa mang cờ này (Generate không biết ngữ cảnh dạy lại).
 - **`replay.json` là mẫu viết tay, chưa phải kết quả của một lần chạy model thật**; phải ghi lại sau khi bật Groq. Giao diện gắn nhãn "bản ghi sẵn" để không bị hiểu là kết quả trực tiếp.
 - Gọi `reteach` hai lần sẽ thêm khối lần hai vào cùng bản nháp (chưa chống trùng).
 
@@ -101,3 +101,4 @@
 - Bảng `subject` (catalogue GDPT, chỉ `DIA_LI` hoạt động, migration 0008). Chưa thêm cột `subject` vào bảng `lesson`: bài vẫn là Địa lí cố định ở API (`subject = GEOGRAPHY`), `lesson_plan.subject` đã có.
 - Căn cứ pháp lý mới ghi trong `docs/security/PHAP-LY-DU-LIEU.md` kèm cảnh báo chưa kiểm chứng; không sửa ADR-0013 cho đến khi có văn bản gốc.
 - Trang "Dữ liệu của em đi đâu" chưa làm (cần quyết định thời hạn lưu).
+- `reteach` idempotent theo đoạn nguồn: bản nháp dạy lại chưa xử lý thì mở lại, không thêm trùng; giao diện cũng không sinh thêm câu luyện khi `alreadyExists`.

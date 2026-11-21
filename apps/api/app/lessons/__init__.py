@@ -180,7 +180,7 @@ async def _lesson_out(db: AsyncSession, lesson: m.Lesson) -> LessonOut:
         .order_by(m.PublishedVersion.created_at.desc()).limit(1))
     return LessonOut(id=lesson.id, title=lesson.title, grade=lesson.grade, goal=lesson.goal, author_id=lesson.author_id,
                      current_revision=await revision_out(db, rev), published_version_id=pub,
-                     created_at=lesson.created_at)
+                     teach_date=lesson.teach_date, created_at=lesson.created_at)
 
 
 async def _readable_lesson(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -> m.Lesson:

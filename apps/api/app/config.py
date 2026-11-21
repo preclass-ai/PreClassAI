@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     source_max_xlsx_cells: int = 2000  # non-empty cells per sheet
     source_max_pptx_slides: int = 60
     source_parse_timeout_s: int = 30  # parser child process is killed after this
+    plan_parse_timeout_s: int = 120  # background job; measured 80 to 102 s for 31 to 40 pages at 0.1 CPU, under 22 s at 0.5 CPU
     source_parse_mem_mb: int = 600  # RLIMIT_AS of the parser child (Linux only; 0 = no limit)
     docs_access: str = ""  # who may open /docs and /v1/openapi.json: open | staff (logged-in teacher/reviewer/admin) | off.
     # Unset: "open" everywhere except APP_ENV=production, where it is "off".

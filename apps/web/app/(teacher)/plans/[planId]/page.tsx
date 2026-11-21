@@ -21,6 +21,11 @@ export default function PlanPage() {
       unwrap(api.PUT("/v1/lesson-plans/{plan_id}/mcqs/{mcq_id}/answer", { params: { path: { plan_id: planId, mcq_id: v.mcq } }, body: { correctOption: v.option } })),
     onSuccess: (d) => qc.setQueryData(["plan", planId], d),
   });
+  const competency = useMutation({
+    mutationFn: (v: { mcq: string; code: string | null }) =>
+      unwrap(api.PUT("/v1/lesson-plans/{plan_id}/mcqs/{mcq_id}/competency", { params: { path: { plan_id: planId, mcq_id: v.mcq } }, body: { competencyCode: v.code } })),
+    onSuccess: (d) => qc.setQueryData(["plan", planId], d),
+  });
   const build = useMutation({
     mutationFn: () => unwrap(api.POST("/v1/lesson-plans/{plan_id}/lesson", { params: { path } })),
     onSuccess: async (r) => {
@@ -90,6 +95,7 @@ export default function PlanPage() {
         <h2 id="mcq">Câu trắc nghiệm ({p.mcqs.length})</h2>
         {p.needsConfirmationCount > 0 ? <Notice tone="warning">{p.needsConfirmationCount} câu chưa rõ đáp án. Chọn đáp án đúng cho từng câu; câu chưa chọn sẽ không vào bài.</Notice> : null}
         <ErrorBox error={confirm.error} />
+        <ErrorBox error={competency.error} />
         {p.mcqs.map((q) => (
           <fieldset key={q.id} className="stack">
             <legend>
@@ -101,6 +107,19 @@ export default function PlanPage() {
                 <input type="radio" name={`q-${q.id}`} checked={q.correctOption === o.label} onChange={() => confirm.mutate({ mcq: q.id, option: o.label })} /> {o.label}. {o.text}
               </label>
             ))}
+            {p.competencies.length ? (
+              <label className="small">
+                Năng lực{" "}
+                <select value={q.competencyCode ?? ""} onChange={(e) => competency.mutate({ mcq: q.id, code: e.target.value || null })}>
+                  <option value="">Chưa gắn</option>
+                  {p.competencies.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
           </fieldset>
         ))}
       </section>

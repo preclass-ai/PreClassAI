@@ -52,6 +52,8 @@ export function Insights({ classId, assignmentId }: { classId: string; assignmen
         </>
       )}
 
+      {(d.competencies ?? []).length ? <Heatmap d={d} /> : null}
+
       <div className="table-wrap">
         <table>
           <thead>
@@ -129,6 +131,49 @@ export function Insights({ classId, assignmentId }: { classId: string; assignmen
   );
 }
 
+/** First-attempt correct rate per item (rows) and competency (columns); each item belongs to one competency. */
+function Heatmap({ d }: { d: Schemas["InsightsOut"] }) {
+  const cols = d.competencies ?? [];
+  const band = (r: number | null | undefined) => (r == null ? "heat-none" : r < 0.4 ? "heat-low" : r < 0.7 ? "heat-mid" : "heat-high");
+  return (
+    <div className="table-wrap" role="region" aria-label="Bản đồ nhiệt: tỉ lệ đúng ngay lần đầu theo câu và năng lực" tabIndex={0}>
+      <table className="heat">
+        <caption className="small muted">Tỉ lệ đúng ngay lần đầu theo câu và năng lực</caption>
+        <thead>
+          <tr>
+            <th scope="col">Câu</th>
+            {cols.map((c) => (
+              <th key={c.code} scope="col">
+                {c.name}
+              </th>
+            ))}
+          </tr>
+          <tr>
+            <th scope="row">Cả năng lực</th>
+            {cols.map((c) => (
+              <td key={c.code} className={band(c.firstAttemptCorrectRate)}>
+                {fmtPercent(c.firstAttemptCorrectRate ?? null)}
+              </td>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {d.items.map((i) => (
+            <tr key={i.itemBlockId}>
+              <th scope="row">Câu {i.position}</th>
+              {cols.map((c) => (
+                <td key={c.code} className={c.code === i.competencyCode ? band(i.firstAttemptCorrectRate) : "heat-empty"}>
+                  {c.code === i.competencyCode ? fmtPercent(i.firstAttemptCorrectRate ?? null) : ""}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /** Draft extra practice with the existing Generate pipeline: AI proposes, validation runs, the teacher approves like any block. */
 function Practice({ insights: d, classId }: { insights: Schemas["InsightsOut"]; classId: string }) {
   const router = useRouter();
@@ -140,8 +185,8 @@ function Practice({ insights: d, classId }: { insights: Schemas["InsightsOut"]; 
     setBusy(true);
     setError(null);
     try {
-      await unwrap(api.POST("/v1/classes/{class_id}/assignments/{assignment_id}/insights/reteach", { params: { path: { class_id: classId, assignment_id: d.assignmentId } } }));
-      if (d.focusSkills.length) {
+      const r = await unwrap(api.POST("/v1/classes/{class_id}/assignments/{assignment_id}/insights/reteach", { params: { path: { class_id: classId, assignment_id: d.assignmentId } } }));
+      if (d.focusSkills.length && !r.alreadyExists) {  // a draft already covers these passages: open it, do not add more
         await unwrap(
           api.POST("/v1/lessons/{lesson_id}/generate", {
             params: { path: { lesson_id: d.lessonId } },

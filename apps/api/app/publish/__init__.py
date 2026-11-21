@@ -184,7 +184,8 @@ async def new_revision(db: AsyncSession, user: CurrentUser, revision_id: UUID) -
         h = content_hash(b.kind, b.payload, str(parent) if parent else None, b.transformation, b.no_source_reason)
         rows.append({"id": mapping[b.id], "revision_id": new.id, "kind": b.kind, "parent_id": parent, "position": b.position,
                      "payload": b.payload, "content_hash": h, "transformation": b.transformation,
-                     "no_source_reason": b.no_source_reason, "is_factual": b.is_factual})  # approvals are NOT carried over
+                     "no_source_reason": b.no_source_reason, "is_factual": b.is_factual,
+                     "competency_code": b.competency_code, "objective_id": b.objective_id})  # approvals are NOT carried over
         events.append({"block_id": mapping[b.id], "actor_type": "SYSTEM", "operation": "EDIT", "before_hash": None,
                        "after_hash": h})
     if rows:
@@ -247,11 +248,18 @@ async def create_assignment(
         raise NOT_FOUND  # not your class
     if pv.state != "ACTIVE":
         raise ApiError(409, "WITHDRAWN", "Bản đã thu hồi, không thể giao bài")
-    if body.due_at <= body.open_at:
+    due = body.due_at
+    if due is None and body.teach_date is not None:
+        from app.lessonplan.service import due_before
+
+        due = due_before(body.teach_date)
+    if due is None:
+        raise ApiError(422, "DUE_REQUIRED", "Cần hạn nộp hoặc ngày học")
+    if due <= body.open_at:
         raise ApiError(422, "INVALID_WINDOW", "Hạn nộp phải sau thời điểm mở bài")
     if cls.grade != lesson.grade:
         raise ApiError(422, "GRADE_MISMATCH", "Khối lớp không khớp với bài giảng")
-    a = m.Assignment(published_version_id=pv.id, class_id=cls.id, open_at=body.open_at, due_at=body.due_at)
+    a = m.Assignment(published_version_id=pv.id, class_id=cls.id, open_at=body.open_at, due_at=due)
     db.add(a)
     audit(db, user.id, "ASSIGN", "assignment", None)
     await db.commit()

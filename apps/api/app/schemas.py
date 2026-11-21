@@ -316,6 +316,7 @@ class LessonOut(ApiModel):
     author_id: UUID
     current_revision: RevisionOut
     published_version_id: UUID | None = None
+    teach_date: date | None = Field(None, description="First teaching day, when built from a plan that states it.")
     created_at: datetime
     model_config = ex({
         "id": I["lesson"], "title": "Phân bố dân cư theo vùng", "grade": 10, "subject": "GEOGRAPHY",
@@ -489,6 +490,9 @@ class BlockOut(ApiModel):
     review_status: ReviewStatus
     no_source_reason: str | None
     is_factual: bool
+    competency_code: str | None = Field(None, description="Competency of the block (metadata; editing it does not reset review).")
+    objective_id: UUID | None = None
+    remediation_draft: bool = Field(False, description="Added by 'Đề xuất dạy lại' from the insights board.")
     version: int = Field(description="Optimistic lock: send back in PATCH.")
     link_count: int = 0
     blocker_count: int = Field(0, description="Failed BLOCKER validations at the current hash.")
@@ -701,7 +705,8 @@ class WithdrawRequest(ApiModel):
 class AssignmentCreate(ApiModel):
     class_id: UUID
     open_at: datetime
-    due_at: datetime
+    due_at: datetime | None = Field(None, description="Required unless `teachDate` is given (then: day before it, 23:59 UTC+7).")
+    teach_date: date | None = Field(None, description="Teaching day; used only when `dueAt` is missing.")
     model_config = ex({"classId": I["class"], "openAt": T1, "dueAt": "2026-11-30T23:59:00+07:00"})
 
 
@@ -912,6 +917,7 @@ class InsightItem(ApiModel):
     max_hint_level: int = Field(0, description="Highest HABIT AI hint level used on this item (0 to 3).")
     needs_reteach: bool = Field(False, description="More than 30% of the students who answered got it wrong, or asked about it.")
     questions: list["InsightTheme"] = Field(default_factory=list, description="Top 2 question themes, 2 anonymous examples each.")
+    competency_code: str | None = Field(None, description="Competency of the item (from the lesson plan or the teacher).")
 
 
 class InsightTheme(ApiModel):
@@ -919,6 +925,14 @@ class InsightTheme(ApiModel):
     label: str
     count: int
     examples: list[str] = Field(description="Up to 3 most repeated questions (personal data already removed).")
+
+
+class CompetencyStat(ApiModel):
+    code: str
+    name: str
+    answered_count: int = Field(description="Answers to the items of this competency, all students together.")
+    first_attempt_correct_rate: float | None = Field(None, description="0..1 over those answers; null when none.")
+    item_ids: list[UUID]
 
 
 class BlockedReason(ApiModel):
@@ -939,6 +953,7 @@ class InsightsOut(ApiModel):
     focus_skills: list[Skill] = Field(description="Skills of the items with the lowest first-attempt correct rate (up to 2).")
     blocked_reasons: list[BlockedReason] = Field(default_factory=list, description="How often HABIT AI declined, by reason.")
     reteach_item_ids: list[UUID] = Field(default_factory=list, description="Items with needsReteach = true.")
+    competencies: list[CompetencyStat] = Field(default_factory=list, description="Rate per competency (heatmap).")
     llm_available: bool
     model_config = ex({"assignmentId": I["assign"], "lessonId": I["lesson"], "publishedRevisionId": I["lrev"],
                        "canPractice": True, "studentCount": 15, "askingStudents": 6, "totalQuestions": 14, "items": [],
@@ -967,6 +982,7 @@ class PlanMcq(ApiModel):
     correct_option: Literal["A", "B", "C", "D"] | None
     answer_source: Literal["underline", "docx_underline", "teacher"] | None
     needs_confirmation: bool
+    competency_code: str | None = None
 
 
 class PlanItem(ApiModel):
@@ -1006,14 +1022,52 @@ class PlanOut(ApiModel):
     lesson_id: UUID | None = Field(description="Set once 'Tạo bài chuẩn bị' has been used.")
 
 
+class Competency(ApiModel):
+    code: str
+    name: str
+
+
+class SubjectCompetencyOut(Competency):
+    subject: str
+
+
+class CompetencyList(ApiModel):
+    items: list[SubjectCompetencyOut]
+
+
 class PlanDetail(PlanOut):
     sections: list[PlanSection]
     objectives: list[PlanObjective]
     mcqs: list[PlanMcq]
+    competencies: list[Competency] = Field([], description="Competency catalogue of the plan's subject.")
 
 
 class PlanList(ApiModel):
     items: list[PlanOut]
+
+
+class PlanJobOut(ApiModel):
+    id: UUID
+    state: Literal["queued", "parsing", "done", "failed"]
+    file_name: str | None
+    page: int | None = Field(None, description="Page being read (parsing only, best effort).")
+    pages: int | None = None
+    error_code: str | None = None
+    error_title: str | None = Field(None, description="Friendly Vietnamese message when state is failed.")
+    plan_ids: list[UUID] = []
+    created_at: datetime
+
+
+class PlanJobLatest(ApiModel):
+    job: PlanJobOut | None
+
+
+class McqCompetency(ApiModel):
+    competency_code: str | None
+
+
+class BlockCompetency(ApiModel):
+    competency_code: str | None = Field(description="Code from the subject catalogue, or null to clear.")
 
 
 class PlanMcqAnswer(ApiModel):
@@ -1032,3 +1086,4 @@ class ReteachOut(ApiModel):
     lesson_id: UUID
     revision_id: UUID
     blocks: int = Field(description="Draft blocks added (source passages to re-teach with). Nothing is approved or published.")
+    already_exists: bool = Field(False, description="True when an unreviewed re-teach draft already covers them: nothing added.")
