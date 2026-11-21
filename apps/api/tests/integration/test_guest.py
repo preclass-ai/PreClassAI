@@ -54,13 +54,13 @@ async def answer_first_mcq(c: httpx.AsyncClient, assignment: str) -> dict[str, A
 
 
 async def test_flag_off_means_404_everywhere(client: httpx.AsyncClient) -> None:
-    assert (await client.get("/v1/auth/config")).json() == {"guestEnabled": False, "chatEnabled": False}
+    assert (await client.get("/v1/auth/config")).json() == {"guestEnabled": False, "chatEnabled": False, "personalizationEnabled": False}
     assert (await client.post("/v1/auth/guest", json={})).status_code == 404
     assert (await client.post("/v1/auth/guest/resume", json={"surveyCode": "KS-ABCD"})).status_code == 404
 
 
 async def test_guest_gets_code_cookie_and_the_survey_assignment(client: httpx.AsyncClient, guests_on: None) -> None:
-    assert (await client.get("/v1/auth/config")).json() == {"guestEnabled": True, "chatEnabled": False}
+    assert (await client.get("/v1/auth/config")).json() == {"guestEnabled": True, "chatEnabled": False, "personalizationEnabled": False}
     g = await new_guest(client, lessonKey="dan-so-vung")
     assert CODE.match(g["surveyCode"]) and g["assignmentId"] == str(KS_ASSIGN)
     assert g["user"]["isGuest"] and g["user"]["role"] == "STUDENT" and g["user"]["email"] is None
@@ -144,7 +144,8 @@ async def test_export_has_only_survey_columns(client: httpx.AsyncClient, guests_
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")
     lines = r.text.strip().split("\n")
     assert lines[0] == ("survey_code,lesson,item,first_attempt_is_correct,answered_at_utc,"
-                        "hints_used,max_hint_level,chat_asks,used_explain,blocked_count")
+                        "hints_used,max_hint_level,chat_asks,used_explain,blocked_count,pref_chia_nho,pref_hen_gio_phut,"
+                        "pref_bang_so_lieu,pref_giai_thich,pref_nhac_tien_do,focus_mode_used")
     cells = lines[1].split(",")
     assert len(lines) == 2 and cells[0] == g["surveyCode"] and cells[2].startswith("Câu ") and cells[3] in ("true", "false")
     assert g["user"]["id"] not in r.text and "Khách" not in r.text and "@" not in r.text

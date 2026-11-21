@@ -148,3 +148,9 @@ Mỗi bài có: 1 nguồn văn bản (tiêu đề, 2 đoạn, bảng 4 hàng × 
 | `study_activity` | `student_id, day, items_answered, hints_used` | khóa chính (student, day); chỉ cập nhật khi `CHAT_ENABLED=true` |
 
 `blocked_reason` ghi cả từ chối (INJECTION, ANSWER_REQUEST, CONFIRM_OPTION, UNSAFE, OFFTOPIC) lẫn lý do rơi về rule của LLM (`LLM_ANSWER, LLM_NUMBER, LLM_PII, LLM_PROMPT, LLM_ERROR, LLM_BUDGET`).
+
+## Cá nhân hóa (migration 0004, chỉ thêm)
+
+| Bảng | Cột | Ghi chú |
+|---|---|---|
+| `student_preference` | `student_id, key, value on/5/10, updated_at` | khóa chính (student, key); `key` bị CHECK vào đúng 6 khóa cố định; không có hàng = tắt; không có cột nào khác về học sinh |

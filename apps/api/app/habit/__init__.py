@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import student
+from app import personalization, student
 from app.auth import CurrentUser
 from app.blocks import NOT_FOUND
 from app.config import get_settings
@@ -113,7 +113,9 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
     msg = rules.redact((body.message or "").strip()) if body.action == "ask" else ""
     used = await db.scalar(select(func.count()).where(
         m.ChatMessage.session_id == sess, m.ChatMessage.action == "hint", m.ChatMessage.role == "assistant")) or 0
-    text, level, refs, reason = rules.decide(v, body.action, msg, used)
+    prefs = await personalization.get_prefs(db, user.id) if personalization.on() else {}
+    text, level, refs, reason = rules.decide(v, body.action, msg, used, small="chia_nho_tung_buoc" in prefs,
+                                             table_first="uu_tien_bang_so_lieu" in prefs)
     mode, tin, tout = "rule", 0, 0
     if body.action != "explain":
         if cfg.chat_mode == "llm" and reason is None:
@@ -171,11 +173,23 @@ async def habit(db: AsyncSession, user: CurrentUser, assignment_id: UUID) -> Hab
         earned.append("KIEN_TRI")
     if any((hints[i][1] or 0) >= 2 for i in right if i in hints):
         earned.append("THAM_HIEM")
+    advice = await personalization.skill_advice(db, user.id) if personalization.on() else {}
+    prefs = await personalization.get_prefs(db, user.id) if advice else {}
+    attempted = set(right) | set(await student._attempts(db, a.id, user.id))  # noqa: SLF001
+
+    def item_out(i: dict[str, Any]) -> HabitItem:
+        iid = UUID(i["id"])
+        got = None if iid in attempted else advice.get(i["payload"]["skill"])
+        preview = None
+        if got == "REVIEW":
+            preview = rules.hint(rules.build_view(pv.snapshot, i), 1, small="chia_nho_tung_buoc" in prefs)[0]
+        return HabitItem(item_id=iid, hints_used=min((hints.get(iid) or (0, 0))[0], HINTS_MAX), hints_max=HINTS_MAX,
+                         advice=got, preview=preview)
+
     return HabitOut(
         streak=streak, today_goal=cfg.habit_daily_goal, today_done=done.get(today(), 0),
         badges=[HabitBadge(code=c, label=BADGES[c]) for c in earned],
-        hints_available=[HabitItem(item_id=UUID(i["id"]), hints_used=min((hints.get(UUID(i["id"])) or (0, 0))[0], HINTS_MAX),
-                                   hints_max=HINTS_MAX) for i in student._items(pv.snapshot)])  # noqa: SLF001
+        hints_available=[item_out(i) for i in student._items(pv.snapshot)])  # noqa: SLF001
 
 
 async def chat_stats(db: AsyncSession) -> dict[str, Any]:

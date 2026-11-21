@@ -32,3 +32,11 @@
 - **web-design-guidelines**: tải luật qua agent web-fetch (không có WebFetch trực tiếp), audit tay các file Habit.
 - **PHIEU-KHAO-SAT-HOC-SINH.md không có trên nhánh này** (ở docs/proposal): câu hỏi để ở `docs/CAU-HOI-KHAO-SAT-HABIT.md`.
 - **`git push` bị chặn** bởi classifier: lệnh để Khải chạy: `git push -u origin feat/habit-chat`.
+
+## Personalization (feat/personalization, 2026-11-21)
+- **Thêm cờ `PERSONALIZATION_ENABLED` (mặc định tắt)**, đề bài không yêu cầu: giữ nguyên tắc "tắt cờ thì hệ thống như cũ" vì UI mới hiện cho mọi học sinh.
+- **"Mở sẵn Gợi ý 1" = `preview` do server trả, không tự gọi hint**: tự gọi sẽ tăng `hints_used`, mất huy hiệu Tự lực và làm sai số liệu khảo sát.
+- **`focus_mode_used` là một khóa trong `student_preference`** (không bảng riêng) để CSV đếm "đã dùng ít nhất một lần".
+- **Thích ứng không lưu gì**: tính lại từ attempt + chat_message mỗi lần `/habit`, tránh lưu kết luận về học sinh.
+- **Ngưỡng**: REVIEW khi ≥ 2 câu và sai ≥ 50%; QUIET khi ≥ 3 câu và ≥ 80% đúng ngay không gợi ý (hằng số trong `app/personalization`, test hạ ngưỡng bằng monkeypatch).
+- **E2E personalization chưa chạy được**: tác vụ nền bị hệ thống dừng vì thiếu RAM; không chạy lại theo ghi chú.

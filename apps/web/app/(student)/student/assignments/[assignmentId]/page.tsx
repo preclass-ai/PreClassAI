@@ -3,6 +3,7 @@
 import { GuestSurveyCard } from "@/features/guest";
 import { HabitBar, HabitItem } from "@/features/habit";
 import { habitKey } from "@/features/habit-api";
+import { FocusTimer, PersonalizationBar, usePersonalizationOn, usePrefs } from "@/features/personalization";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { use, useRef, useState, type FormEvent } from "react";
@@ -23,6 +24,10 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
   const key = ["student-assignment", assignmentId];
   const qc = useQueryClient();
   const [closed, setClosed] = useState(false);
+  const [focus, setFocus] = useState(false);
+  const [idx, setIdx] = useState(0);
+  const persOn = usePersonalizationOn();
+  const prefs = usePrefs(persOn);
   const a = useQuery({
     queryKey: key,
     queryFn: () =>
@@ -57,6 +62,21 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
   ].sort((x, y) => x.pos - y.pos);
   const answered = data.items.filter((i) => i.result).length;
   let n = 0;
+  const items = data.items.slice().sort((x, y) => x.position - y.position);
+  const inFocus = focus && persOn && items.length > 0;
+  const cur = items[Math.min(idx, items.length - 1)];
+  const content = entries.filter((e): e is { pos: number; block: ContentBlock } => "block" in e);
+  const itemProps = (item: Item, no: number) => ({
+    no,
+    item,
+    assignmentId,
+    disabled: isClosed,
+    onAnswered: () => {
+      void qc.invalidateQueries({ queryKey: key });
+      void qc.invalidateQueries({ queryKey: habitKey(assignmentId) }); // streak + daily goal
+    },
+    onClosed: () => setClosed(true),
+  });
 
   return (
     <article className="student">
@@ -70,28 +90,43 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
         <div className="lesson-hero-meta">{user?.isGuest ? null : <span>◷ Hạn nộp {fmtDate(data.dueAt)}</span>}<strong>{answered}/{data.items.length} câu đã làm</strong></div>
         <div className="bar" aria-label={`Đã làm ${answered}/${data.items.length} câu`}><span style={{ width: `${data.items.length ? (100 * answered) / data.items.length : 0}%` }} /></div>
       </header>
-      <DataNotice />
-      <HabitBar assignmentId={assignmentId} />
+      {inFocus ? null : <DataNotice />}
+      {inFocus ? null : <HabitBar assignmentId={assignmentId} />}
+      <PersonalizationBar focus={focus} onFocus={(on) => { setFocus(on); setIdx(0); }} />
+      {prefs.nhac_tien_do && !inFocus ? (
+        <p className="pers-nudge" role="status">
+          Em đã làm {answered}/{data.items.length} câu{answered < data.items.length ? `, còn ${data.items.length - answered} câu nữa là xong.` : ". Giỏi lắm!"}
+        </p>
+      ) : null}
       {isClosed ? <Notice>Bài đã hết hạn nộp. Em vẫn xem lại được bài.</Notice> : null}
-      {entries.map((e) =>
+      {inFocus && cur ? (
+        <section className="focus" aria-label="Chế độ tập trung">
+          <div className="focus-top">
+            <strong>Câu {Math.min(idx, items.length - 1) + 1}/{items.length}</strong>
+            {prefs.hen_gio_tap_trung ? <FocusTimer minutes={Number(prefs.hen_gio_tap_trung)} /> : null}
+          </div>
+          <div className="bar" role="progressbar" aria-label="Tiến độ" aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={answered}>
+            <span style={{ width: `${(100 * answered) / items.length}%` }} />
+          </div>
+          <details className="focus-content">
+            <summary>Xem lại nội dung bài</summary>
+            {content.map((e) => <ContentView key={e.block.id} block={e.block} />)}
+          </details>
+          <ItemView key={cur.id} {...itemProps(cur, Math.min(idx, items.length - 1) + 1)} />
+          <div className="focus-nav">
+            <Button onClick={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx <= 0}>Câu trước</Button>
+            <Button variant="primary" onClick={() => setIdx((i) => Math.min(items.length - 1, i + 1))} disabled={idx >= items.length - 1}>Câu tiếp</Button>
+          </div>
+        </section>
+      ) : null}
+      {inFocus ? null : entries.map((e) =>
         "block" in e && e.block ? (
           <ContentView key={e.block.id} block={e.block} />
         ) : "item" in e && e.item ? (
-          <ItemView
-            key={e.item.id}
-            no={++n}
-            item={e.item}
-            assignmentId={assignmentId}
-            disabled={isClosed}
-            onAnswered={() => {
-              void qc.invalidateQueries({ queryKey: key });
-              void qc.invalidateQueries({ queryKey: habitKey(assignmentId) }); // streak + daily goal
-            }}
-            onClosed={() => setClosed(true)}
-          />
+          <ItemView key={e.item.id} {...itemProps(e.item, ++n)} />
         ) : null,
       )}
-      <GuestSurveyCard />
+      {inFocus ? null : <GuestSurveyCard />}
     </article>
   );
 }

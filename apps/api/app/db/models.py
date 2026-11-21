@@ -391,3 +391,13 @@ class StudyActivity(Base):
     day: Mapped[date] = mapped_column(Date, primary_key=True)
     items_answered: Mapped[int] = mapped_column(Integer, server_default="0")
     hints_used: Mapped[int] = mapped_column(Integer, server_default="0")
+
+
+class StudentPreference(Base):
+    """A learning option the student switched on (absent row = off). Never a label about the student."""
+
+    __tablename__ = "student_preference"
+    student_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("app_user.id"), primary_key=True)
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    value: Mapped[str] = mapped_column(Text)  # on | 5 | 10
+    updated_at: Mapped[datetime] = ts()

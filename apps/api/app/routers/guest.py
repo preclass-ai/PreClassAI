@@ -38,7 +38,8 @@ async def _start(db: AsyncSession, response: Response, user: Any, lesson_key: st
 @router.get("/auth/config", tags=["auth"], operation_id="getAuthConfig", response_model=AuthConfig, openapi_extra=_PUBLIC,
             summary="Public sign-in options (is anonymous guest access on?)")
 async def auth_config() -> AuthConfig:
-    return AuthConfig(guest_enabled=get_settings().guest_access_enabled, chat_enabled=get_settings().chat_enabled)
+    return AuthConfig(guest_enabled=get_settings().guest_access_enabled, chat_enabled=get_settings().chat_enabled,
+                      personalization_enabled=get_settings().personalization_enabled)
 
 
 @router.post("/auth/guest", tags=["auth"], operation_id="createGuest", status_code=201, response_model=GuestOut,

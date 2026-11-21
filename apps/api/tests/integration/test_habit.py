@@ -56,7 +56,7 @@ async def test_hints_one_to_three_then_stay_at_three(client: httpx.AsyncClient, 
     levels = [(await chat(client, it["id"], "hint")).json()["hintLevel"] for _ in range(4)]
     assert levels == [1, 2, 3, 3]
     h = (await client.get(f"{URL}/habit")).json()
-    assert next(x for x in h["hintsAvailable"] if x["itemId"] == it["id"]) == {"itemId": it["id"], "hintsUsed": 3, "hintsMax": 3}
+    assert next(x for x in h["hintsAvailable"] if x["itemId"] == it["id"]) == {"itemId": it["id"], "hintsUsed": 3, "hintsMax": 3, "advice": None, "preview": None}
 
 
 async def test_direct_answer_confirm_and_injection_refused(client: httpx.AsyncClient, on: pytest.MonkeyPatch) -> None:

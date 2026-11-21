@@ -789,6 +789,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/student/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The student's own learning options
+         * @description 404 when `PERSONALIZATION_ENABLED` is off. Only options the student chose; never a label about the student (ADR-0013). A missing key means the option is off.
+         */
+        get: operations["getPreferences"];
+        /**
+         * Switch learning options on or off (partial update)
+         * @description 404 when `PERSONALIZATION_ENABLED` is off. Only options the student chose; never a label about the student (ADR-0013). A missing key means the option is off.
+         */
+        put: operations["updatePreferences"];
+        post?: never;
+        /**
+         * Switch every option off
+         * @description 404 when `PERSONALIZATION_ENABLED` is off. Only options the student chose; never a label about the student (ADR-0013). A missing key means the option is off.
+         */
+        delete: operations["resetPreferences"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1132,7 +1160,8 @@ export interface components {
          * AuthConfig
          * @example {
          *       "chatEnabled": false,
-         *       "guestEnabled": true
+         *       "guestEnabled": true,
+         *       "personalizationEnabled": false
          *     }
          */
         AuthConfig: {
@@ -1147,6 +1176,12 @@ export interface components {
              * @description True when anonymous guest access is switched on (GUEST_ACCESS_ENABLED).
              */
             guestEnabled: boolean;
+            /**
+             * Personalizationenabled
+             * @description True when student-chosen options and focus mode are on.
+             * @default false
+             */
+            personalizationEnabled: boolean;
         };
         /** BlockCounts */
         BlockCounts: {
@@ -1675,6 +1710,11 @@ export interface components {
         };
         /** HabitItem */
         HabitItem: {
+            /**
+             * Advice
+             * @description From the student's own first-attempt results and hint use per skill (rules): REVIEW = suggest re-reading the lesson first; QUIET = the skill goes well, fewer nudges. Null when personalization is off.
+             */
+            advice?: ("REVIEW" | "QUIET") | null;
             /** Hintsmax */
             hintsMax: number;
             /** Hintsused */
@@ -1684,6 +1724,11 @@ export interface components {
              * Format: uuid
              */
             itemId: string;
+            /**
+             * Preview
+             * @description Hint 1 text shown open for a REVIEW item (does not count as a hint used).
+             */
+            preview?: string | null;
         };
         /**
          * HabitOut
@@ -2042,6 +2087,42 @@ export interface components {
         ParagraphPayload: {
             /** Text */
             text: string;
+        };
+        /**
+         * PreferencesIn
+         * @example {
+         *       "preferences": {
+         *         "chia_nho_tung_buoc": "on",
+         *         "hen_gio_tap_trung": "off"
+         *       }
+         *     }
+         */
+        PreferencesIn: {
+            /**
+             * Preferences
+             * @description Partial update: `off` removes the option. `hen_gio_tap_trung` takes `5`, `10` or `off`; others `on`/`off`.
+             */
+            preferences: {
+                [key: string]: "on" | "off" | "5" | "10";
+            };
+        };
+        /**
+         * PreferencesOut
+         * @example {
+         *       "preferences": {
+         *         "chia_nho_tung_buoc": "on",
+         *         "hen_gio_tap_trung": "10"
+         *       }
+         *     }
+         */
+        PreferencesOut: {
+            /**
+             * Preferences
+             * @description Only the options that are ON: `on`, or `5`/`10` minutes for `hen_gio_tap_trung`. A missing key means off.
+             */
+            preferences: {
+                [key: string]: string;
+            };
         };
         /**
          * Problem
@@ -5736,6 +5817,160 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    getPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updatePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreferencesIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resetPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreferencesOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };

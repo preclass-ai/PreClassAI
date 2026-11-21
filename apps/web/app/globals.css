@@ -460,3 +460,22 @@ fieldset { border: 0; padding: 0; margin: 0; }
 .habit-btn, .habit-chip, .habit-close, .habit-input .btn { touch-action: manipulation; }
 .habit-form { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
 .habit-chip:hover, .habit-close:hover { background: var(--info-bg); }
+
+/* Personalization (ADR-0013): student-chosen options + focus mode. Tokens only. */
+.pers-bar { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.pers-bar summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; }
+.pers-options { border: 0; margin: 0; padding: 0 0 8px; display: grid; gap: 8px; }
+.pers-option { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.pers-option input[type="checkbox"] { width: 22px; height: 22px; }
+.pers-focus { min-height: 44px; }
+.pers-nudge { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--info-bg); color: var(--info); font-weight: 600; }
+.focus { display: flex; flex-direction: column; gap: 14px; }
+.focus-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.focus-timer { margin: 0; font-variant-numeric: tabular-nums; font-weight: 700; }
+.focus-content { border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; background: var(--surface); }
+.focus-content summary { cursor: pointer; min-height: 40px; display: flex; align-items: center; font-weight: 600; }
+.focus-nav { display: flex; gap: 10px; justify-content: space-between; }
+.focus-nav .btn { min-height: 44px; flex: 1; }
+.habit-advice { margin-bottom: 10px; padding: 12px 14px; border-radius: 12px; background: var(--info-bg); border-left: 4px solid var(--primary); }
+.habit-preview { margin: 6px 0 0; }
+.habit.quiet .habit-btn { background: transparent; border-color: transparent; text-decoration: underline; }
