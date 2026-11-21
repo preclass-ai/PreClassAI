@@ -13,3 +13,7 @@ Status: `in_progress` · Owner/harness: Claude Code · Date: 2026-11-22
 | security-threat-model | PR B: phần "gợi ý thêm", nút gợi ý | `THREAT-MODEL-habit.md` thêm H-17..H-20 (mỗi mối đe dọa có biện pháp và test). |
 | security-best-practices | PR B | Review code: `quick` là enum cố định, bỏ qua `message`; `postcheck_extra` không tin đầu ra model; khóa chỉ ở env. |
 | playwright-cli | PR B | habit.spec 4 viewport; bắt lỗi bảng chat cao hơn màn hình ở 1280. |
+| security-threat-model | PR C: góc nhìn giáo viên | `THREAT-MODEL-habit.md` thêm H-21 (ẩn danh, quyền lớp) và H-22 (gửi dữ liệu cho AI phân tích). |
+| security-best-practices | PR C | Quyền theo lớp (404 không 403), phản hồi chỉ có số đếm và văn bản đã che PII, prompt bọc `<data>` và vô hiệu ngoặc nhọn. |
+| humanizer | PR C | Câu chữ giáo viên: ngắn, không gạch dài (test quét chuỗi UI vẫn chạy). |
+| playwright-cli | PR C | insights.spec 4 viewport; ảnh `.agents/screens-insights/`. |

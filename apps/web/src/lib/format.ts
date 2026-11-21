@@ -29,3 +29,10 @@ export function toLocalInput(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+/** "Trước buổi học 1 ngày": the lesson day (`yyyy-mm-dd` from a date input) minus one day at 23:59, as a datetime-local value. */
+export function dueDayBefore(lessonDay: string): string {
+  const d = new Date(`${lessonDay}T00:00:00`);
+  d.setDate(d.getDate() - 1);
+  return toLocalInput(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59));
+}

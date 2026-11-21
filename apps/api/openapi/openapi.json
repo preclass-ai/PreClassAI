@@ -1,6 +1,40 @@
 {
   "components": {
     "schemas": {
+      "AnalyzeOut": {
+        "examples": [
+          {
+            "generatedBy": "rule",
+            "topics": [
+              "Chưa biết bắt đầu từ đâu: 5 lượt hỏi"
+            ]
+          }
+        ],
+        "properties": {
+          "generatedBy": {
+            "enum": [
+              "rule",
+              "llm"
+            ],
+            "title": "Generatedby",
+            "type": "string"
+          },
+          "topics": {
+            "description": "3 to 5 short topics students get stuck on (empty when there is no data).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Topics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "topics",
+          "generatedBy"
+        ],
+        "title": "AnalyzeOut",
+        "type": "object"
+      },
       "AnchorList": {
         "examples": [
           {
@@ -2031,6 +2065,214 @@
           "blockCount"
         ],
         "title": "HistoryRevision",
+        "type": "object"
+      },
+      "InsightItem": {
+        "properties": {
+          "answeredCount": {
+            "title": "Answeredcount",
+            "type": "integer"
+          },
+          "asks": {
+            "description": "Questions typed or tapped in HABIT AI for this item, all students together.",
+            "title": "Asks",
+            "type": "integer"
+          },
+          "firstAttemptCorrectRate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0..1; null when nobody answered.",
+            "title": "Firstattemptcorrectrate"
+          },
+          "hintsUsed": {
+            "description": "HABIT AI hints asked for this item, all students together.",
+            "title": "Hintsused",
+            "type": "integer"
+          },
+          "itemBlockId": {
+            "format": "uuid",
+            "title": "Itemblockid",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "skill": {
+            "enum": [
+              "READ_TABLE",
+              "COMPARE",
+              "CALCULATE",
+              "EXPLAIN"
+            ],
+            "title": "Skill",
+            "type": "string"
+          },
+          "stem": {
+            "title": "Stem",
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemBlockId",
+          "position",
+          "stem",
+          "skill",
+          "answeredCount",
+          "hintsUsed",
+          "asks"
+        ],
+        "title": "InsightItem",
+        "type": "object"
+      },
+      "InsightTheme": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "examples": {
+            "description": "Up to 3 most repeated questions (personal data already removed).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Examples",
+            "type": "array"
+          },
+          "key": {
+            "description": "answer, start, data, formula, unit, concept, compare or other.",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "count",
+          "examples"
+        ],
+        "title": "InsightTheme",
+        "type": "object"
+      },
+      "InsightsOut": {
+        "examples": [
+          {
+            "askingStudents": 6,
+            "assignmentId": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
+            "canPractice": true,
+            "focusSkills": [
+              "COMPARE"
+            ],
+            "items": [],
+            "lessonId": "712030dc-698a-5be5-9781-5d7a907b3628",
+            "llmAvailable": false,
+            "publishedRevisionId": "19679e00-c9d2-540a-b0da-de9bde3e0a9b",
+            "studentCount": 15,
+            "themes": [
+              {
+                "count": 5,
+                "examples": [
+                  "Em nên bắt đầu từ đâu?"
+                ],
+                "key": "start",
+                "label": "Chưa biết bắt đầu từ đâu"
+              }
+            ],
+            "totalQuestions": 14
+          }
+        ],
+        "properties": {
+          "askingStudents": {
+            "description": "How many different students asked something (never who).",
+            "title": "Askingstudents",
+            "type": "integer"
+          },
+          "assignmentId": {
+            "format": "uuid",
+            "title": "Assignmentid",
+            "type": "string"
+          },
+          "canPractice": {
+            "description": "True when the caller wrote the lesson, so extra practice can be drafted from it.",
+            "title": "Canpractice",
+            "type": "boolean"
+          },
+          "focusSkills": {
+            "description": "Skills of the items with the lowest first-attempt correct rate (up to 2).",
+            "items": {
+              "enum": [
+                "READ_TABLE",
+                "COMPARE",
+                "CALCULATE",
+                "EXPLAIN"
+              ],
+              "type": "string"
+            },
+            "title": "Focusskills",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InsightItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "lessonId": {
+            "format": "uuid",
+            "title": "Lessonid",
+            "type": "string"
+          },
+          "llmAvailable": {
+            "title": "Llmavailable",
+            "type": "boolean"
+          },
+          "publishedRevisionId": {
+            "description": "Revision this assignment was published from.",
+            "format": "uuid",
+            "title": "Publishedrevisionid",
+            "type": "string"
+          },
+          "studentCount": {
+            "title": "Studentcount",
+            "type": "integer"
+          },
+          "themes": {
+            "items": {
+              "$ref": "#/components/schemas/InsightTheme"
+            },
+            "title": "Themes",
+            "type": "array"
+          },
+          "totalQuestions": {
+            "title": "Totalquestions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "assignmentId",
+          "lessonId",
+          "publishedRevisionId",
+          "canPractice",
+          "studentCount",
+          "askingStudents",
+          "totalQuestions",
+          "items",
+          "themes",
+          "focusSkills",
+          "llmAvailable"
+        ],
+        "title": "InsightsOut",
         "type": "object"
       },
       "InstructionPayload": {
@@ -5605,6 +5847,174 @@
         ]
       }
     },
+    "/v1/classes/{class_id}/assignments/{assignment_id}/insights": {
+      "get": {
+        "description": "Only a TEACHER of the class; anything else is 404. Anonymous: no student id, name or survey code in the answer. Questions are grouped by rules (0đ) into themes; items carry first-attempt rate and hint use.",
+        "operationId": "getAssignmentInsights",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "class_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Class Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsightsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "What students ask HABIT AI and where they struggle (class teacher)",
+        "tags": [
+          "insights"
+        ]
+      }
+    },
+    "/v1/classes/{class_id}/assignments/{assignment_id}/insights/analyze": {
+      "post": {
+        "description": "Only a TEACHER of the class; anything else is 404. Anonymous: no student id, name or survey code in the answer. Pressed by the teacher only. The model call is cached for 10 minutes and counts against `CHAT_DAILY_TOKEN_BUDGET`; any failure falls back to the rule topics.",
+        "operationId": "analyzeAssignmentInsights",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "class_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Class Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "3 to 5 topics students get stuck on (rules, or one model call when CHAT_MODE=llm)",
+        "tags": [
+          "insights"
+        ]
+      }
+    },
     "/v1/classes/{class_id}/assignments/{assignment_id}/progress": {
       "get": {
         "operationId": "getAssignmentProgress",
@@ -7653,7 +8063,7 @@
                 }
               }
             },
-            "description": "ASSIGNMENT_CLOSED (sau hạn) hoặc ALREADY_ANSWERED (câu này đã trả lời)."
+            "description": "PAST_DUE (sau hạn, vẫn xem lại được bài) hoặc ALREADY_ANSWERED (câu này đã trả lời)."
           },
           "410": {
             "content": {

@@ -56,3 +56,10 @@ Mức = khả năng × tác động (đã tính biện pháp). Test nằm ở `a
 2. **Chế độ LLM** là xác suất: hậu kiểm bằng rule bắt được các mẫu đã biết (nhãn + từ khẳng định, số lạ), không chứng minh được "không bao giờ". Vì vậy mặc định `rule`, và LLM chỉ nên bật sau khi chạy `scripts/ops/habit_redteam.py` với model thật.
 3. **Tiếng lóng/viết tắt** ngoài danh sách từ khóa có thể lọt intent; hậu quả bị giới hạn vì rule không chứa đáp án để lộ.
 4. Gửi nội dung bài (đã duyệt) ra LLM bên thứ ba ở chế độ `llm`: cần ADR/đồng ý của trường trước khi bật (ADR-0012).
+
+### Góc nhìn giáo viên (PR C)
+
+| ID | Mối đe dọa | Mức | Biện pháp | Test |
+|---|---|---|---|---|
+| H-21 | **Giáo viên (hoặc người đoán id) đọc câu hỏi của lớp khác, hoặc nhận ra học sinh qua câu hỏi** | Trung bình | Chỉ TEACHER là thành viên lớp của assignment (khác thì 404, không 403); phản hồi không có id/tên/mã; câu hỏi đã che PII lúc lưu; chỉ hiện tối đa 3 ví dụ mỗi chủ đề. Rủi ro còn lại: câu hỏi tự do có thể tự nêu danh tính ("em là Nam..."); lớp rất nhỏ thì khó ẩn danh | `test_only_a_teacher_of_that_class_can_read_it`, `test_insights_group_questions...` (không có HS10-xx, id, số điện thoại trong JSON) |
+| H-22 | **Nút "AI phân tích" gửi dữ liệu ra ngoài hoặc bị tiêm lệnh qua câu hỏi học sinh** | Thấp | Chỉ gửi chủ đề, ví dụ ẩn danh và tỉ lệ; bọc trong `<data>` và vô hiệu `<`/`>`; kết quả bị bỏ dòng có PII, tối đa 5 dòng 160 ký tự; cache 10 phút; ngân sách token chung; lỗi thì dùng luật | `test_analysis_with_the_model_is_cached_guarded_and_budgeted` |

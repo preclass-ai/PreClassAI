@@ -132,7 +132,7 @@ async def submit_attempt(db: AsyncSession, user: CurrentUser, assignment_id: UUI
             return _result(snap, item["id"], existing.is_correct)
         raise ApiError(409, "ALREADY_ANSWERED", "Bạn đã trả lời câu này rồi")
     if _now() > a.due_at:
-        raise ApiError(409, "ASSIGNMENT_CLOSED", "Bài đã quá hạn nộp")
+        raise ApiError(409, "PAST_DUE", "Bài đã quá hạn nộp. Em vẫn xem lại được bài và lời giải")
     key = next(iter(_children(snap, item["id"], "answer_key")), None)
     ok = _grade(item["payload"]["itemType"], key["payload"] if key else None, body.answer)
     got = await db.scalar(pg_insert(m.StudentAttempt).values(
