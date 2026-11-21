@@ -40,3 +40,8 @@ apps/api/data/
 .agents/PREVIEW_URL.md
 *.tsbuildinfo
 infra/backup-recipients.txt
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
+
+# Real teacher lesson plans and any private data: never commit
+private/

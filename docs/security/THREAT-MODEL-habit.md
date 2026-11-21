@@ -63,3 +63,12 @@ Mức = khả năng × tác động (đã tính biện pháp). Test nằm ở `a
 |---|---|---|---|---|
 | H-21 | **Giáo viên (hoặc người đoán id) đọc câu hỏi của lớp khác, hoặc nhận ra học sinh qua câu hỏi** | Trung bình | Chỉ TEACHER là thành viên lớp của assignment (khác thì 404, không 403); phản hồi không có id/tên/mã; câu hỏi đã che PII lúc lưu; chỉ hiện tối đa 3 ví dụ mỗi chủ đề. Rủi ro còn lại: câu hỏi tự do có thể tự nêu danh tính ("em là Nam..."); lớp rất nhỏ thì khó ẩn danh | `test_only_a_teacher_of_that_class_can_read_it`, `test_insights_group_questions...` (không có HS10-xx, id, số điện thoại trong JSON) |
 | H-22 | **Nút "AI phân tích" gửi dữ liệu ra ngoài hoặc bị tiêm lệnh qua câu hỏi học sinh** | Thấp | Chỉ gửi chủ đề, ví dụ ẩn danh và tỉ lệ; bọc trong `<data>` và vô hiệu `<`/`>`; kết quả bị bỏ dòng có PII, tối đa 5 dòng 160 ký tự; cache 10 phút; ngân sách token chung; lỗi thì dùng luật | `test_analysis_with_the_model_is_cached_guarded_and_budgeted` |
+
+### Đọc giáo án thật (PR D1)
+
+| ID | Mối đe dọa | Mức | Biện pháp | Test |
+|---|---|---|---|---|
+| L-01 | **Tên giáo viên, tổ trưởng, chữ ký thành dữ liệu (neo) và lộ ra học sinh hoặc log** | Cao | Cắt khối chữ ký cuối bài, che tên sau nhãn ("Giáo viên:", "Họ tên:"), bỏ dòng chỉ có họ tên ở đầu và cuối bài; ghi `redacted_count`. Còn lại: tên viết tự do giữa đoạn không bị bắt (nêu trong mã) | `test_signature_and_teacher_names_are_redacted`; trên giáo án thật 0 neo chứa tên giáo viên (kiểm cục bộ, chỉ in số đếm) |
+| L-02 | **PDF độc hoặc quá lớn làm treo hoặc hết RAM (Render 512MB)** | Trung bình | Tiến trình con có timeout và RLIMIT_AS, đọc từng trang rồi xả cache, giới hạn số trang; không OCR; kiểm tra mã tự chạy như nguồn PDF thường | `test_parse_runs_in_the_isolated_child_process`; đo thật: đỉnh Python 30 đến 44MB mỗi tệp |
+| L-03 | **Đáp án MCQ sai (do mô hình đoán) đi thẳng đến học sinh** | Cao | Đáp án chỉ từ gạch chân (đúng 1 phương án) hoặc do giáo viên chọn; 0 hoặc 2+ gạch thì `needs_confirmation`; mô hình (mặc định tắt) chỉ gán nhãn đoạn, id bịa bị loại | `test_mcq_answer_comes_from_the_underline`, `test_model_labels_only_known_ids_and_labels` |
+| L-04 | **Giáo án thật bị commit hoặc tải lên cloud** | Cao | `private/` trong `.gitignore`; test và fixture chỉ dùng nội dung bịa; script đánh giá chỉ in số liệu | `git check-ignore private/giao-an/x` |

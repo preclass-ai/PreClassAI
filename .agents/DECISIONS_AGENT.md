@@ -72,3 +72,12 @@
 - **Đổi mã lỗi `ASSIGNMENT_CLOSED` thành `PAST_DUE`** theo yêu cầu; giao diện chấp nhận cả hai để không vỡ nếu backend chưa lên.
 - **Hạn nộp hiện cho mọi học sinh, kể cả lớp khảo sát/khách** (bỏ ẩn): đổi test cũ `due-date.test.tsx`. Hạn của lớp KS trong seed là +365 ngày; đặt lại khi cần.
 - **"Ngày học" chỉ ở giao diện**: API không đổi, hạn vẫn là `dueAt` (23:59 ngày trước ngày học, giờ máy giáo viên).
+
+## Giáo án 5512, PR D1 (feat/lesson-plan-5512, 2026-11-21)
+- **pdfplumber thay pypdf cho giáo án** vì cần tọa độ ký tự, đường và hình chữ nhật (gạch chân, khung); nguồn PDF thường giữ pypdf. Thêm `pdfplumber` (runtime) và `reportlab` (chỉ dev, để dựng fixture).
+- **Loại neo mới nằm trong `locator.type`**, không sửa CHECK của `source_anchor`.
+- **Đáp án chỉ từ gạch chân hoặc giáo viên**; không dùng mô hình, không đọc "Đáp án" tự do trong văn bản.
+- **Một khung đơn ô là khung kiến thức, bảng cần 2 ô trở lên trên một hàng** (pdfplumber gộp khung sát bảng thành một bảng).
+- **Môn và lớp kế thừa từ bài trước trong cùng tệp** khi tiêu đề bài sau không lặp lại.
+- **Chưa có endpoint và chưa ghi DB** (PR D2): bảng đã có, kiểm tra bằng test schema.
+- **Fixture PDF cần phông có tiếng Việt** (DejaVu trên Linux, Arial trên Windows); test tự bỏ qua nếu máy không có.

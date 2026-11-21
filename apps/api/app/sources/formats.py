@@ -188,7 +188,14 @@ def parse_docx_file(data: bytes, lim: Limits) -> list[ParsedAnchor]:
     return parse_docx(data)
 
 
-PARSERS = {"pdf": parse_pdf, "xlsx": parse_xlsx, "pptx": parse_pptx, "docx": parse_docx_file}
+def _plan(data: bytes, lim: Limits) -> Any:
+    from app.lessonplan import parse_plan_file
+
+    return parse_plan_file(data, lim)
+
+
+# "plan" returns a PlanFile (lesson plans, CV 5512), the others a list of anchors
+PARSERS: dict[str, Any] = {"pdf": parse_pdf, "xlsx": parse_xlsx, "pptx": parse_pptx, "docx": parse_docx_file, "plan": _plan}
 
 
 # ---------------------------------------------------------------- isolation
@@ -212,7 +219,7 @@ def _child(kind: str, data: bytes, lim: Limits, conn: Any) -> None:
         conn.close()
 
 
-def _run(kind: str, data: bytes, lim: Limits) -> list[ParsedAnchor]:
+def _run(kind: str, data: bytes, lim: Limits) -> Any:
     ctx = multiprocessing.get_context("spawn")
     recv, send = ctx.Pipe(duplex=False)
     proc = ctx.Process(target=_child, args=(kind, data, lim, send), daemon=True)
@@ -231,12 +238,12 @@ def _run(kind: str, data: bytes, lim: Limits) -> list[ParsedAnchor]:
         proc.join(5)
         recv.close()
     if msg[0] == "ok":
-        return list(msg[1])
+        return msg[1]
     if msg[0] == "api":
         raise ApiError(msg[1], msg[2], msg[3])
     raise ApiError(422, "INVALID_FILE", "Không đọc được tệp")
 
 
-async def parse_isolated(kind: str, data: bytes, lim: Limits) -> list[ParsedAnchor]:
+async def parse_isolated(kind: str, data: bytes, lim: Limits) -> Any:
     async with _SLOT:
         return await asyncio.to_thread(_run, kind, data, lim)

@@ -19,6 +19,7 @@ dependencies = [
   "openpyxl>=3.1.5",
   "python-pptx>=1.0.2",
   "defusedxml>=0.7.1",
+  "pdfplumber>=0.11.11",
 ]
 
 [dependency-groups]
@@ -29,6 +30,7 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
     "openapi-spec-validator>=0.7",
+    "reportlab>=5.1.0",
 ]
 
 [tool.pytest.ini_options]
