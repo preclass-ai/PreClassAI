@@ -143,3 +143,17 @@ Giới hạn tham khảo: khoảng 200 nghìn token mỗi ngày cho mỗi model 
 - `CHAT_AI_EXTRA=false` (mỗi câu hỏi chỉ 1 lời gọi);
 - `CHAT_DAILY_TOKEN_BUDGET` thấp hơn giới hạn của nhà cung cấp (ví dụ 150000) để API tự chuyển sang luật trước khi bị 429;
 - hint bậc 1 đến 2 và phân tích của giáo viên dùng luật hoặc bản ghi sẵn: đặt `DEMO_REPLAY=true` cho buổi trình diễn không có mạng (nhãn "bản ghi sẵn" hiện trên màn giáo viên; `replay.json` là mẫu viết tay, hãy thay bằng kết quả một lần chạy thật sau khi bật model).
+
+## Trước giờ thi và sau đợt khảo sát (22/11/2026)
+
+**Đọc giáo án (chạy nền).** Đặt `PLAN_PARSE_TIMEOUT_S=240` trên Render (mặc định trong code là 120). Số đo trong Docker 512 MB với giáo án thật: ở 0,5 CPU, 25 đến 42 trang mất 11 đến 22 giây; ở 0,1 CPU (mức Render Free) 31 trang mất 80 giây và 40 trang mất 102 giây, sát mốc 120 giây. RAM đỉnh 97 đến 127 MB. Vì là việc chạy nền nên chậm không chặn trang; vẫn nên chọn Render từ 0,5 CPU nếu có.
+
+**Tải giáo án demo trước giờ thi.** Tải sẵn giáo án demo (tệp tổng hợp, không dùng giáo án thật) vào tài khoản demo, đợi trạng thái "xong", mở màn Kiểm tra một lần để chắc chắn đã có bài chuẩn bị. Cùng lúc chỉ có một việc đọc giáo án mỗi giáo viên; nếu báo bận thì đợi việc cũ xong.
+
+**Đổi `CHAT_MODE` về `rule` khi có sự cố.** Render, mục Environment: đặt `CHAT_MODE=rule`, Save, đợi API khởi động lại (khoảng 1 phút). Kiểm tra `GET /v1/auth/config` có `"chatMode":"rule"`. Học sinh vẫn có bốn nút gợi ý, câu xã giao và gợi ý bậc 1 đến 3, không thấy lỗi. Không cần xóa khóa Groq. Muốn tắt hẳn Habit: `CHAT_ENABLED=false`.
+
+**Dự phòng cho buổi trình diễn không có mạng.** `DEMO_REPLAY=true` làm phần "Học sinh hỏi gì" trả về bản ghi sẵn từ một lần chạy model thật (có nhãn "bản ghi sẵn").
+
+**Xóa dữ liệu khảo sát (chạy tay).** Trang "Dữ liệu của em đi đâu" hứa xóa sau 90 ngày kể từ khi đợt khảo sát kết thúc; việc này chưa tự động. Đến hạn, người phụ trách chạy `cd apps/api && PYTHONPATH=. uv run python ../../scripts/ops/purge_guests.py` `--dry-run` trước, rồi `--days 90`, với `DATABASE_URL` của môi trường cần xóa, rồi ghi ngày chạy vào nhật ký nhóm. Nên đặt nhắc lịch ngay khi đợt khảo sát kết thúc.
+
+**Giới hạn cần biết:** các lượt trả lời là bảng chỉ thêm (trigger trong cơ sở dữ liệu), nên `purge_guests.py` xóa được khách chưa trả lời câu nào, còn khách đã trả lời chỉ bị vô hiệu hóa (khóa phiên, giữ mã khảo sát). Như vậy lời hứa "xóa sau 90 ngày" trên trang `/du-lieu` chưa đúng hoàn toàn với dữ liệu trả lời. Nhóm cần chọn: sửa câu chữ trang (ví dụ "ngừng dùng và không gắn với tên em") hoặc làm một đường xóa riêng có kiểm soát sau kỳ thi. Việc này chưa làm.

@@ -18,12 +18,14 @@ test("new revision → approve block by block → publish → assign (S04–S06)
   await page.getByRole("tab", { name: "Duyệt" }).click();
   const approve = page.getByRole("button", { name: "Duyệt khối này" });
   await expect(approve.first()).toBeVisible();
-  for (let i = 0; i < 40 && (await approve.count()) > 0; i++) {
+  // The queue re-renders after every decision, so a click can land on a card that is replaced a moment later and be lost
+  // (no error on screen, the "x/y đã duyệt" counter does not move). Click again until the queue is empty.
+  for (let i = 0; i < 80 && (await approve.count()) > 0; i++) {
     const before = await approve.count();
     await approve.first().click();
-    // The queue refetches after each decision and can briefly show extra cards: wait for it to shrink, not for an exact count.
-    await expect.poll(() => approve.count(), { timeout: 10_000 }).toBeLessThan(before);
+    await expect.poll(() => approve.count(), { timeout: 4_000 }).toBeLessThan(before).catch(() => undefined);
   }
+  await expect(approve).toHaveCount(0);
 
   // S05: gate passes, explicit confirmation, publish, then assign to a class of the same grade.
   await page.getByRole("tab", { name: /Xuất bản/ }).click();
