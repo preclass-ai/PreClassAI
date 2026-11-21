@@ -22,7 +22,7 @@
   "devDependencies": {
     "@next/eslint-plugin-next": "^15.3.0",
     "@playwright/test": "1.60.0",
-    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.1.0",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
