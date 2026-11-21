@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 export function HabitMark() {
   return (
     <svg className="habit-mark" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -8,10 +12,17 @@ export function HabitMark() {
 }
 
 export function SourceRef({ excerpt }: { label?: string; excerpt: string }) {
+  const [open, setOpen] = useState(false);
+  const long = excerpt.length > 150; // about four lines in the panel
   return (
     <blockquote className="habit-source">
       <span className="habit-source-label">Tài liệu giáo viên đã duyệt</span>
-      {excerpt}
+      <span className={`habit-source-text${open ? " open" : ""}`}>{excerpt}</span>
+      {long ? (
+        <button type="button" className="habit-more" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+          {open ? "Thu gọn" : "Xem thêm"}
+        </button>
+      ) : null}
     </blockquote>
   );
 }

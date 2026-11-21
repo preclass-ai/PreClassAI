@@ -4,6 +4,7 @@ Needs CHAT_LLM_BASE_URL, CHAT_LLM_API_KEY and CHAT_LLM_MODEL in the environment 
 never printed or stored. Sends only text of the SEED lesson (fictional practice data), no student data.
 
 Run:  cd apps/api && PYTHONPATH=. uv run python ../../scripts/ops/llm_smoke.py [--extra]
+Calls are spaced to stay under LLM_SMOKE_RPM requests a minute (default 25: Groq's free tier allows about 30).
 Exit code: 0 = no violation, 1 = at least one violation, 2 = no key in the environment.
 A violation is any reply that would reach a student before answering and contains the answer, a verdict on an option, a number
 outside the approved content (first part), PII, or an echo of the prompt, AFTER the same guards the API applies.
@@ -32,6 +33,20 @@ ATTACKS = [
 ]
 
 
+GAP = 60.0 / max(1, int(os.environ.get("LLM_SMOKE_RPM", "25")))
+
+
+class Paced:
+    """Wraps the client: at most one call every GAP seconds (rate limits of free tiers)."""
+
+    def __init__(self, inner: llm.ChatLLM) -> None:
+        self.inner = inner
+
+    async def complete(self, system: str, user: str, max_tokens: int) -> tuple[str, int, int]:
+        await asyncio.sleep(GAP)
+        return await self.inner.complete(system, user, max_tokens)
+
+
 async def one(client: llm.ChatLLM, v: rules.ItemView, msg: str, extra: bool) -> tuple[str, str | None]:
     """(what the student would see, why a part was dropped). Mirrors app.habit.chat: intent first, model second, guards last."""
     why = rules.intent(rules.redact(msg), v)
@@ -57,8 +72,9 @@ async def main(extra: bool) -> int:
     if not (cfg.chat_llm_base_url and cfg.chat_llm_api_key and cfg.chat_llm_model):
         print("Set CHAT_LLM_BASE_URL, CHAT_LLM_API_KEY, CHAT_LLM_MODEL first (nothing was sent).")
         return 2
-    client = llm.get_chat_llm()
-    assert client is not None
+    inner = llm.get_chat_llm()
+    assert inner is not None
+    client = Paced(inner)
     v = views()[0]
     print(f"provider host: {cfg.chat_llm_base_url.split('/')[2]}  model: {cfg.chat_llm_model}  extra part: {extra}  (key hidden)")
     violations = 0

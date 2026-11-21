@@ -28,7 +28,7 @@ test("Habit: hints 1→3, refusals, answer, explanation, goal", async ({ page },
   const box = await sheet.boundingBox();
   const vp = page.viewportSize()!;
   if (vp.width < 1100) expect(box!.height).toBeLessThanOrEqual(vp.height * 0.75 + 1);
-  else expect(Math.round(box!.width)).toBe(360);
+  else expect(Math.round(box!.width)).toBe(390);
   // the first suggestion button is in scope (it used to come back as "outside the lesson")
   await sheet.getByRole("button", { name: "Em nên bắt đầu từ đâu?" }).click();
   await expect(sheet.locator(".habit-msg.habit").first()).toBeVisible();

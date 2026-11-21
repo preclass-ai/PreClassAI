@@ -57,6 +57,24 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
   }, [open]);
 
   useEffect(() => {
+    // Phones: keep the sheet (and its input) above the on-screen keyboard. visualViewport shrinks when the keyboard opens.
+    const vv = window.visualViewport;
+    const d = dlg.current;
+    if (!open || !vv || !d || window.matchMedia("(min-width: 1100px)").matches) return;
+    const fit = () => {
+      d.style.setProperty("--vvh", `${Math.round(vv.height * 0.8)}px`);
+      d.style.setProperty("--vvb", `${Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))}px`);
+    };
+    fit();
+    vv.addEventListener("resize", fit);
+    vv.addEventListener("scroll", fit);
+    return () => {
+      vv.removeEventListener("resize", fit);
+      vv.removeEventListener("scroll", fit);
+    };
+  }, [open]);
+
+  useEffect(() => {
     // Non-modal side panel: Esc must work even when focus fell back to the page (e.g. the button just got disabled).
     if (!open) return;
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -109,7 +127,7 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
           ×
         </button>
       </header>
-      <p className="habit-note">HABIT AI không đưa đáp án, em tự làm nhé. Không nhập thông tin cá nhân.</p>
+      <p className="habit-note">HABIT AI không đưa đáp án. Không nhập thông tin cá nhân.</p>
       <div ref={log} className="habit-log" aria-live="polite" aria-busy={busy}>
         {msgs.map((m, idx) => (
           <div key={m.id} className="habit-turn">
