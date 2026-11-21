@@ -21,7 +21,8 @@ test("new revision → approve block by block → publish → assign (S04–S06)
   for (let i = 0; i < 40 && (await approve.count()) > 0; i++) {
     const before = await approve.count();
     await approve.first().click();
-    await expect(approve).toHaveCount(before - 1);
+    // The queue refetches after each decision and can briefly show extra cards: wait for it to shrink, not for an exact count.
+    await expect.poll(() => approve.count(), { timeout: 10_000 }).toBeLessThan(before);
   }
 
   // S05: gate passes, explicit confirmation, publish, then assign to a class of the same grade.

@@ -1865,6 +1865,18 @@
             ],
             "title": "Outputtype",
             "type": "string"
+          },
+          "remediation": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True after a re-teach suggestion: new blocks carry remediationDraft.",
+            "title": "Remediation"
           }
         },
         "required": [

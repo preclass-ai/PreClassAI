@@ -67,7 +67,8 @@ async def create_job(db: AsyncSession, user_id: UUID, lesson_id: UUID, body: Gen
     if has_blocks and body.mode == "initial":
         raise ApiError(409, "REVISION_NOT_EMPTY", "Bản đã có nội dung; dùng mode=append")
     job = m.GenerationJob(revision_id=rev.id, output_type=body.output_type, created_by=user_id, status="QUEUED",
-                          params={"nItems": body.n_items, "focusSkills": list(body.focus_skills), "mode": body.mode})
+                          params={"nItems": body.n_items, "focusSkills": list(body.focus_skills), "mode": body.mode,
+                                  "remediation": bool(body.remediation)})
     db.add(job)
     try:
         await db.commit()
@@ -223,7 +224,8 @@ async def run_job(db: AsyncSession, job_id: UUID) -> None:
         req = GenRequest(lesson.grade, job.output_type, int(job.params.get("nItems", 5)),
                          list(job.params.get("focusSkills", [])), views)
         result = await _call(provider, req)
-        n = await _persist(db, rev, result.draft, views, alias_id, f"{result.model}/{PROMPT_VERSION}")
+        flag = {b.key: {"remediation_draft": True} for b in result.draft.blocks} if job.params.get("remediation") else None
+        n = await _persist(db, rev, result.draft, views, alias_id, f"{result.model}/{PROMPT_VERSION}", flag)
         await db.commit()
         await validate_revision(db, rev.id)  # AUTO_CHECKED or FLAGGED; never APPROVED
         job = await db.get(m.GenerationJob, job_id)

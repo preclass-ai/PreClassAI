@@ -280,3 +280,15 @@ async def test_val10_flags_an_answer_given_away_by_the_text_and_blocks_approval(
     assert "VAL-10" in got["failedRules"] and got["reviewStatus"] == "FLAGGED"
     ev = (await failed_rules(client, item["id"]))["VAL-10"]
     assert "OPTION_WITH_CUE" in {f["kind"] for f in ev["findings"]}
+
+
+async def test_remediation_generation_flags_every_new_block(client: httpx.AsyncClient) -> None:
+    await login(client, "gv.dia@preclass.local")
+    lesson, rev = await new_lesson(client)
+    assert (await generate(client, lesson, remediation=True)).status_code == 202
+    items = await blocks(client, rev)
+    assert items and all(i["remediationDraft"] is True for i in items)  # shown as "Bản nháp dạy lại" until approved
+    lesson2, rev2 = await new_lesson(client)
+    assert (await generate(client, lesson2)).status_code == 202
+    plain = await blocks(client, rev2)
+    assert plain and not any(i["remediationDraft"] for i in plain)  # the default stays unflagged

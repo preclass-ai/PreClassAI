@@ -393,6 +393,7 @@ class GenerateRequest(ApiModel):
     focus_skills: list[Skill] = []
     mode: Literal["initial", "append"] = Field(
         "initial", description="initial: only when the revision has no blocks. append: add to existing blocks.")
+    remediation: bool | None = Field(None, description="True after a re-teach suggestion: new blocks carry remediationDraft.")
     model_config = ex({"outputType": "WORKSHEET", "nItems": 5, "focusSkills": ["READ_TABLE", "COMPARE"],
                        "mode": "initial"})
 

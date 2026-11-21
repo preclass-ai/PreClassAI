@@ -1974,6 +1974,11 @@ export interface components {
              * @enum {string}
              */
             outputType: "WORKSHEET" | "FLASHCARDS";
+            /**
+             * Remediation
+             * @description True after a re-teach suggestion: new blocks carry remediationDraft.
+             */
+            remediation?: boolean | null;
         };
         /**
          * GuestOut
