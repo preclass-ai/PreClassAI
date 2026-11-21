@@ -262,3 +262,21 @@ async def test_validate_guards(client: httpx.AsyncClient) -> None:
     client.cookies.clear()
     await login(client, "HS10-01")
     assert (await client.post(f"/v1/revisions/{uid('dien-tich-rung:lrev')}/validate")).status_code == 403
+
+
+async def test_val10_flags_an_answer_given_away_by_the_text_and_blocks_approval(client: httpx.AsyncClient) -> None:
+    await login(client, "gv.dia@preclass.local")
+    lesson, rev = await new_lesson(client)
+    await generate(client, lesson)
+    items = await blocks(client, rev)
+    item = next(i for i in items if i["kind"] == "worksheet_item" and i["payload"]["itemType"] == "MCQ")
+    assert "VAL-10" not in await failed_rules(client, item["id"])  # the mock now shows the whole table: no leak
+    ins = next(i for i in items if i["kind"] == "instruction")
+    r = await client.patch(f"/v1/blocks/{ins['id']}", json={"payload": {"text": "Đồng bằng sông Hồng có số dân lớn nhất."},
+                                                             "version": ins["version"]})
+    assert r.status_code == 200, r.text
+    out = (await client.post(f"/v1/revisions/{rev}/validate")).json()
+    got = next(b for b in out["blocks"] if b["blockId"] == item["id"])
+    assert "VAL-10" in got["failedRules"] and got["reviewStatus"] == "FLAGGED"
+    ev = (await failed_rules(client, item["id"]))["VAL-10"]
+    assert "OPTION_WITH_CUE" in {f["kind"] for f in ev["findings"]}

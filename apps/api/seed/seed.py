@@ -65,10 +65,15 @@ def build_blocks(spec: dict[str, Any], vals: list[Decimal], code: dict[str, str]
         B("p2", "paragraph", None, {"text": spec["paras"][1]}, "ORIGINAL", True, links=[("p2", "quotes")]),
         B("ins", "instruction", None, {"text": "Đọc bảng số liệu và trả lời các câu hỏi sau."},
           "AI_PROPOSED", reason=AI_REASON),
-        B("df", "data_fact", None,
-          {"label": f"{labels[imax]}: {metric}", "value": float(vals[imax]), "unit": unit,
-           "period": spec["period"], "region": spec["area"] or labels[imax]},
-          "PARAPHRASED", True, links=[(f"r{imax + 1}c0", "derived_from"), (cell(imax), "derived_from")]),
+    ]
+    # The whole data table is shown (one fact per row) so the questions can be answered by reading it; showing only the
+    # row that is the answer would give it away (VAL-10). Key "df" stays the first row.
+    for i, lab in enumerate(labels):
+        out.append(B("df" if i == 0 else f"df{i}", "data_fact", None,
+                     {"label": f"{lab}: {metric}", "value": float(vals[i]), "unit": unit,
+                      "period": spec["period"], "region": spec["area"] or lab},
+                     "PARAPHRASED", True, links=[(f"r{i + 1}c0", "derived_from"), (cell(i), "derived_from")]))
+    out += [
         B("q1", "worksheet_item", None,
           {"stem": f"Theo bảng số liệu, {spec['ent'].lower()} nào có {metric} cao nhất?",
            "itemType": "MCQ", "skill": "COMPARE"}, "AI_PROPOSED", reason=AI_REASON),
@@ -85,7 +90,7 @@ def build_blocks(spec: dict[str, Any], vals: list[Decimal], code: dict[str, str]
           "SYNTHESISED", True, links=[(cell(imax), "supports"), (cell(isec), "supports")],
           deps=[("q1k", "EXPLANATION_OF")]),
         B("q2", "worksheet_item", None,
-          {"stem": f"Tính chênh lệch {metric} giữa {labels[imax]} và {labels[imin]} (đơn vị: {unit}).",
+          {"stem": f"Tính chênh lệch {metric} giữa {spec['ent'].lower()} cao nhất và {spec['ent'].lower()} thấp nhất (đơn vị: {unit}).",
            "itemType": "NUMERIC", "skill": "CALCULATE"}, "AI_PROPOSED", reason=AI_REASON),
         B("q2k", "answer_key", "q2",
           {"value": float(diff), "unit": unit, "tolerance": 0.05, "derivation": deriv}, "SYNTHESISED", True,
@@ -108,6 +113,7 @@ def rules_for(b: Blk) -> list[str]:
         r.append("VAL-03")
     if b.kind == "worksheet_item":
         r.append("VAL-04")
+        r.append("VAL-10")
     if b.kind == "option":
         r.append("VAL-05")
     return r

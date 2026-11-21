@@ -76,3 +76,15 @@ Xem tokens và số lần bị chặn: đăng nhập ADMIN rồi `GET /v1/admin/
 ## Cá nhân hóa (lựa chọn của học sinh, chế độ tập trung)
 
 `PERSONALIZATION_ENABLED` (mặc định `false`): bật thì học sinh thấy "Em muốn học theo cách nào hôm nay?" và nút "Chế độ tập trung" ở bài; tắt thì route trả 404 và UI ẩn. Đổi cần restart API; cần `alembic upgrade head` (0004) trước khi bật. Habit (`CHAT_ENABLED=true`) không bắt buộc, nhưng lời khuyên theo kỹ năng và cách gợi ý ngắn/ưu tiên bảng chỉ có khi Habit bật. Giá trị đề xuất cho đợt thử: `CHAT_ENABLED=true`, `PERSONALIZATION_ENABLED=true`. Xóa dữ liệu của một học sinh: `DELETE FROM student_preference WHERE student_id = ...`.
+
+## Quy trình merge
+
+1. Chỉ merge khi **CI xanh** và PR có **báo cáo test** (lệnh đã chạy và kết quả: ruff, mypy --strict, pytest, OpenAPI khớp code, web lint/typecheck/vitest/build; Playwright theo viewport khi đổi giao diện).
+2. **Không resolve conflict trên GitHub web.** Có conflict thì gộp `main` vào nhánh ở máy, giải conflict, chạy lại đúng các bước CI rồi push. Lý do: bản giải trên web đã làm mất nội dung (biến `source_*`, CSS upload, mục tài liệu) mà không báo lỗi.
+3. **Merge từng nhánh một**, theo thứ tự phụ thuộc. Trước khi merge nhánh kế tiếp, gộp `main` mới nhất (đã có nhánh vừa merge) vào nhánh đó, giải conflict ở máy và chạy lại CI.
+4. Sau merge: kiểm tra Render chạy đúng commit; không xóa nhánh cho đến khi xong bước này.
+5. Số liệu cứng trong test (`test_contract` đếm operation, tiêu đề CSV) phải khớp openapi thật: đếm từ `openapi.json`, không tính nhẩm.
+
+## Seed và dữ liệu khảo sát
+
+`python -m seed.seed` **bỏ qua** khi DB đã có dữ liệu, nên sửa nội dung seed (ví dụ chống lộ đáp án) chỉ có hiệu lực trên DB mới. Reset DB demo xóa bài làm của học sinh: xuất `GET /v1/admin/survey/export.csv` trước, và không reset giữa chừng một đợt khảo sát. Kiểm tra seed không lộ đáp án: `cd apps/api && PYTHONPATH=. uv run python ../../scripts/ops/check_seed_leak.py` (0 vi phạm; CI chạy cùng kiểm tra trong `tests/unit/test_seed_leak.py`).

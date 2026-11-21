@@ -3273,7 +3273,7 @@ export interface components {
             outcome: "PASS" | "FAIL";
             /**
              * Rule
-             * @description VAL-01 … VAL-09
+             * @description VAL-01 … VAL-10
              */
             rule: string;
             /**

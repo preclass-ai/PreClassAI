@@ -561,7 +561,7 @@ class TransformationEventOut(ApiModel):
 
 class ValidationResultOut(ApiModel):
     id: UUID
-    rule: str = Field(description="VAL-01 … VAL-09")
+    rule: str = Field(description="VAL-01 … VAL-10")
     severity: Severity
     outcome: Outcome
     evidence: dict[str, Any] = {}

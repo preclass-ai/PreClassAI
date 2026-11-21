@@ -21,7 +21,7 @@ test("teacher sees lessons, inspects a block's sources and the publish gate", as
   // S03: review decisions sit next to the selected block, one block at a time.
   await expect(page.locator(".editor-inspector").getByRole("button", { name: "Duyệt khối này" })).toBeVisible();
   await expectNoHorizontalScroll(page);
-  await page.screenshot({ path: `test-results/screens/editor-${info.project.name}.png`, fullPage: true });
+  await page.screenshot({ path: `test-results/screens/editor-${info.project.name}.png`, fullPage: info.project.name !== "webkit-390" });
   // On mobile the inspector is a bottom sheet: close it before moving on.
   await page.getByRole("button", { name: "Đóng" }).click();
   await expect(page.locator(".editor-inspector.open")).toHaveCount(0);
@@ -29,12 +29,12 @@ test("teacher sees lessons, inspects a block's sources and the publish gate", as
   await page.getByRole("tab", { name: "Duyệt" }).click();
   await expect(page.getByText("Hiện khối")).toBeVisible();
   await expectNoHorizontalScroll(page);
-  await page.screenshot({ path: `test-results/screens/review-${info.project.name}.png`, fullPage: true });
+  await page.screenshot({ path: `test-results/screens/review-${info.project.name}.png`, fullPage: info.project.name !== "webkit-390" });
 
   await page.getByRole("tab", { name: /Xuất bản/ }).click();
   await expect(page.getByRole("heading", { name: "Kiểm tra trước khi xuất bản" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Xuất bản", exact: true })).toBeDisabled();
-  await page.screenshot({ path: `test-results/screens/publish-${info.project.name}.png`, fullPage: true });
+  await page.screenshot({ path: `test-results/screens/publish-${info.project.name}.png`, fullPage: info.project.name !== "webkit-390" });
 });
 
 test("source library lists anchors of a source", async ({ page }) => {

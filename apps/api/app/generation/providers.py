@@ -147,11 +147,13 @@ class MockProvider:
         top = max(rows, key=lambda r: r[1].numbers[0])
         low = min(rows, key=lambda r: r[1].numbers[0])
         fake = "fake_anchor" in self.inject
-        out.append(DraftBlock(
-            key="df", kind="data_fact", isFactual=True, transformation="PARAPHRASED",
-            payload={"label": f"{top[0].excerpt}: giá trị cao nhất", "value": float(top[1].numbers[0]), "unit": unit,
-                     "period": "theo nguồn", "region": top[0].excerpt},
-            anchorAliases=["A999"] if fake else [top[0].alias, top[1].alias]))
+        # Every row of the table is shown (one fact each): a single fact for the largest row would answer the MCQ (VAL-10).
+        for r, (name, val) in enumerate(rows[:4]):
+            out.append(DraftBlock(
+                key="df" if r == 0 else f"df{r}", kind="data_fact", isFactual=True, transformation="PARAPHRASED",
+                payload={"label": f"{name.excerpt}: giá trị", "value": float(val.numbers[0]), "unit": unit,
+                         "period": "theo nguồn", "region": name.excerpt},
+                anchorAliases=["A999"] if fake and r == 0 else [name.alias, val.alias]))
         variants = ["max", "diff", "min", "sum"]
         for i in range(max(1, min(req.n_items, len(variants)))):
             v, q = variants[i], f"q{i}"
@@ -186,7 +188,8 @@ class MockProvider:
                 word = "chênh lệch" if op == "diff" else "tổng"
                 out.append(DraftBlock(key=q, kind="worksheet_item", transformation="AI_PROPOSED",
                                       noSourceReason="Câu hỏi sư phạm do AI đề xuất.",
-                                      payload={"stem": f"Tính {word} giữa {a[0].excerpt} và {b[0].excerpt}.",
+                                      payload={"stem": ("Tính chênh lệch giữa giá trị lớn nhất và giá trị nhỏ nhất trong bảng." if op == "diff"
+                                                else "Tính tổng giữa giá trị lớn nhất và giá trị của dòng đầu tiên trong bảng."),
                                                "itemType": "NUMERIC", "skill": "CALCULATE"}))
                 deriv = {"op": op, "operands": [a[1].alias, b[1].alias]}
                 out.append(DraftBlock(key=f"{q}k", kind="answer_key", parentKey=q, transformation="SYNTHESISED",

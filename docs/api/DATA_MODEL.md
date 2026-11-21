@@ -48,7 +48,7 @@ erDiagram
 | `provenance_link` | `block_id`, `anchor_id`, `relation` derived_from/quotes/supports, `rationale`, `status` VERIFIED/UNRESOLVED | VERIFIED chỉ khi anchor thuộc nguồn của revision. |
 | `block_dependency` | `block_id`, `depends_on_block_id`, `kind` ANSWER_OF/EXPLANATION_OF/FEEDBACK_OF/LABEL_OF | Sửa X ⇒ block phụ thuộc X (bắc cầu) và cha trực tiếp của X → REVIEW_AGAIN. |
 | `transformation_event` | `block_id`, `actor_type`, `actor_id`, `operation`, `before_hash`, `after_hash`, `generator_version` | **Chỉ thêm.** |
-| `validation_result` | `block_id`, `rule` VAL-01..09, `severity`, `outcome`, `evidence`, `method`, `content_hash` | **Chỉ thêm.** Kết quả cũ gắn hash cũ → API trả `isCurrent`. |
+| `validation_result` | `block_id`, `rule` VAL-01..10, `severity`, `outcome`, `evidence`, `method`, `content_hash` | **Chỉ thêm.** Kết quả cũ gắn hash cũ → API trả `isCurrent`. |
 | `review_event` | `block_id`, `content_hash`, `source_hashes text[]`, `reviewer_id`, `action`, `note` | **Chỉ thêm.** Duyệt gắn hash nội dung + hash nguồn. |
 | `generation_job` | `revision_id`, `output_type`, `params`, `status`, `error`, `model`, `prompt_version`, `tokens_in/out` | Tối đa 1 job QUEUED/RUNNING mỗi revision (unique index). |
 | `usage_daily` | `day`, `tokens` | Đếm token cho `GENERATION_DAILY_TOKEN_BUDGET`. |
@@ -158,3 +158,7 @@ Mỗi bài có: 1 nguồn văn bản (tiêu đề, 2 đoạn, bảng 4 hàng × 
 | Bảng | Cột | Ghi chú |
 |---|---|---|
 | `student_preference` | `student_id, key, value on/5/10, updated_at` | khóa chính (student, key); `key` bị CHECK vào đúng 6 khóa cố định; không có hàng = tắt; không có cột nào khác về học sinh |
+
+## VAL-10 (migration 0005)
+
+`ck_validation_rule` rộng từ `VAL-01..09` sang `VAL-01..19` (đổi CHECK, không đổi dữ liệu cũ; downgrade dùng `NOT VALID` vì bảng chỉ thêm). VAL-10 chạy trên `worksheet_item`, kết quả `evidence.findings[{kind, block, in}]` với `kind` ∈ `NUMBER`, `OPTION_WITH_CUE`, `SINGLED_OUT` (Chặn) hoặc `CUE_TOKEN`, `NARROWS` (Cảnh báo). Seed: mỗi hàng bảng là một `data_fact` (khối `df`, `df1`, `df2`, `df3`), đáp án đúng ở các vị trí A–D khác nhau giữa các bài.

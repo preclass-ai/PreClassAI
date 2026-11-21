@@ -1,4 +1,4 @@
-"""Validation rules VAL-01..09 and the runner (GĐ7).
+"""Validation rules VAL-01..10 and the runner (GĐ7; VAL-10 = no answer leak before submitting, see leak.py).
 
 Results are append-only and bound to the block's content_hash. The runner never approves anything: it only moves a
 block between UNREVIEWED / AUTO_CHECKED / FLAGGED, and APPROVED -> REVIEW_AGAIN when an approval is no longer valid.
@@ -20,6 +20,7 @@ from app.db import models as m
 from app.hashing import norm_text
 from app.schemas import BlockValidationSummary, ValidateOut
 from app.sources.numbers import parse_numbers
+from app.validation.leak import item_answer_leaks, severity, visible_text
 
 _GLOSSARY = [t.strip().lower() for t in (Path(__file__).parent / "glossary_geo.txt").read_text(encoding="utf-8").splitlines()
              if t.strip() and not t.startswith("#")]
@@ -63,6 +64,7 @@ class Ctx:
     children: dict[UUID, list[m.ContentBlock]]
     last_approval: dict[UUID, m.ReviewEvent]
     source_hashes: dict[UUID, list[str]]
+    visible: list[tuple[UUID, str, str]] = field(default_factory=list)  # (block id, kind, text) a student sees before answering
 
 
 def _exempt(n: Decimal) -> bool:  # years and small ordinals (PR-07)
@@ -223,7 +225,21 @@ def val09(b: m.ContentBlock, ctx: Ctx) -> R | None:
     return _fail("VAL-09", "BLOCKER", anchors=bad) if bad else _pass("VAL-09")
 
 
-RULES = (val01, val02, val03, val04, val05, val06, val08, val09)  # VAL-07 (images): P1 stub, always passes
+def val10(b: m.ContentBlock, ctx: Ctx) -> R | None:
+    """The answer must not be readable from anything shown before this item is answered (every subject)."""
+    if b.kind != "worksheet_item":
+        return None
+    kids = ctx.children.get(b.id, [])
+    key = next((k.payload for k in kids if k.kind == "answer_key"), {})
+    opts = sorted((str(o.payload.get("label")), str(o.payload.get("text"))) for o in kids if o.kind == "option")
+    found = item_answer_leaks(str(b.payload.get("itemType")), opts, key,
+                              [(str(i), k, t) for i, k, t in ctx.visible if i != b.id])
+    if not found:
+        return _pass("VAL-10")
+    return _fail("VAL-10", severity(found), findings=found)
+
+
+RULES = (val01, val02, val03, val04, val05, val06, val08, val09, val10)  # VAL-07 (images): P1 stub, always passes
 
 
 async def _context(db: AsyncSession, revision_id: UUID, blocks: list[m.ContentBlock]) -> Ctx:
@@ -257,8 +273,10 @@ async def _context(db: AsyncSession, revision_id: UUID, blocks: list[m.ContentBl
         for ev in await db.scalars(select(m.ReviewEvent).where(m.ReviewEvent.block_id.in_(approved)).order_by(
                 m.ReviewEvent.created_at)):
             last[ev.block_id] = ev
+    visible = [(b.id, "stem" if b.kind == "worksheet_item" else b.kind, visible_text(b.kind, b.payload)) for b in blocks
+               if b.kind in ("heading", "paragraph", "instruction", "data_fact", "card_front", "worksheet_item")]
     return Ctx(anchors, {n for ns in anchors.values() for n in ns}, links, children, last,
-               {k: sorted(v) for k, v in shash.items()})
+               {k: sorted(v) for k, v in shash.items()}, visible)
 
 
 async def evaluate_revision(db: AsyncSession, revision_id: UUID) -> tuple[list[m.ContentBlock], dict[UUID, list[R]]]:
