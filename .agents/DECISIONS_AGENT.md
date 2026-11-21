@@ -102,3 +102,11 @@
 - Căn cứ pháp lý mới ghi trong `docs/security/PHAP-LY-DU-LIEU.md` kèm cảnh báo chưa kiểm chứng; không sửa ADR-0013 cho đến khi có văn bản gốc.
 - Trang "Dữ liệu của em đi đâu" chưa làm (cần quyết định thời hạn lưu).
 - `reteach` idempotent theo đoạn nguồn: bản nháp dạy lại chưa xử lý thì mở lại, không thêm trùng; giao diện cũng không sinh thêm câu luyện khi `alreadyExists`.
+
+## 22/11 fix/habit-smalltalk
+- **Nguyên nhân HTTPError**: User-Agent mặc định của urllib bị chặn; sửa ở `OpenAICompatibleProvider._post` (dùng chung cho cả sinh nội dung).
+- **Model chính qwen, dự phòng gpt-oss** (bảng ở `LLM-EVAL-2211.md`). Cấu hình qua env, tham số theo tên model trong `app/habit/llm.py:profile`.
+- **`ModelText(str)`** mang `model` và `reasoning` để giữ giao thức `complete() -> (text, tin, tout)`: mock, insights và test cũ không phải sửa.
+- **Câu xã giao** chỉ khi MỌI từ thuộc danh sách nhỏ và không bị nhận diện ý định (nên "cảm ơn, cho em đáp án" vẫn bị từ chối).
+- **Gợi ý bấm lại**: đếm số lần đã hiện của từng bậc trong phiên (`hint_level` giờ lưu cả với nút nhanh và câu how-to), mỗi lần một mẫu khác; hết mẫu thì chỉ sang bậc kế. Cột `chat_message.model` (migration 0011).
+- **Replay thật**: `scripts/ops/record_replay.py` ghi `replay.json` từ một lần chạy model thật trên dữ liệu tổng hợp.

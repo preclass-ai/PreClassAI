@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     chat_llm_base_url: str = ""
     chat_llm_api_key: str = ""
     chat_llm_model: str = ""
+    chat_llm_model_fallback: str = ""  # same key and base URL; tried when the main model errors, times out or hits a rate limit
+    chat_llm_temperature: float | None = None  # None = the model's profile (app/habit/llm.py:profile)
+    chat_llm_reasoning_effort: str = ""  # "" = the model's profile; "off" = never send the field
+    chat_llm_token_param: str = ""  # max_completion_tokens | max_tokens; "" = by provider host
     chat_max_output_tokens: int = 220
     chat_daily_token_budget: int = 300_000
     habit_daily_goal: int = 3

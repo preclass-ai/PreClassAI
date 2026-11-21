@@ -5596,6 +5596,14 @@
             "title": "Chatblocked",
             "type": "object"
           },
+          "chatByModel": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Replies per model name (main, fallback, cache).",
+            "title": "Chatbymodel",
+            "type": "object"
+          },
           "chatFallbackRate": {
             "default": 0,
             "description": "Share of LLM attempts that fell back to the rule reply.",

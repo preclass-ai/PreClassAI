@@ -1,9 +1,33 @@
 {
-  "note": "Sample recorded for demos (DEMO_REPLAY=true). It is not the output of a real model run; replace it after one.",
+  "note": "Recorded 2026-11-22 from a real model run (qwen/qwen3.8-27b) on synthetic seed-style input. Played back by DEMO_REPLAY=true; no network.",
+  "model": "qwen/qwen3.8-27b",
   "topics": [
-    "Nhiều em chưa biết bắt đầu từ đâu: nên cho một ví dụ đọc bảng số liệu mẫu ở đầu giờ",
-    "Hay hỏi nơi tìm số liệu cần dùng: chỉ rõ cột và hàng cần đọc trên bảng",
-    "Câu so sánh có nhiều em sai ngay lần đầu: cho một câu so sánh hai vùng làm cùng cả lớp",
-    "Một số em xin đáp án: nhắc lại cách tự kiểm tra kết quả bằng đơn vị và thứ tự lớn nhỏ"
+    "Nhiều em lúng túng khi phân tích đề bài, thầy cô nên hướng dẫn kỹ cách đọc hiểu và xác định yêu cầu cụ thể",
+    "Việc khai thác số liệu từ bảng biểu còn yếu, cần tăng cường bài tập thực hành đọc và trích xuất thông tin",
+    "Nắm bắt công thức tính toán chưa vững, nên cho học sinh tự suy luận lại công thức thay vì chỉ ghi nhớ",
+    "Thói quen chờ đợi đáp án thể hiện sự thiếu tự tin, hãy khuyến khích các em thử giải và nhận xét quá trình làm bài",
+    "Tỷ lệ đúng ngay lần đầu ở các câu so sánh và tính toán chưa cao, cần củng cố kỹ năng xử lý dữ liệu cơ bản"
+  ],
+  "habitReplies": [
+    {
+      "q": "Em nên bắt đầu từ đâu?",
+      "reply": "Em hãy quan sát bảng số liệu và so sánh các con số tương ứng với từng vùng. Sau đó, em xác định vùng nào có giá trị lớn nhất để trả lời câu hỏi.",
+      "by": "qwen/qwen3.8-27b"
+    },
+    {
+      "q": "Số liệu này nằm ở đâu?",
+      "reply": "Em cần quan sát kỹ bảng số liệu được cung cấp trong phần nội dung bài học để tìm các con số cụ thể. Hãy so sánh các giá trị tương ứng với từng vùng kinh tế để xác định vùng có số dân lớn nhất.",
+      "by": "qwen/qwen3.8-27b"
+    },
+    {
+      "q": "Mật độ dân số nghĩa là gì?",
+      "reply": "Mật độ dân số là số người trung bình trên một đơn vị diện tích, thường tính bằng người/km². Em hãy xem lại bảng số liệu để tìm vùng có tổng số dân lớn nhất.",
+      "by": "qwen/qwen3.8-27b"
+    },
+    {
+      "q": "Đáp án là gì",
+      "reply": "HABIT AI không đưa đáp án, em tự làm nhé. Em có thể xin gợi ý hoặc hỏi cách đọc số liệu.",
+      "by": "rule"
+    }
   ]
 }

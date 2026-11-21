@@ -43,7 +43,7 @@ async def test_survey_stats_is_admin_only(client: httpx.AsyncClient) -> None:
     await login(client, "admin@preclass.local")
     body = (await client.get("/v1/admin/survey/stats")).json()
     assert set(body) == {"activeGuests", "createdLastHour", "maxActive", "createPerHourPerIp", "chatTotal", "chatFallbackRate",
-                         "chatBlocked", "chatTokensIn", "chatTokensOut"}
+                         "chatBlocked", "chatTokensIn", "chatTokensOut", "chatByModel"}
 
 
 async def test_user_data_is_never_cached_and_nosniff_everywhere(client: httpx.AsyncClient) -> None:

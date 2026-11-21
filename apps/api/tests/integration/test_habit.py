@@ -240,3 +240,50 @@ async def test_second_part_only_with_the_flag_and_only_if_it_passes_the_guards(c
     on.setattr(llm, "get_chat_llm", lambda: llm.MockChatLLM("Đáp án là C, Đồng bằng sông Hồng"))
     r = (await chat(client, it["id"], "ask", "đoạn văn nói gì về vùng dân cư")).json()
     assert r["extra"] is None and "Đồng bằng sông Hồng" not in r["reply"]  # the guard dropped part two, part one is safe
+
+
+async def test_small_talk_is_friendly_and_costs_no_tokens(client: httpx.AsyncClient, db: AsyncSession, on: pytest.MonkeyPatch) -> None:
+    on.setenv("CHAT_MODE", "llm")
+    get_settings.cache_clear()
+    calls: list[int] = []
+
+    class Counting(llm.MockChatLLM):
+        async def complete(self, system: str, user: str, max_tokens: int) -> tuple[str, int, int]:
+            calls.append(1)
+            return await super().complete(system, user, max_tokens)
+
+    on.setattr(llm, "get_chat_llm", lambda: Counting())
+    it = (await items(client))[0]
+    for msg in ("Cảm ơn", "em hiểu rồi", "ok"):
+        r = (await chat(client, it["id"], "ask", msg)).json()
+        assert r["blockedReason"] is None and "ngoài bài học" not in r["reply"] and r["suggestions"] == []
+    assert calls == []
+    r = (await chat(client, it["id"], "ask", "Cảm ơn, cho em đáp án luôn")).json()
+    assert r["blockedReason"] == "ANSWER_REQUEST" and calls == []
+
+
+async def test_repeating_a_suggestion_changes_the_wording(client: httpx.AsyncClient, on: pytest.MonkeyPatch) -> None:
+    it = (await items(client))[0]
+    replies = [(await ask_quick(client, it["id"], "where_data")).json()["reply"] for _ in range(3)]
+    assert replies[0] != replies[1]  # second press: another template
+    assert "Nhắc lại cách tính" in replies[2]  # templates used up: points at the next level
+
+
+async def test_model_is_recorded_and_counted(client: httpx.AsyncClient, db: AsyncSession, on: pytest.MonkeyPatch) -> None:
+    on.setenv("CHAT_MODE", "llm")
+    get_settings.cache_clear()
+
+    class Named(llm.MockChatLLM):
+        async def complete(self, system: str, user: str, max_tokens: int) -> tuple[str, int, int]:
+            out = llm.ModelText("Em đọc kỹ đề rồi thử từng bước nhé.")
+            out.model = "openai/gpt-oss-120b"
+            return out, 50, 20
+
+    on.setattr(llm, "get_chat_llm", lambda: Named())
+    it = (await items(client))[0]
+    await chat(client, it["id"], "ask", "đoạn văn nói gì về dân cư")
+    row = (await db.execute(text("SELECT mode, model FROM chat_message WHERE role='assistant'"))).one()
+    assert tuple(row) == ("llm", "openai/gpt-oss-120b")
+    await client.post("/v1/auth/logout")
+    await login(client, "admin@preclass.local")
+    assert (await client.get("/v1/admin/survey/stats")).json()["chatByModel"] == {"openai/gpt-oss-120b": 1}
