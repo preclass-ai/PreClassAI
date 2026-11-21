@@ -88,7 +88,7 @@ async def test_uploaded_file_is_stored_under_random_name_not_client_name(client:
     r = await upload(client, make_docx(), name="../../evil.docx")
     assert r.status_code == 201
     stored = sorted(p.name for p in Path(get_settings().upload_dir).iterdir())
-    assert stored and all(re.fullmatch(r"[0-9a-f-]{36}\.docx", n) for n in stored)
+    assert stored and all(re.fullmatch(r"[0-9a-f-]{36}\.(docx|pdf|xlsx|pptx)", n) for n in stored)
     assert not (Path(get_settings().upload_dir).parent / "evil.docx").exists()
 
 

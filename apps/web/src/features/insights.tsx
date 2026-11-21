@@ -9,6 +9,14 @@ import { errorCode } from "@/lib/errors";
 import { fmtPercent } from "@/lib/format";
 import { SKILL } from "@/lib/labels";
 
+const REFUSAL: Record<string, string> = {
+  ANSWER_REQUEST: "Xin đáp án",
+  CONFIRM_OPTION: "Hỏi phương án đúng hay sai",
+  INJECTION: "Cố đổi cách làm việc của HABIT AI",
+  UNSAFE: "Nội dung không phù hợp",
+  OFFTOPIC: "Ngoài phạm vi bài",
+};
+
 /** "Học sinh hỏi gì": questions asked to HABIT AI, grouped, anonymous. Teacher of the class only (the server enforces it). */
 export function Insights({ classId, assignmentId }: { classId: string; assignmentId: string }) {
   const path = { class_id: classId, assignment_id: assignmentId };
@@ -44,13 +52,16 @@ export function Insights({ classId, assignmentId }: { classId: string; assignmen
         </>
       )}
 
+      {(d.competencies ?? []).length ? <Heatmap d={d} /> : null}
+
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Câu</th>
               <th>Đúng ngay lần đầu</th>
-              <th>Gợi ý đã dùng</th>
+              <th>Phương án sai hay chọn</th>
+              <th>Gợi ý cao nhất</th>
               <th>Câu hỏi cho HABIT AI</th>
             </tr>
           </thead>
@@ -61,19 +72,40 @@ export function Insights({ classId, assignmentId }: { classId: string; assignmen
                   {i.position}. {i.stem} <span className="muted small">({SKILL[i.skill]})</span>
                 </td>
                 <td>{fmtPercent(i.firstAttemptCorrectRate)}</td>
-                <td>{i.hintsUsed}</td>
-                <td>{i.asks}</td>
+                <td>{i.topWrongOption ? `${i.topWrongOption} (${fmtPercent(i.topWrongShare ?? null)})` : "Chưa có"}</td>
+                <td>{i.maxHintLevel ? `Bậc ${i.maxHintLevel}` : "Chưa dùng"}</td>
+                <td>
+                  {i.asks}
+                  {i.needsReteach ? <> <span className="badge badge-warning">Cần dạy lại</span></> : null}
+                  {(i.questions ?? []).length ? (
+                    <details>
+                      <summary className="small">Câu hỏi theo câu</summary>
+                      <ul className="plain small">
+                        {(i.questions ?? []).map((q) => (
+                          <li key={q.key}>
+                            {q.label} ({q.count}): {q.examples.map((e) => `“${e}”`).join("; ")}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
+      {(d.blockedReasons ?? []).length ? (
+        <p className="muted small">
+          HABIT AI đã từ chối: {(d.blockedReasons ?? []).map((b) => `${REFUSAL[b.reason] ?? b.reason} (${b.count})`).join("; ")}.
+        </p>
+      ) : null}
       <div className="row-actions">
         <Button variant="secondary" busy={analyze.isPending} onClick={() => analyze.mutate()}>
           {d.llmAvailable ? "AI phân tích" : "Tóm tắt chủ đề vướng"}
         </Button>
-        <Practice insights={d} />
+        <Practice insights={d} classId={classId} />
       </div>
       <ErrorBox error={analyze.error} />
       {analyze.data ? (
@@ -85,7 +117,11 @@ export function Insights({ classId, assignmentId }: { classId: string; assignmen
                 <li key={t}>{t}</li>
               ))}
             </ul>
-            <p className="muted small">{analyze.data.generatedBy === "llm" ? "Do AI tóm tắt, thầy cô kiểm tra lại." : "Tổng hợp tự động từ câu hỏi và kết quả."}</p>
+            <p className="muted small">{analyze.data.generatedBy === "llm"
+                ? "Do AI tóm tắt, thầy cô kiểm tra lại."
+                : analyze.data.generatedBy === "replay"
+                  ? "Bản ghi sẵn dùng cho trình diễn, chưa phải kết quả chạy trực tiếp."
+                  : "Tổng hợp tự động từ câu hỏi và kết quả."}</p>
           </div>
         ) : (
           <Notice>Chưa đủ dữ liệu để tóm tắt.</Notice>
@@ -95,12 +131,76 @@ export function Insights({ classId, assignmentId }: { classId: string; assignmen
   );
 }
 
+/** First-attempt correct rate per item (rows) and competency (columns); each item belongs to one competency. */
+function Heatmap({ d }: { d: Schemas["InsightsOut"] }) {
+  const cols = d.competencies ?? [];
+  const band = (r: number | null | undefined) => (r == null ? "heat-none" : r < 0.4 ? "heat-low" : r < 0.7 ? "heat-mid" : "heat-high");
+  return (
+    <div className="table-wrap" role="region" aria-label="Bản đồ nhiệt: tỉ lệ đúng ngay lần đầu theo câu và năng lực" tabIndex={0}>
+      <table className="heat">
+        <caption className="small muted">Tỉ lệ đúng ngay lần đầu theo câu và năng lực</caption>
+        <thead>
+          <tr>
+            <th scope="col">Câu</th>
+            {cols.map((c) => (
+              <th key={c.code} scope="col">
+                {c.name}
+              </th>
+            ))}
+          </tr>
+          <tr>
+            <th scope="row">Cả năng lực</th>
+            {cols.map((c) => (
+              <td key={c.code} className={band(c.firstAttemptCorrectRate)}>
+                {fmtPercent(c.firstAttemptCorrectRate ?? null)}
+              </td>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {d.items.map((i) => (
+            <tr key={i.itemBlockId}>
+              <th scope="row">Câu {i.position}</th>
+              {cols.map((c) => (
+                <td key={c.code} className={c.code === i.competencyCode ? band(i.firstAttemptCorrectRate) : "heat-empty"}>
+                  {c.code === i.competencyCode ? fmtPercent(i.firstAttemptCorrectRate ?? null) : ""}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /** Draft extra practice with the existing Generate pipeline: AI proposes, validation runs, the teacher approves like any block. */
-function Practice({ insights: d }: { insights: Schemas["InsightsOut"] }) {
+function Practice({ insights: d, classId }: { insights: Schemas["InsightsOut"]; classId: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  if (!d.canPractice || d.focusSkills.length === 0) return null;
+  if (!d.canPractice || (d.focusSkills.length === 0 && (d.reteachItemIds ?? []).length === 0)) return null;
+
+  async function reteach() {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await unwrap(api.POST("/v1/classes/{class_id}/assignments/{assignment_id}/insights/reteach", { params: { path: { class_id: classId, assignment_id: d.assignmentId } } }));
+      if (d.focusSkills.length && !r.alreadyExists) {  // a draft already covers these passages: open it, do not add more
+        await unwrap(
+          api.POST("/v1/lessons/{lesson_id}/generate", {
+            params: { path: { lesson_id: d.lessonId } },
+            body: { outputType: "WORKSHEET", nItems: 3, focusSkills: d.focusSkills, mode: "append" },
+          }),
+        );
+      }
+      router.push(`/lessons/${d.lessonId}?tab=editor`);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function run() {
     setBusy(true);
@@ -127,7 +227,12 @@ function Practice({ insights: d }: { insights: Schemas["InsightsOut"] }) {
 
   return (
     <>
-      <Button variant="primary" busy={busy} onClick={() => void run()}>
+      {(d.reteachItemIds ?? []).length ? (
+        <Button variant="primary" busy={busy} onClick={() => void reteach()}>
+          Đề xuất dạy lại
+        </Button>
+      ) : null}
+      <Button variant={(d.reteachItemIds ?? []).length ? "secondary" : "primary"} busy={busy} onClick={() => void run()}>
         AI gợi ý bài tập thêm
       </Button>
       <ErrorBox error={error} />

@@ -60,4 +60,46 @@ describe("Insights", () => {
     expect(post.mock.calls[1]![0]).toBe("/v1/lessons/{lesson_id}/generate");
     expect(post.mock.calls[1]![1].body).toEqual({ outputType: "WORKSHEET", nItems: 3, focusSkills: ["COMPARE"], mode: "append" });
   });
+
+  it("shows the distractor, hint level, per-item questions and blocked reasons, and chains reteach then generate", async () => {
+    get.mockResolvedValue({
+      ...base,
+      reteachItemIds: ["i"],
+      blockedReasons: [{ reason: "ANSWER_REQUEST", count: 3 }],
+      items: [{ ...base.items[0], topWrongOption: "B", topWrongShare: 0.5, maxHintLevel: 2, needsReteach: true,
+        questions: [{ key: "start", label: "Chưa biết bắt đầu từ đâu", count: 2, examples: ["Em nên bắt đầu từ đâu?"] }] }],
+    });
+    post.mockResolvedValue({ jobId: "j" });
+    wrap();
+    expect(await screen.findByText("B (50%)")).toBeInTheDocument();
+    expect(screen.getByText("Bậc 2")).toBeInTheDocument();
+    expect(screen.getByText("Cần dạy lại")).toBeInTheDocument();
+    expect(screen.getByText(/Xin đáp án \(3\)/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Đề xuất dạy lại" }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    expect(post.mock.calls[0]![0]).toBe("/v1/classes/{class_id}/assignments/{assignment_id}/insights/reteach");
+    expect(post.mock.calls[1]![0]).toBe("/v1/lessons/{lesson_id}/generate");
+  });
+
+  it("reuses an existing re-teach draft: no extra practice is generated", async () => {
+    get.mockResolvedValue({ ...base, reteachItemIds: ["i"] });
+    post.mockResolvedValue({ alreadyExists: true, blocks: 0 });
+    wrap();
+    fireEvent.click(await screen.findByRole("button", { name: "Đề xuất dạy lại" }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(post.mock.calls[0]![0]).toContain("/insights/reteach");
+  });
+
+  it("draws the competency heatmap: item rows by competency columns", async () => {
+    get.mockResolvedValue({
+      ...base,
+      competencies: [{ code: "TIM_HIEU", name: "Tìm hiểu địa lí", answeredCount: 2, firstAttemptCorrectRate: 0.25, itemIds: ["i"] }],
+      items: [{ ...base.items[0], competencyCode: "TIM_HIEU", firstAttemptCorrectRate: 0.25 }],
+    });
+    wrap();
+    const grid = await screen.findByRole("region", { name: /Bản đồ nhiệt/ });
+    expect(grid).toHaveTextContent("Tìm hiểu địa lí");
+    expect(grid).toHaveTextContent("Câu 1");
+    expect(grid.querySelectorAll(".heat-low").length).toBe(2);
+  });
 });

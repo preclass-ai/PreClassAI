@@ -12,6 +12,7 @@ function block(id: string, parentId: string | null, position: number, extra: Par
     transformation: "TEACHER_AUTHORED",
     contentHash: `h-${id}`,
     isFactual: false,
+    remediationDraft: false,
     noSourceReason: null,
     revisionId: "r1",
     version: 1,

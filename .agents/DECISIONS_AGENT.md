@@ -72,3 +72,27 @@
 - **Đổi mã lỗi `ASSIGNMENT_CLOSED` thành `PAST_DUE`** theo yêu cầu; giao diện chấp nhận cả hai để không vỡ nếu backend chưa lên.
 - **Hạn nộp hiện cho mọi học sinh, kể cả lớp khảo sát/khách** (bỏ ẩn): đổi test cũ `due-date.test.tsx`. Hạn của lớp KS trong seed là +365 ngày; đặt lại khi cần.
 - **"Ngày học" chỉ ở giao diện**: API không đổi, hạn vẫn là `dueAt` (23:59 ngày trước ngày học, giờ máy giáo viên).
+
+## Giáo án 5512, PR D1 (feat/lesson-plan-5512, 2026-11-21)
+- **pdfplumber thay pypdf cho giáo án** vì cần tọa độ ký tự, đường và hình chữ nhật (gạch chân, khung); nguồn PDF thường giữ pypdf. Thêm `pdfplumber` (runtime) và `reportlab` (chỉ dev, để dựng fixture).
+- **Loại neo mới nằm trong `locator.type`**, không sửa CHECK của `source_anchor`.
+- **Đáp án chỉ từ gạch chân hoặc giáo viên**; không dùng mô hình, không đọc "Đáp án" tự do trong văn bản.
+- **Một khung đơn ô là khung kiến thức, bảng cần 2 ô trở lên trên một hàng** (pdfplumber gộp khung sát bảng thành một bảng).
+- **Môn và lớp kế thừa từ bài trước trong cùng tệp** khi tiêu đề bài sau không lặp lại.
+- **Chưa có endpoint và chưa ghi DB** (PR D2): bảng đã có, kiểm tra bằng test schema.
+- **Fixture PDF cần phông có tiếng Việt** (DejaVu trên Linux, Arial trên Windows); test tự bỏ qua nếu máy không có.
+
+## Giáo án 5512, PR D2 (feat/preclass-from-plan)
+- **Đọc giáo án là job nền** (bổ sung theo yêu cầu 21/11): POST trả 202, trạng thái trong bảng `lesson_plan_job`, tiến độ trang từ tiến trình con qua mảng chia sẻ (bộ nhớ, mất khi khởi động lại thì job thành failed). File giữ trong bộ nhớ của tác vụ, không ghi đĩa cho tới khi đọc xong. Một job mỗi giáo viên; semaphore toàn cục vẫn là 1 (Render 512 MB).
+- **Chưa có ảnh trang có tô vùng**: màn kiểm tra hiện văn bản theo hoạt động kèm số trang. Cần render trang (pypdfium2 đã có sẵn) nếu muốn.
+- **`TEACHER_AUTHORED` bị `generation._persist` đổi thành `AI_PROPOSED`** (mô hình không được tự nhận). Vì vậy khối từ giáo án dùng `ORIGINAL` (trích nguyên văn, có neo) và `SYNTHESISED` (lời giải mẫu, thẻ hỏi); tiêu đề bài là tên bài, không tạo khối tiêu đề.
+- **Mã năng lực chưa gắn vào khối bài** (khối không có trường này). Mã chỉ ở bước đọc (mục tiêu) và cần cột thêm ở PR sau.
+- **Hint bậc 1 đến 2 duyệt sẵn và câu ôn sau giờ (post_spaced) chưa làm**: cần cột hoặc loại khối mới và chỉnh HABIT AI.
+- **Lời giải mẫu theo khuôn** ("Đáp án đúng là X. <nội dung phương án>") vì chưa bật LLM; khi bật có thể thay bằng lời giải do AI viết có neo.
+
+## Bảng insight v2, PR D3 (feat/insights-v2)
+- **Heatmap theo năng lực** (bổ sung 21/11): có sau khi khối có `competency_code` (D2). Lưới câu x năng lực, mỗi câu thuộc một năng lực nên mỗi hàng một ô có màu; hàng đầu là tỉ lệ cả năng lực.
+- **Nhóm câu hỏi theo câu dùng cùng bộ luật chủ đề của PR C** (0đ). Số học sinh mỗi cụm chưa hiện (chỉ số lượt hỏi) để tránh nhận diện trong lớp nhỏ.
+- **"Đề xuất dạy lại" = trích nguyên văn đoạn nguồn + câu luyện thêm qua Generate sẵn có**, không gọi LLM mới; khối tạo ra là `instruction` ORIGINAL kèm cờ `remediation_draft` (migration 0009). Các câu luyện thêm sinh qua Generate chưa mang cờ này (Generate không biết ngữ cảnh dạy lại).
+- **`replay.json` là mẫu viết tay, chưa phải kết quả của một lần chạy model thật**; phải ghi lại sau khi bật Groq. Giao diện gắn nhãn "bản ghi sẵn" để không bị hiểu là kết quả trực tiếp.
+- `reteach` idempotent theo đoạn nguồn: bản nháp dạy lại chưa xử lý thì mở lại, không thêm trùng; giao diện cũng không sinh thêm câu luyện khi `alreadyExists`.

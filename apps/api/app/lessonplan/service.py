@@ -1,0 +1,392 @@
+# ruff: noqa: E501
+"""Lesson plans (CV 5512) for the teacher: upload, check what was read, confirm answers, build the pre-class lesson draft.
+
+The draft goes through the normal pipeline: blocks are written with provenance links to the plan's anchors, validation
+VAL-01..10 runs, and nothing is approved or published here.
+"""
+
+import asyncio
+import logging
+import re
+import uuid
+from collections.abc import Awaitable, Callable
+from datetime import UTC, date, datetime, time, timedelta
+from typing import Any
+from uuid import UUID
+
+from sqlalchemy import func, insert, select, update
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.auth import CurrentUser
+from app.blocks import NOT_FOUND
+from app.config import get_settings
+from app.db import models as m
+from app.db.session import get_engine
+from app.errors import ApiError
+from app.generation import _persist
+from app.generation.providers import AnchorView, Draft, DraftBlock
+from app.lessonplan.model import PlanFile
+from app.schemas import (
+    Competency,
+    CompetencyList,
+    PlanDetail,
+    PlanItem,
+    PlanJobLatest,
+    PlanJobOut,
+    PlanLessonOut,
+    PlanList,
+    PlanMcq,
+    PlanMcqOption,
+    PlanObjective,
+    PlanOut,
+    PlanSection,
+    SubjectCompetencyOut,
+)
+from app.sources.formats import MIME, Limits, detect_kind, parse_isolated
+from app.sources.parse import MAX_UPLOAD_BYTES, ParsedAnchor
+from app.sources.service import _insert_revision, _store_docx, sha256_hex_bytes
+from app.validation import validate_revision
+
+log = logging.getLogger(__name__)
+VN_OFFSET = timedelta(hours=7)
+MAX_PRACTICE = 5
+
+
+def due_before(taught_from: date | None) -> datetime | None:
+    """Day before the first teaching day at 23:59 Vietnam time (UTC+7), as an aware UTC datetime."""
+    if taught_from is None:
+        return None
+    local = datetime.combine(taught_from - timedelta(days=1), time(23, 59))
+    return (local - VN_OFFSET).replace(tzinfo=UTC)
+
+
+async def _own(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> m.LessonPlan:
+    plan = await db.scalar(select(m.LessonPlan).where(m.LessonPlan.id == plan_id, m.LessonPlan.owner_id == user.id))
+    if plan is None:
+        raise NOT_FOUND
+    return plan
+
+
+# ---------------------------------------------------------------- background job: upload -> parse -> plans
+PlanRunner = Callable[[UUID, bytes], Awaitable[None]]
+PROGRESS: dict[UUID, tuple[int, int]] = {}  # job id -> (page, pages), in memory: a restart fails the job anyway
+_tasks: set[asyncio.Task[None]] = set()
+_ACTIVE = ("queued", "parsing")
+# Default competency by activity (DIA_LI codes); only applied when the code exists in the plan's subject catalogue.
+ACTIVITY_COMPETENCY = {"mo_dau": "NHAN_THUC", "hinh_thanh": "NHAN_THUC", "van_dung": "VAN_DUNG"}
+_READS_DATA = re.compile(r"bảng|biểu đồ|bản đồ|át lát|atlat|số liệu|quan sát|dựa vào", re.IGNORECASE)
+
+
+def plan_runner() -> PlanRunner:
+    """Default runner: fire-and-forget in this process with its own DB session (tests override it to run inline)."""
+
+    async def run(job_id: UUID, data: bytes) -> None:
+        async def _go() -> None:
+            async with async_sessionmaker(get_engine(), expire_on_commit=False)() as s:
+                await run_job(s, job_id, data)
+
+        t = asyncio.create_task(_go())
+        _tasks.add(t)
+        t.add_done_callback(_tasks.discard)
+
+    return run
+
+
+async def recover_after_restart() -> int:
+    async with async_sessionmaker(get_engine())() as s:
+        res = await s.execute(update(m.LessonPlanJob).where(m.LessonPlanJob.state.in_(_ACTIVE)).values(
+            state="failed", error_code="RESTART", error_title="Máy chủ vừa khởi động lại. Em tải giáo án lên lần nữa nhé."))
+        await s.commit()
+        return int(res.rowcount or 0)  # type: ignore[attr-defined]
+
+
+def _job_out(j: m.LessonPlanJob) -> PlanJobOut:
+    page, pages = PROGRESS.get(j.id, (0, 0)) if j.state == "parsing" else (0, 0)
+    return PlanJobOut(id=j.id, state=j.state, file_name=j.file_name, page=page or None, pages=pages or None,
+                      error_code=j.error_code, error_title=j.error_title, plan_ids=list(j.plan_ids), created_at=j.created_at)
+
+
+async def start_upload(db: AsyncSession, user: CurrentUser, data: bytes, name: str | None, runner: PlanRunner) -> PlanJobOut:
+    """Quick checks, one job row, and the parse runs in the background. One active job per teacher."""
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise ApiError(422, "FILE_TOO_LARGE", "Tệp vượt quá 10 MB")
+    kind = detect_kind(data)
+    if kind not in ("pdf", "docx"):
+        raise ApiError(422, "UNSUPPORTED_FILE", "Giáo án cần là tệp DOCX hoặc PDF có chữ")
+    busy = await db.scalar(select(m.LessonPlanJob.id).where(m.LessonPlanJob.owner_id == user.id, m.LessonPlanJob.state.in_(_ACTIVE)).limit(1))
+    if busy is not None:
+        raise ApiError(409, "PARSE_BUSY", "Em đang có một giáo án được đọc. Đợi xong rồi tải tiếp nhé.")
+    job = m.LessonPlanJob(owner_id=user.id, file_name=(name or "")[:200] or None)
+    db.add(job)
+    await db.commit()
+    await runner(job.id, data)
+    await db.refresh(job)
+    return _job_out(job)
+
+
+async def competencies(db: AsyncSession) -> CompetencyList:
+    rows = (await db.scalars(select(m.SubjectCompetency).order_by(m.SubjectCompetency.subject, m.SubjectCompetency.code))).all()
+    return CompetencyList(items=[SubjectCompetencyOut(subject=c.subject, code=c.code, name=c.name_vi) for c in rows])
+
+
+async def latest_job(db: AsyncSession, user: CurrentUser) -> PlanJobLatest:
+    j = await db.scalar(select(m.LessonPlanJob).where(m.LessonPlanJob.owner_id == user.id).order_by(m.LessonPlanJob.created_at.desc()).limit(1))
+    return PlanJobLatest(job=_job_out(j) if j else None)
+
+
+async def get_job(db: AsyncSession, user: CurrentUser, job_id: UUID) -> PlanJobOut:
+    j = await db.scalar(select(m.LessonPlanJob).where(m.LessonPlanJob.id == job_id, m.LessonPlanJob.owner_id == user.id))
+    if j is None:
+        raise NOT_FOUND
+    return _job_out(j)
+
+
+async def _set_state(db: AsyncSession, job_id: UUID, **vals: Any) -> None:
+    await db.execute(update(m.LessonPlanJob).where(m.LessonPlanJob.id == job_id).values(updated_at=func.clock_timestamp(), **vals))
+    await db.commit()
+
+
+async def run_job(db: AsyncSession, job_id: UUID, data: bytes) -> None:
+    job = await db.get(m.LessonPlanJob, job_id)
+    if job is None:
+        return
+    owner = job.owner_id
+    cfg = get_settings()
+    lim = Limits(cfg.source_max_pdf_pages, cfg.source_max_xlsx_sheets, cfg.source_max_xlsx_cells, cfg.source_max_pptx_slides,
+                 cfg.plan_parse_timeout_s, cfg.source_parse_mem_mb)
+
+    async def started() -> None:
+        await _set_state(db, job_id, state="parsing")
+
+    def progress(page: int, pages: int) -> None:
+        PROGRESS[job_id] = (page, pages)
+
+    try:
+        plan: PlanFile = await parse_isolated("plan", data, lim, progress=progress, on_start=started)
+        if not plan.anchors or not plan.lessons:
+            raise ApiError(422, "EMPTY_SOURCE", "Không đọc được nội dung giáo án")
+        ids = await _persist_plans(db, owner, plan, data)
+        await _set_state(db, job_id, state="done", plan_ids=ids)
+    except ApiError as e:
+        await db.rollback()
+        await _set_state(db, job_id, state="failed", error_code=e.code, error_title=e.title)
+    except Exception:  # noqa: BLE001 the teacher gets a friendly message, details stay in the server log
+        log.exception("lesson plan job failed")
+        await db.rollback()
+        await _set_state(db, job_id, state="failed", error_code="PARSE_FAILED",
+                         error_title="Chưa đọc được giáo án này. Em thử lại hoặc nạp bản DOCX nhé.")
+    finally:
+        PROGRESS.pop(job_id, None)
+
+
+def default_competency(codes: set[str], text: str) -> str | None:
+    """MCQ in the practice part: reading a table, chart or map -> TIM_HIEU, otherwise NHAN_THUC."""
+    code = "TIM_HIEU" if _READS_DATA.search(text) else "NHAN_THUC"
+    return code if code in codes else None
+
+
+async def _persist_plans(db: AsyncSession, owner: UUID, plan: PlanFile, data: bytes) -> list[UUID]:
+    kind = detect_kind(data)
+    title = next((x.title for x in plan.lessons if x.title), "Giáo án")
+    asset = m.SourceAsset(owner_id=owner, title=f"Giáo án: {title}"[:200], license_note=None, visibility="PRIVATE")
+    db.add(asset)
+    await db.flush()
+    anchors = [ParsedAnchor(a.kind, {**a.locator}, a.excerpt) for a in plan.anchors]
+    rev = await _insert_revision(db, asset.id, 1, sha256_hex_bytes(data), MIME[kind], _store_docx(data, kind), anchors)
+    codes = (await db.execute(select(m.SourceAnchor.code, m.SourceAnchor.id).where(m.SourceAnchor.source_revision_id == rev.id))).all()
+    ids: list[UUID] = [uuid.UUID(int=0)] * len(anchors)
+    for code, aid in codes:
+        ids[int(code.rsplit("_", 1)[1]) - 1] = aid
+    out: list[UUID] = []
+    for les in plan.lessons:
+        row = m.LessonPlan(
+            owner_id=owner, source_revision_id=rev.id, subject=les.subject or "UNKNOWN", grade=les.grade,
+            title=(les.title or "Giáo án")[:200], ppct_period=les.ppct_period, week=les.week, planned_on=les.planned_on,
+            taught_from=les.taught_from, taught_to=les.taught_to, redacted_count=les.redacted)
+        db.add(row)
+        await db.flush()
+        out.append(row.id)
+        cat = set(await db.scalars(select(m.SubjectCompetency.code).where(m.SubjectCompetency.subject == row.subject)))
+        for pos, sec in enumerate(les.sections, 1):
+            await db.execute(insert(m.LessonSection).values(
+                lesson_plan_id=row.id, position=pos, kind=sec.kind, activity_type=sec.activity_type, sub=sec.sub,
+                anchor_ids=[ids[i] for i in sec.anchors]))
+        for ob in les.objectives:
+            await db.execute(insert(m.Objective).values(
+                lesson_plan_id=row.id, text=ob.text[:1500], competency_code=ob.competency_code, anchor_id=ids[ob.anchor]))
+        for pos, q in enumerate(les.mcqs, 1):
+            text = " ".join(plan.anchors[i].excerpt for i in [q.stem, *q.options])
+            await db.execute(insert(m.ExtractedMcq).values(
+                lesson_plan_id=row.id, position=pos, stem_anchor_id=ids[q.stem], option_anchor_ids=[ids[i] for i in q.options],
+                correct_option=q.correct, answer_source=q.answer_source, confidence=q.confidence,
+                needs_confirmation=q.needs_confirmation, competency_code=default_competency(cat, text)))
+    await db.commit()
+    return out
+
+
+async def _lesson_of(db: AsyncSession, p: m.LessonPlan) -> UUID | None:
+    """The pre-class lesson built from this plan: the author's lesson that cites the plan's source revision and carries its title."""
+    return await db.scalar(
+        select(m.Lesson.id).join(m.LessonRevision, m.LessonRevision.lesson_id == m.Lesson.id)
+        .join(m.LessonSource, m.LessonSource.lesson_revision_id == m.LessonRevision.id)
+        .where(m.LessonSource.source_revision_id == p.source_revision_id, m.Lesson.author_id == p.owner_id,
+               m.Lesson.title == f"Chuẩn bị: {p.title}"[:200]).limit(1))
+
+
+async def _out(db: AsyncSession, p: m.LessonPlan) -> PlanOut:
+    secs = (await db.scalars(select(m.LessonSection).where(m.LessonSection.lesson_plan_id == p.id))).all()
+    mcqs = (await db.scalars(select(m.ExtractedMcq).where(m.ExtractedMcq.lesson_plan_id == p.id))).all()
+    return PlanOut(
+        id=p.id, title=p.title, subject=p.subject, grade=p.grade, ppct_period=p.ppct_period, week=p.week,
+        taught_from=p.taught_from, taught_to=p.taught_to, suggested_due_at=due_before(p.taught_from),
+        redacted_count=p.redacted_count,
+        activities=sorted({s.activity_type for s in secs if s.kind == "activity" and s.activity_type}),
+        mcq_count=len(mcqs), needs_confirmation_count=sum(1 for q in mcqs if q.needs_confirmation),
+        lesson_id=await _lesson_of(db, p))
+
+
+async def list_plans(db: AsyncSession, user: CurrentUser) -> PlanList:
+    rows = (await db.scalars(select(m.LessonPlan).where(m.LessonPlan.owner_id == user.id).order_by(
+        m.LessonPlan.created_at.desc(), m.LessonPlan.title))).all()
+    return PlanList(items=[await _out(db, p) for p in rows])
+
+
+async def _anchors(db: AsyncSession, ids: set[UUID]) -> dict[UUID, m.SourceAnchor]:
+    if not ids:
+        return {}
+    rows = (await db.scalars(select(m.SourceAnchor).where(m.SourceAnchor.id.in_(ids)))).all()
+    return {a.id: a for a in rows}
+
+
+async def get_plan(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> PlanDetail:
+    p = await _own(db, user, plan_id)
+    secs = (await db.scalars(select(m.LessonSection).where(m.LessonSection.lesson_plan_id == p.id).order_by(m.LessonSection.position))).all()
+    objs = (await db.scalars(select(m.Objective).where(m.Objective.lesson_plan_id == p.id))).all()
+    mcqs = (await db.scalars(select(m.ExtractedMcq).where(m.ExtractedMcq.lesson_plan_id == p.id).order_by(m.ExtractedMcq.position))).all()
+    want = {a for s in secs for a in s.anchor_ids} | {q.stem_anchor_id for q in mcqs} | {a for q in mcqs for a in q.option_anchor_ids}
+    by = await _anchors(db, want)
+    cat = (await db.scalars(select(m.SubjectCompetency).where(m.SubjectCompetency.subject == p.subject).order_by(m.SubjectCompetency.code))).all()
+    names = {c.code: c.name_vi for c in cat}
+
+    def item(a: m.SourceAnchor) -> PlanItem:
+        return PlanItem(anchor_id=a.id, page=a.locator.get("page"), type=str(a.locator.get("type", "paragraph")), text=a.excerpt)
+
+    base = await _out(db, p)
+    return PlanDetail(
+        **base.model_dump(),
+        sections=[PlanSection(kind=s.kind, activity_type=s.activity_type, sub=s.sub, items=[item(by[a]) for a in s.anchor_ids if a in by])
+                  for s in secs],
+        objectives=[PlanObjective(text=o.text, competency_code=o.competency_code, competency_name=names.get(o.competency_code or "")) for o in objs],
+        mcqs=[PlanMcq(id=q.id, position=q.position, stem=by[q.stem_anchor_id].excerpt,
+                      options=[PlanMcqOption(label=chr(65 + i), text=by[a].excerpt) for i, a in enumerate(q.option_anchor_ids)],
+                      correct_option=q.correct_option, answer_source=q.answer_source, needs_confirmation=q.needs_confirmation,
+                      competency_code=q.competency_code)
+              for q in mcqs],
+        competencies=[Competency(code=c.code, name=c.name_vi) for c in cat])
+
+
+async def set_answer(db: AsyncSession, user: CurrentUser, plan_id: UUID, mcq_id: UUID, option: str) -> PlanDetail:
+    p = await _own(db, user, plan_id)
+    q = await db.scalar(select(m.ExtractedMcq).where(m.ExtractedMcq.id == mcq_id, m.ExtractedMcq.lesson_plan_id == p.id))
+    if q is None:
+        raise NOT_FOUND
+    if ord(option) - 65 >= len(q.option_anchor_ids):
+        raise ApiError(422, "INVALID_OPTION", "Câu này không có phương án đó")
+    await db.execute(update(m.ExtractedMcq).where(m.ExtractedMcq.id == q.id).values(
+        correct_option=option, answer_source="teacher", confidence="high", needs_confirmation=False))
+    await db.commit()
+    return await get_plan(db, user, plan_id)
+
+
+async def set_mcq_competency(db: AsyncSession, user: CurrentUser, plan_id: UUID, mcq_id: UUID, code: str | None) -> PlanDetail:
+    p = await _own(db, user, plan_id)
+    q = await db.scalar(select(m.ExtractedMcq).where(m.ExtractedMcq.id == mcq_id, m.ExtractedMcq.lesson_plan_id == p.id))
+    if q is None:
+        raise NOT_FOUND
+    if code is not None and await db.get(m.SubjectCompetency, (p.subject, code)) is None:
+        raise ApiError(422, "INVALID_COMPETENCY", "Mã năng lực này không có trong môn của giáo án")
+    await db.execute(update(m.ExtractedMcq).where(m.ExtractedMcq.id == q.id).values(competency_code=code))
+    await db.commit()
+    return await get_plan(db, user, plan_id)
+
+
+# ---------------------------------------------------------------- "Tạo bài chuẩn bị trước giờ học"
+def _first(items: list[m.SourceAnchor], pred: Any) -> m.SourceAnchor | None:
+    return next((a for a in items if pred(a)), None)
+
+
+async def build_lesson(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> PlanLessonOut:
+    """Default mapping (the teacher edits the draft afterwards like any lesson):
+    mở đầu -> 1 trigger question; hình thành -> up to 2 reading cards + 1 flashcard quoted verbatim; luyện tập -> up to 5
+    confirmed MCQ with a templated explanation; vận dụng -> 1 after-class task. Everything is a draft to review."""
+    p = await _own(db, user, plan_id)
+    if await _lesson_of(db, p) is not None:
+        raise ApiError(409, "LESSON_EXISTS", "Đã tạo bài chuẩn bị từ giáo án này")
+    secs = (await db.scalars(select(m.LessonSection).where(m.LessonSection.lesson_plan_id == p.id).order_by(m.LessonSection.position))).all()
+    mcqs = (await db.scalars(select(m.ExtractedMcq).where(m.ExtractedMcq.lesson_plan_id == p.id).order_by(m.ExtractedMcq.position))).all()
+    want = {a for s in secs for a in s.anchor_ids} | {q.stem_anchor_id for q in mcqs} | {a for q in mcqs for a in q.option_anchor_ids}
+    by = await _anchors(db, want)
+
+    def anchors_of(kind: str) -> list[m.SourceAnchor]:
+        return [by[a] for s in secs if s.activity_type == kind for a in s.anchor_ids if a in by and by[a].kind != "HEADING"]
+
+    lesson = m.Lesson(author_id=user.id, grade=p.grade if p.grade in (10, 11) else 10, title=f"Chuẩn bị: {p.title}"[:200],
+                      goal="Bài chuẩn bị trước giờ học, dựng từ giáo án.", teach_date=p.taught_from)
+    db.add(lesson)
+    await db.flush()
+    rev = m.LessonRevision(lesson_id=lesson.id, revision_no=1, state="DRAFT")
+    db.add(rev)
+    await db.flush()
+    await db.execute(insert(m.LessonSource).values(lesson_revision_id=rev.id, source_revision_id=p.source_revision_id))
+    ordered = list(by.values())
+    views = [AnchorView(f"A{i}", a.code, a.kind, a.locator, a.excerpt, list(a.numbers)) for i, a in enumerate(ordered, 1)]
+    alias = {a.id: v.alias for v, a in zip(views, ordered, strict=True)}
+    alias_id = {v.alias: a.id for v, a in zip(views, ordered, strict=True)}
+    blocks: list[DraftBlock] = []
+    cat = set(await db.scalars(select(m.SubjectCompetency.code).where(m.SubjectCompetency.subject == p.subject)))
+    objs = (await db.scalars(select(m.Objective).where(m.Objective.lesson_plan_id == p.id).order_by(m.Objective.id))).all()
+    meta: dict[str, dict[str, Any]] = {}
+
+    def tag(key: str, code: str | None) -> None:
+        """Competency of a block: the teacher's choice (MCQ) or the activity default; the objective with the same code."""
+        if code is None or code not in cat:
+            return
+        obj = next((o.id for o in objs if o.competency_code == code), None)
+        meta[key] = {"competency_code": code, "objective_id": obj}
+
+    def add(key: str, kind: str, payload: dict[str, Any], anchor: m.SourceAnchor, *, parent: str | None = None,
+            tr: str = "ORIGINAL", factual: bool = False, code: str | None = None) -> None:
+        tag(key, code)
+        blocks.append(DraftBlock(key=key, kind=kind, parentKey=parent, payload=payload, transformation=tr,
+                                 anchorAliases=[alias[anchor.id]], isFactual=factual))
+
+    opening = anchors_of("mo_dau")
+    trig = _first(opening, lambda a: a.excerpt.rstrip().endswith("?")) or _first(opening, lambda a: len(a.excerpt) > 20)
+    if trig:
+        add("open", "instruction", {"text": trig.excerpt}, trig, code=ACTIVITY_COMPETENCY["mo_dau"])
+    boxes = [a for a in anchors_of("hinh_thanh") if a.locator.get("type") == "knowledge_box"][:2]
+    for i, b in enumerate(boxes, 1):
+        add(f"read{i}", "paragraph", {"text": b.excerpt}, b, factual=True, code=ACTIVITY_COMPETENCY["hinh_thanh"])
+    if boxes:
+        add("fc", "card_front", {"text": "Em nhớ gì về nội dung này?"}, boxes[0], tr="SYNTHESISED", code=ACTIVITY_COMPETENCY["hinh_thanh"])
+        add("fcb", "card_back", {"text": boxes[0].excerpt}, boxes[0], parent="fc", code=ACTIVITY_COMPETENCY["hinh_thanh"])
+    ok = [q for q in mcqs if not q.needs_confirmation and q.correct_option]
+    chosen = ok[:MAX_PRACTICE]
+    for n, q in enumerate(chosen, 1):
+        stem = by[q.stem_anchor_id]
+        opts = [by[a] for a in q.option_anchor_ids]
+        cc = q.competency_code
+        add(f"q{n}", "worksheet_item", {"stem": stem.excerpt, "itemType": "MCQ", "skill": "EXPLAIN"}, stem, code=cc)
+        for i, o in enumerate(opts):
+            add(f"q{n}{chr(97 + i)}", "option", {"label": chr(65 + i), "text": o.excerpt}, o, parent=f"q{n}", code=cc)
+        right = opts[ord(q.correct_option or "A") - 65]
+        add(f"q{n}k", "answer_key", {"correct": q.correct_option}, right, parent=f"q{n}", code=cc)  # the pipeline never lets a generator claim TEACHER_AUTHORED; the confirmed option is quoted
+        add(f"q{n}e", "explanation", {"text": f"Đáp án đúng là {q.correct_option}. {right.excerpt}"}, right, parent=f"q{n}", tr="SYNTHESISED", code=cc)
+    apply = _first(anchors_of("van_dung"), lambda a: len(a.excerpt) > 20)
+    if apply:
+        add("apply", "instruction", {"text": apply.excerpt}, apply, code=ACTIVITY_COMPETENCY["van_dung"])
+    n = await _persist(db, rev, Draft(blocks=blocks), views, alias_id, "plan-5512/1", meta)
+    await db.commit()
+    await validate_revision(db, rev.id)
+    return PlanLessonOut(lesson_id=lesson.id, blocks=n, practice_items=len(chosen),
+                         skipped_unconfirmed=len(mcqs) - len(ok), left_for_after_class=max(0, len(ok) - MAX_PRACTICE))

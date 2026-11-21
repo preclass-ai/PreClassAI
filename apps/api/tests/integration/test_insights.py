@@ -7,9 +7,12 @@ from typing import Any
 
 import httpx
 import pytest
+from sqlalchemy import text, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import insights
 from app.config import get_settings
+from app.db import models as m
 from app.habit import llm
 from app.ids import uid
 from tests.conftest import login
@@ -135,3 +138,56 @@ async def test_a_failing_model_falls_back_to_the_rule_topics(client: httpx.Async
     on.setattr(llm, "get_chat_llm", lambda: Boom())
     a: dict[str, Any] = (await client.post(f"{URL}/analyze")).json()
     assert a["generatedBy"] == "rule" and a["topics"]
+
+
+async def test_per_item_detail_blocked_reasons_and_reteach_flag(client: httpx.AsyncClient, on: pytest.MonkeyPatch) -> None:
+    await seed_chats(client)
+    d = (await client.get(URL)).json()
+    item = next(i for i in d["items"] if i["skill"] == "COMPARE")
+    assert item["topWrongOption"] in ("A", "B") and item["topWrongShare"] == 0.5
+    assert item["maxHintLevel"] >= 1 and item["needsReteach"] is True
+    assert {q["key"] for q in item["questions"]} <= {"start", "answer", "data", "formula"} and len(item["questions"]) == 2
+    assert item["itemBlockId"] in d["reteachItemIds"]
+    assert sum(b["count"] for b in d["blockedReasons"]) >= 1  # "đáp án là gì" was declined
+    blob = json.dumps(d, ensure_ascii=False)
+    assert "HS10-0" not in blob and str(uid("user:HS10-01")) not in blob
+
+
+async def test_reteach_drafts_quoted_source_passages_and_never_approves(client: httpx.AsyncClient, on: pytest.MonkeyPatch) -> None:
+    await seed_chats(client)
+    r = await client.post(f"{URL}/reteach", headers={"X-PreClass-CSRF": "1"})
+    assert r.status_code == 201, r.text
+    out = r.json()
+    assert out["blocks"] >= 1
+    rev = (await client.get(f"/v1/lessons/{out['lessonId']}")).json()["currentRevision"]
+    assert rev["id"] == out["revisionId"] and rev["state"] == "DRAFT"  # a new draft, the published revision is untouched
+    blocks = (await client.get(f"/v1/revisions/{out['revisionId']}/blocks")).json()["items"]
+    assert sum(1 for b in blocks if b["remediationDraft"]) == out["blocks"] and out["alreadyExists"] is False
+    # idempotent: the same flagged passages already have an unreviewed draft, so nothing is added and the draft is reused
+    again = (await client.post(f"{URL}/reteach", headers={"X-PreClass-CSRF": "1"})).json()
+    assert again["alreadyExists"] is True and again["blocks"] == 0 and again["revisionId"] == out["revisionId"]
+    client.cookies.clear()
+    await login(client, "gv.khac@preclass.local")
+    assert (await client.post(f"{URL}/reteach", headers={"X-PreClass-CSRF": "1"})).status_code == 404
+
+
+async def test_demo_replay_gives_a_labelled_recorded_sample(client: httpx.AsyncClient, on: pytest.MonkeyPatch) -> None:
+    await seed_chats(client)
+    on.setenv("DEMO_REPLAY", "true")
+    get_settings.cache_clear()
+    a = (await client.post(f"{URL}/analyze")).json()
+    assert a["generatedBy"] == "replay" and 3 <= len(a["topics"]) <= 5
+
+
+async def test_competency_heatmap_groups_first_attempt_rate(client: httpx.AsyncClient, on: pytest.MonkeyPatch, db: AsyncSession) -> None:
+    await seed_chats(client)
+    d = (await client.get(URL)).json()
+    assert d["competencies"] == []  # seeded items carry no competency
+    ids = [i["itemBlockId"] for i in d["items"]]
+    await db.execute(text("ALTER TABLE content_block DISABLE TRIGGER tg_block_guard"))  # published blocks are locked; rolled back with the test
+    await db.execute(update(m.ContentBlock).where(m.ContentBlock.id.in_(ids)).values(competency_code="TIM_HIEU"))
+    d = (await client.get(URL)).json()
+    (c,) = d["competencies"]
+    assert c["code"] == "TIM_HIEU" and c["name"] and set(c["itemIds"]) == set(ids)
+    assert 0 <= c["firstAttemptCorrectRate"] <= 1 and c["answeredCount"] == sum(i["answeredCount"] for i in d["items"])
+    assert all(i["competencyCode"] == "TIM_HIEU" for i in d["items"])

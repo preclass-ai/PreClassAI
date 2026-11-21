@@ -166,3 +166,11 @@ Mỗi bài có: 1 nguồn văn bản (tiêu đề, 2 đoạn, bảng 4 hàng × 
 ## Tên lớp (migration 0006)
 
 `class.name` (TEXT, nullable): tên hiển thị như `10A1`; NULL thì hiện mã. Mã nội bộ `code` (ví dụ `KS`) giữ nguyên, mã khảo sát `KS-XXXX` của học sinh không đổi. `GET /v1/student/assignments` trả thêm `className` (tên hoặc mã).
+
+## Giáo án CV 5512 (migration 0007, chỉ thêm)
+
+`subject_competency(subject, code, name_vi)` (seed Địa lí: NHAN_THUC, TIM_HIEU, VAN_DUNG; môn khác thêm sau, không đoán) ·
+`lesson_plan(owner_id, source_revision_id, subject, grade, title, ppct_period, week, planned_on, taught_from, taught_to, redacted_count)` ·
+`lesson_section(lesson_plan_id, position, kind, activity_type mo_dau|hinh_thanh|luyen_tap|van_dung, sub muc_tieu|noi_dung|san_pham|to_chuc, anchor_ids)` ·
+`objective(text, competency_code, anchor_id)` · `extracted_mcq(stem_anchor_id, option_anchor_ids, correct_option, answer_source underline|docx_underline|teacher, confidence, needs_confirmation)`.
+Neo vẫn là `source_anchor` (kind cũ); loại neo mới (`knowledge_box`, `table_cell`, `figure_caption`) nằm trong `locator.type`, nên không đổi ràng buộc cũ. Migration 0008: `lesson_plan_job(owner_id, state queued|parsing|done|failed, file_name, error_code, error_title, plan_ids)`, `extracted_mcq.competency_code`, `content_block.competency_code` + `objective_id`, `lesson.teach_date`. Migration 0009: `content_block.remediation_draft`. Chỉ thêm cột và bảng.

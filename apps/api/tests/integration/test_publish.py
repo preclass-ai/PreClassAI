@@ -293,6 +293,10 @@ async def test_assignments_checks_and_listing(client: httpx.AsyncClient) -> None
     assert window.status_code == 422 and window.json()["code"] == "INVALID_WINDOW"
     unknown = await client.post(f"/v1/published/{PUB}/assignments", json={"classId": str(uuid.uuid4()), "openAt": OPEN, "dueAt": DUE})
     assert unknown.status_code == 404
+    taught = await client.post(f"/v1/published/{PUB}/assignments", json={"classId": str(uid("class:10A1")), "openAt": OPEN, "teachDate": "2099-01-10"})
+    assert taught.status_code == 201 and taught.json()["dueAt"].startswith("2099-01-09T16:59")  # day before, 23:59 UTC+7
+    neither = await client.post(f"/v1/published/{PUB}/assignments", json={"classId": str(uid("class:10A1")), "openAt": OPEN})
+    assert neither.status_code == 422 and neither.json()["code"] == "DUE_REQUIRED"
     listed = (await client.get(f"/v1/classes/{uid('class:10A1')}/assignments")).json()["items"]
     assert {a["id"] for a in listed} >= {ok.json()["id"], str(uid("dan-so-vung:assignment"))}
     client.cookies.clear()

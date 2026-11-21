@@ -147,6 +147,7 @@ class Lesson(Base):
     grade: Mapped[int] = mapped_column(Integer)
     title: Mapped[str] = mapped_column(Text)
     goal: Mapped[str | None] = mapped_column(Text)
+    teach_date: Mapped[date | None] = mapped_column(Date)  # from the lesson plan; the assign form suggests a due date from it
     created_at: Mapped[datetime] = ts()
 
 
@@ -202,6 +203,9 @@ class ContentBlock(Base):
     review_status: Mapped[str] = mapped_column(Text, server_default="UNREVIEWED")
     no_source_reason: Mapped[str | None] = mapped_column(Text)
     is_factual: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    competency_code: Mapped[str | None] = mapped_column(Text)  # metadata, not part of content_hash
+    objective_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("objective.id"))
+    remediation_draft: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     version: Mapped[int] = mapped_column(Integer, server_default=text("1"))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = ts()
@@ -401,4 +405,82 @@ class StudentPreference(Base):
     student_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("app_user.id"), primary_key=True)
     key: Mapped[str] = mapped_column(Text, primary_key=True)
     value: Mapped[str] = mapped_column(Text)  # on | 5 | 10
+    updated_at: Mapped[datetime] = ts()
+
+
+class SubjectCompetency(Base):
+    __tablename__ = "subject_competency"
+    subject: Mapped[str] = mapped_column(Text, primary_key=True)
+    code: Mapped[str] = mapped_column(Text, primary_key=True)
+    name_vi: Mapped[str] = mapped_column(Text)
+
+
+class LessonPlan(Base):
+    """A teacher's lesson plan (CV 5512) read from an uploaded source revision."""
+
+    __tablename__ = "lesson_plan"
+    id: Mapped[uuid.UUID] = pk()
+    owner_id: Mapped[uuid.UUID] = fk("app_user.id")
+    source_revision_id: Mapped[uuid.UUID] = fk("source_revision.id")
+    subject: Mapped[str] = mapped_column(Text)
+    grade: Mapped[int | None] = mapped_column(Integer)
+    title: Mapped[str] = mapped_column(Text)
+    ppct_period: Mapped[str | None] = mapped_column(Text)
+    week: Mapped[str | None] = mapped_column(Text)
+    planned_on: Mapped[date | None] = mapped_column(Date)
+    taught_from: Mapped[date | None] = mapped_column(Date)
+    taught_to: Mapped[date | None] = mapped_column(Date)
+    redacted_count: Mapped[int] = mapped_column(Integer, server_default="0")
+    created_at: Mapped[datetime] = ts()
+
+
+class LessonSection(Base):
+    __tablename__ = "lesson_section"
+    id: Mapped[uuid.UUID] = pk()
+    lesson_plan_id: Mapped[uuid.UUID] = fk("lesson_plan.id")
+    position: Mapped[int] = mapped_column(Integer)
+    kind: Mapped[str] = mapped_column(Text)
+    activity_type: Mapped[str | None] = mapped_column(Text)  # mo_dau | hinh_thanh | luyen_tap | van_dung
+    sub: Mapped[str | None] = mapped_column(Text)  # muc_tieu | noi_dung | san_pham | to_chuc
+    anchor_ids: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(UUID(as_uuid=True)), server_default=text("'{}'"))
+
+
+class Objective(Base):
+    __tablename__ = "objective"
+    id: Mapped[uuid.UUID] = pk()
+    lesson_plan_id: Mapped[uuid.UUID] = fk("lesson_plan.id")
+    text: Mapped[str] = mapped_column(Text)
+    competency_code: Mapped[str | None] = mapped_column(Text)
+    anchor_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("source_anchor.id"))
+
+
+class ExtractedMcq(Base):
+    """Answer comes from an underline or the teacher, never from a model."""
+
+    __tablename__ = "extracted_mcq"
+    id: Mapped[uuid.UUID] = pk()
+    lesson_plan_id: Mapped[uuid.UUID] = fk("lesson_plan.id")
+    position: Mapped[int] = mapped_column(Integer)
+    stem_anchor_id: Mapped[uuid.UUID] = fk("source_anchor.id")
+    option_anchor_ids: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(UUID(as_uuid=True)), server_default=text("'{}'"))
+    correct_option: Mapped[str | None] = mapped_column(Text)
+    answer_source: Mapped[str | None] = mapped_column(Text)  # underline | docx_underline | teacher
+    confidence: Mapped[str] = mapped_column(Text, server_default="low")
+    needs_confirmation: Mapped[bool] = mapped_column(server_default=text("true"))
+    competency_code: Mapped[str | None] = mapped_column(Text)
+
+
+class LessonPlanJob(Base):
+    """Background reading of one uploaded plan. The file itself is held in memory only: a restart fails the job."""
+
+    __tablename__ = "lesson_plan_job"
+    __table_args__ = (_in("state", "queued", "parsing", "done", "failed"),)
+    id: Mapped[uuid.UUID] = pk()
+    owner_id: Mapped[uuid.UUID] = fk("app_user.id")
+    state: Mapped[str] = mapped_column(Text, server_default="queued")
+    file_name: Mapped[str | None] = mapped_column(Text)
+    error_code: Mapped[str | None] = mapped_column(Text)
+    error_title: Mapped[str | None] = mapped_column(Text)
+    plan_ids: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(UUID(as_uuid=True)), server_default=text("'{}'"))
+    created_at: Mapped[datetime] = ts()
     updated_at: Mapped[datetime] = ts()
