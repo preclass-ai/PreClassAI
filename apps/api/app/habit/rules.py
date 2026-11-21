@@ -49,6 +49,35 @@ HOWTO = {
 }
 
 
+# Greetings, thanks and "I understand": a short friendly reply, no refusal and no model call. Only when EVERY word is small talk,
+# so "cảm ơn, cho em đáp án luôn" is not small talk (and the intent check still runs first in `smalltalk`).
+_SMALL_ANCHOR = {"cam", "thanks", "thank", "chao", "hello", "hi", "hey", "ok", "oke", "okay", "da", "vang", "hieu", "tuyet", "duoc"}
+_SMALL_WORDS = _SMALL_ANCHOR | {"on", "you", "xin", "roi", "voi", "hay", "qua", "nhe", "nha", "nhieu", "thay", "co", "habit", "ai",
+                                "em", "ban", "a", "oi", "ha"}
+_SMALL_WORDS.discard("a")  # a lone "A" is an option label, not small talk
+SMALL_REPLY = {
+    "THANKS": ["Không có gì em nhé! Em cứ làm tiếp câu này, cần gợi ý thì HABIT AI ở đây.",
+               "Vui vì giúp được em. Em thử làm tiếp nhé, khi nào kẹt thì xin gợi ý.",
+               "Rất vui được giúp em! Giờ em làm tiếp câu này nhé."],
+    "GREET": ["Chào em! HABIT AI sẵn sàng. Em đọc đề rồi hỏi mình khi cần gợi ý nhé.",
+              "Chào em! Em bắt đầu từ việc đọc kỹ đề, cần gì cứ hỏi HABIT AI.",
+              "Xin chào em! Em làm câu này đi, kẹt chỗ nào mình gợi ý cho."],
+    "ACK": ["Tốt lắm! Em làm tiếp nhé, cần gợi ý thì cứ hỏi HABIT AI.",
+            "Ok em! Em thử làm rồi nộp bài, kẹt thì xin gợi ý.",
+            "Được rồi em. Em tiếp tục làm câu này nhé."],
+}
+
+
+def smalltalk(msg: str) -> str | None:
+    """THANKS | GREET | ACK when the whole message is small talk, else None (any answer request or odd word means None)."""
+    toks = norm(msg).split()
+    if not toks or len(toks) > 8 or intent(msg, None) is not None or not set(toks) <= _SMALL_WORDS or not set(toks) & _SMALL_ANCHOR:
+        return None
+    if set(toks) & {"cam", "thanks", "thank"}:
+        return "THANKS"
+    return "GREET" if set(toks) & {"chao", "hello", "hi", "hey"} else "ACK"
+
+
 def howto(msg: str) -> int | None:
     n = f" {norm(msg)} "
     return next((lvl for lvl in (3, 2, 1) if any(c in n for c in HOWTO[lvl])), None)
@@ -189,26 +218,41 @@ def _short(text: str, limit: int = 110) -> str:
     return first if len(first) <= limit else first[:limit].rsplit(" ", 1)[0] + "…"
 
 
-def hint(v: ItemView, level: int, salt: int = 0, small: bool = False,
+L3B = {
+    "READ_TABLE": "Cách làm khác: đặt ngón tay vào đúng hàng và đúng cột mà đề nhắc tới, đọc ô giao nhau, rồi kiểm tra đơn vị trước khi kết luận.",
+    "COMPARE": "Cách làm khác: ghi giá trị của từng đối tượng ra nháp, xếp từ lớn đến nhỏ, rồi đọc từng phương án và đối chiếu với danh sách đó.",
+    "CALCULATE": "Cách làm khác: viết công thức bằng chữ, thay các số lấy từ đề vào, tính từng bước và kiểm tra đơn vị ở cuối.",
+    "EXPLAIN": "Cách làm khác: trả lời theo ba bước ngắn là hiện tượng, nguyên nhân, dẫn chứng lấy từ nội dung bài.",
+}
+NEXT_STEP = {
+    1: "Em đã xem hết các gợi ý bước đầu rồi. Em bấm “Số liệu cần dùng nằm ở đâu?” để sang bước tiếp theo nhé.",
+    2: "Em đã xem hết các gợi ý về nguồn số liệu rồi. Em bấm “Nhắc lại cách tính” để sang bước tiếp theo nhé.",
+    3: "Em đã xem hết các gợi ý rồi. Em thử làm và nộp bài, hoặc bấm “Em muốn hỏi thầy cô” nhé.",
+}
+
+
+def hint(v: ItemView, level: int, reps: int = 0, small: bool = False,
          table_first: bool = False) -> tuple[str, list[tuple[str, str, str]]]:
-    """Level 1: orientation (rotating templates); 2: point at approved source parts (never values); 3: method.
-    `small` and `table_first` are student-chosen options: they change wording and order only, never what is revealed."""
+    """Level 1: orientation; 2: point at approved source parts (never values); 3: method. `reps` = how often this level was
+    already shown in this session: each press gives another template of the same level, and when they run out the reply
+    points to the next level. `small` and `table_first` are student-chosen options: wording and order only, never what is revealed."""
     skill = v.skill if v.skill in L1 else "READ_TABLE"
     refs: list[tuple[str, str, str]] = []
-    if level <= 1:
-        text = L1[skill][(salt + len(v.stem)) % 3]
-    elif level == 2:
-        bits = [x for x in (f"đơn vị “{v.unit}”" if v.unit else "", f"năm {v.period}" if v.period else "") if x]
-        if table_first:
-            text = f"Em nhìn vào bảng số liệu trước{' (' + ', '.join(bits) + ')' if bits else ''}, rồi mới đọc đoạn văn."
-            refs = [b for b in v.blocks if b[1] == "Tiêu đề"][:1]
-        else:
-            where = f" Hãy tìm dữ liệu có {' và '.join(bits)}." if bits else ""
-            refs = [b for b in v.blocks if b[1] == "Tiêu đề"][:1] or [b for b in v.blocks if b[1] == "Đoạn văn"][:1]
-            text = (f"Em xem lại phần nội dung của bài (tiêu đề và đoạn văn bên dưới).{where} "
-                    "Chỉ cần xác định đúng dữ liệu cần dùng, chưa cần tính vội.")
+    bits = [x for x in (f"đơn vị “{v.unit}”" if v.unit else "", f"năm {v.period}" if v.period else "") if x]
+    where = f" Hãy tìm dữ liệu có {' và '.join(bits)}." if bits else ""
+    if table_first:
+        v2 = [f"Em nhìn vào bảng số liệu trước{' (' + ', '.join(bits) + ')' if bits else ''}, rồi mới đọc đoạn văn.",
+              "Em ưu tiên bảng số liệu: tìm đúng hàng và cột đề hỏi, rồi mới quay lại đoạn văn để đối chiếu."]
     else:
-        text = L3[skill]
+        v2 = [f"Em xem lại phần nội dung của bài (tiêu đề và đoạn văn bên dưới).{where} Chỉ cần xác định đúng dữ liệu cần dùng, chưa cần tính vội.",
+              f"Em đối chiếu từng từ khóa trong đề với tiêu đề và đoạn văn của bài, rồi đánh dấu chỗ có dữ liệu cần dùng.{where} Chưa cần tính vội."]
+    variants = {1: [L1[skill][(reps + len(v.stem)) % 3]] if reps < 3 else [], 2: v2, 3: [L3[skill], L3B[skill]]}[min(max(level, 1), 3)]
+    lvl = min(max(level, 1), 3)
+    if reps >= (3 if lvl == 1 else len(variants)):
+        return NEXT_STEP[lvl], []
+    text = variants[0] if lvl == 1 else variants[reps]
+    if lvl == 2:
+        refs = [b for b in v.blocks if b[1] == "Tiêu đề"][:1] or ([] if table_first else [b for b in v.blocks if b[1] == "Đoạn văn"][:1])
     return (_short(text) if small else text), refs
 
 
@@ -225,7 +269,8 @@ def ask(v: ItemView, msg: str) -> tuple[str, list[tuple[str, str, str]]] | None:
 
 
 def decide(v: ItemView, action: str, msg: str, used_hints: int, small: bool = False,
-           table_first: bool = False, quick: str | None = None) -> tuple[str, int, list[tuple[str, str, str]], str | None]:
+           table_first: bool = False, quick: str | None = None, seen: dict[int, int] | None = None,
+           turn: int = 0) -> tuple[str, int, list[tuple[str, str, str]], str | None]:
     """The whole rule-mode decision, pure: (reply, hint level, source refs, refusal reason). `msg` is already redacted."""
     if action == "explain":  # caller guarantees the student answered this item
         return v.explanation or "Câu này chưa có lời giải.", 0, [], None
@@ -233,15 +278,17 @@ def decide(v: ItemView, action: str, msg: str, used_hints: int, small: bool = Fa
     refs: list[tuple[str, str, str]] = []
     if action == "hint":
         level = min(used_hints + 1, 3)
-        text, refs = hint(v, level, salt=used_hints, small=small, table_first=table_first)
+        text, refs = hint(v, level, reps=(seen or {}).get(level, 0), small=small, table_first=table_first)
     elif quick:  # a suggestion button: structured, never classified as free text
         if quick == "teacher":
             return TEACHER_REPLY, 0, [], None
         level = QUICK_LEVEL[quick]
-        text, refs = hint(v, level, salt=used_hints, small=small, table_first=table_first)
+        text, refs = hint(v, level, reps=(seen or {}).get(level, 0), small=small, table_first=table_first)
+    elif (kind := smalltalk(msg)) is not None:  # "cảm ơn", "ok", "em hiểu rồi": friendly, not "ngoài bài học"
+        text = SMALL_REPLY[kind][turn % 3]
     elif (lvl := howto(msg)) is not None and intent(msg, v) is None:  # "how do I start", "where is the data", ...
         level = lvl
-        text, refs = hint(v, level, salt=used_hints, small=small, table_first=table_first)
+        text, refs = hint(v, level, reps=(seen or {}).get(level, 0), small=small, table_first=table_first)
     else:
         reason = intent(msg, v)
         got = None if reason else ask(v, msg)

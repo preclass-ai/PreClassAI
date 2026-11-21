@@ -55,60 +55,62 @@ async def _session(db: AsyncSession, assignment_id: UUID, student_id: UUID, item
 
 
 async def _llm_reply(db: AsyncSession, v: rules.ItemView, level: int, msg: str, base: str, excerpt: str, sess: UUID,
-                     key: tuple[Any, ...]) -> tuple[str | None, str | None, int, int]:
-    """(reply, fallback_reason, tokens_in, tokens_out). Any problem → (None, reason, …) and the caller keeps the rule reply."""
+                     key: tuple[Any, ...]) -> tuple[str | None, str | None, int, int, str | None]:
+    """(reply, fallback_reason, tokens_in, tokens_out, model). A problem gives (None, reason, ...): the rule reply stays."""
     cfg = get_settings()
     client = llm.get_chat_llm()
     if client is None:
-        return None, "LLM_ERROR", 0, 0
+        return None, "LLM_ERROR", 0, 0, None
     if key in _CACHE:
-        return _CACHE[key], None, 0, 0
+        return _CACHE[key], None, 0, 0, "cache"
     used = await db.scalar(select(func.coalesce(func.sum(m.ChatMessage.tokens_in + m.ChatMessage.tokens_out), 0)).where(
         m.ChatMessage.created_at >= day_start_utc())) or 0
     if used >= cfg.chat_daily_token_budget:
-        return None, "LLM_BUDGET", 0, 0
+        return None, "LLM_BUDGET", 0, 0, None
     hist = (await db.execute(select(m.ChatMessage.role, m.ChatMessage.text).where(m.ChatMessage.session_id == sess)
                              .order_by(m.ChatMessage.created_at.desc()).limit(4))).all()
     history = [f"{r}: {t}" for r, t in reversed(hist)]
     try:
-        out, tin, tout = await client.complete(llm.SYSTEM, llm.build_user(v, level, msg, history, excerpt),
+        raw, tin, tout = await client.complete(llm.SYSTEM, llm.build_user(v, level, msg, history, excerpt),
                                                cfg.chat_max_output_tokens)
     except Exception:  # noqa: BLE001 timeout, HTTP error, bad payload: all mean "use the rule reply"
-        return None, "LLM_ERROR", 0, 0
-    out = out.strip()[:600]
+        return None, "LLM_ERROR", 0, 0, None
+    out = llm.clip(raw)
+    model = out.model or "unknown"
     bad = llm.postcheck(out, v)
     if bad:
-        return None, bad, tin, tout
-    _CACHE[key] = out
+        return None, bad, tin, tout, model
+    _CACHE[key] = str(out)
     if len(_CACHE) > 200:
         _CACHE.popitem(last=False)
-    return out, None, tin, tout
+    return str(out), None, tin, tout, model
 
 
-async def _extra_reply(db: AsyncSession, v: rules.ItemView, msg: str, pv_id: UUID, item_id: UUID) -> tuple[str | None, int, int]:
+async def _extra_reply(db: AsyncSession, v: rules.ItemView, msg: str, pv_id: UUID,
+                       item_id: UUID) -> tuple[str | None, int, int, str | None]:
     """The unverified second part. Anything wrong (no model, budget, error, guard) means: no second part, the first stays."""
     cfg = get_settings()
     client = llm.get_chat_llm()
     if client is None:
-        return None, 0, 0
+        return None, 0, 0, None
     key = (today(), pv_id, item_id, "extra", rules.norm(msg))
     if key in _CACHE:
-        return _CACHE[key], 0, 0
+        return _CACHE[key], 0, 0, "cache"
     used = await db.scalar(select(func.coalesce(func.sum(m.ChatMessage.tokens_in + m.ChatMessage.tokens_out), 0)).where(
         m.ChatMessage.created_at >= day_start_utc())) or 0
     if used >= cfg.chat_daily_token_budget:
-        return None, 0, 0
+        return None, 0, 0, None
     try:
-        out, tin, tout = await client.complete(llm.EXTRA_SYSTEM, llm.build_extra_user(v, msg), cfg.chat_max_output_tokens)
+        raw, tin, tout = await client.complete(llm.EXTRA_SYSTEM, llm.build_extra_user(v, msg), cfg.chat_max_output_tokens)
     except Exception:  # noqa: BLE001 timeout, HTTP error, bad payload
-        return None, 0, 0
-    out = out.strip()[:600]
+        return None, 0, 0, None
+    out = llm.clip(raw)
     if llm.postcheck_extra(out, v):
-        return None, tin, tout
-    _CACHE[key] = out
+        return None, tin, tout, out.model or None
+    _CACHE[key] = str(out)
     if len(_CACHE) > 200:
         _CACHE.popitem(last=False)
-    return out, tin, tout
+    return str(out), tin, tout, out.model or None
 
 
 async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: ChatRequest) -> ChatReply:
@@ -148,30 +150,34 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
     msg = label if quick else rules.redact((body.message or "").strip()) if body.action == "ask" else ""
     used = await db.scalar(select(func.count()).where(
         m.ChatMessage.session_id == sess, m.ChatMessage.action == "hint", m.ChatMessage.role == "assistant")) or 0
+    seen = {int(lv or 0): n for lv, n in (await db.execute(select(m.ChatMessage.hint_level, func.count()).where(
+        m.ChatMessage.session_id == sess, m.ChatMessage.role == "assistant", m.ChatMessage.hint_level.is_not(None))
+        .group_by(m.ChatMessage.hint_level))).all()}  # how often each level was already shown: rotate, never repeat
     prefs = await personalization.get_prefs(db, user.id) if personalization.on() else {}
     text, level, refs, reason = rules.decide(v, body.action, msg, used, small="chia_nho_tung_buoc" in prefs,
-                                             table_first="uu_tien_bang_so_lieu" in prefs, quick=quick)
-    mode, tin, tout = "rule", 0, 0
-    if body.action != "explain":
+                                             table_first="uu_tien_bang_so_lieu" in prefs, quick=quick, seen=seen, turn=per_item)
+    mode, tin, tout, used_model = "rule", 0, 0, None
+    chatty = body.action == "ask" and not quick and rules.smalltalk(msg) is not None  # greeting or thanks: no model, no tokens
+    if body.action != "explain" and not chatty:
         if cfg.chat_mode == "llm" and reason is None and not quick:
             excerpt = " ".join(t for _, _, t in (refs or v.blocks))
             key = (today(), pv.id, body.item_id, level, rules.norm(msg))
-            out, fb, tin, tout = await _llm_reply(db, v, level, msg, text, excerpt, sess, key)
+            out, fb, tin, tout, used_model = await _llm_reply(db, v, level, msg, text, excerpt, sess, key)
             if out is not None:
                 text, mode = out, "llm"
             else:
                 reason = fb
         if cfg.chat_mode == "llm" and cfg.chat_ai_extra and body.action == "ask" and reason is None and not quick:
-            extra, etin, etout = await _extra_reply(db, v, msg, pv.id, body.item_id)
+            extra, etin, etout, emodel = await _extra_reply(db, v, msg, pv.id, body.item_id)
             tin, tout = tin + etin, tout + etout
             if extra:
-                text, mode = text + EXTRA_SEP + extra, "llm"
+                text, mode, used_model = text + EXTRA_SEP + extra, "llm", used_model or emodel
 
     try:
         async with db.begin_nested():
             db.add(m.ChatMessage(session_id=sess, role="user", action=body.action, text=msg or "(gợi ý)", mode="rule"))
             db.add(m.ChatMessage(session_id=sess, role="assistant", action=body.action, text=text,
-                                 hint_level=level if body.action == "hint" else None, mode=mode, blocked_reason=reason,
+                                 hint_level=level or None, mode=mode, model=used_model, blocked_reason=reason,
                                  tokens_in=tin, tokens_out=tout, request_id=body.request_id))
     except IntegrityError:  # double click: the other request won
         again = (await db.execute(select(m.ChatMessage).where(
@@ -234,6 +240,8 @@ async def habit(db: AsyncSession, user: CurrentUser, assignment_id: UUID) -> Hab
 
 async def chat_stats(db: AsyncSession) -> dict[str, Any]:
     """Counters for /admin/survey/stats. No message text."""
+    by_model = {r[0]: r[1] for r in (await db.execute(select(m.ChatMessage.model, func.count()).where(
+        m.ChatMessage.role == "assistant", m.ChatMessage.model.is_not(None)).group_by(m.ChatMessage.model))).all()}
     rows = (await db.execute(select(m.ChatMessage.blocked_reason, m.ChatMessage.mode, func.count(),
                                     func.coalesce(func.sum(m.ChatMessage.tokens_in), 0),
                                     func.coalesce(func.sum(m.ChatMessage.tokens_out), 0))
@@ -247,4 +255,5 @@ async def chat_stats(db: AsyncSession) -> dict[str, Any]:
         if reason:
             blocked[reason] = blocked.get(reason, 0) + n
     return {"chat_total": total, "chat_fallback_rate": fb / llm_try if llm_try else 0.0, "chat_blocked": blocked,
+            "chat_by_model": by_model,
             "chat_tokens_in": sum(int(r[3]) for r in rows), "chat_tokens_out": sum(int(r[4]) for r in rows)}

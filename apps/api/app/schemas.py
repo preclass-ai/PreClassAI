@@ -152,6 +152,7 @@ class SurveyStats(ApiModel):
     chat_blocked: dict[str, int] = Field(default_factory=dict, description="Replies per blocked_reason.")
     chat_tokens_in: int = 0
     chat_tokens_out: int = 0
+    chat_by_model: dict[str, int] = Field(default_factory=dict, description="Replies per model name (main, fallback, cache).")
     model_config = ex({"activeGuests": 42, "createdLastHour": 12, "maxActive": 500, "createPerHourPerIp": 60,
                        "chatTotal": 120, "chatFallbackRate": 0.0, "chatBlocked": {"ANSWER_REQUEST": 7},
                        "chatTokensIn": 0, "chatTokensOut": 0})

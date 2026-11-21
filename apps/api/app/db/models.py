@@ -383,6 +383,7 @@ class ChatMessage(Base):
     text: Mapped[str] = mapped_column(Text)  # PII already redacted
     hint_level: Mapped[int | None] = mapped_column(Integer)
     mode: Mapped[str] = mapped_column(Text)  # rule | llm
+    model: Mapped[str | None] = mapped_column(Text)  # the model that wrote an llm reply (main or fallback)
     blocked_reason: Mapped[str | None] = mapped_column(Text)
     tokens_in: Mapped[int] = mapped_column(Integer, server_default="0")
     tokens_out: Mapped[int] = mapped_column(Integer, server_default="0")

@@ -9,6 +9,7 @@ import asyncio
 import json
 import re
 import unicodedata
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from decimal import Decimal
@@ -221,15 +222,30 @@ FORMAT = (
 )
 
 
+class ProviderHTTPError(RuntimeError):
+    """The provider answered with an HTTP error. `status` and a body of at most 300 characters; no secrets."""
+
+    def __init__(self, status: int, detail: str) -> None:
+        super().__init__(f"HTTP {status}: {detail}")
+        self.status = status
+
+
 class OpenAICompatibleProvider:
     def __init__(self, base_url: str, api_key: str, model: str, timeout: float = 90) -> None:
         self.url, self.key, self.model, self.timeout = base_url.rstrip("/") + "/chat/completions", api_key, model, timeout
 
     def _post(self, body: dict[str, Any]) -> dict[str, Any]:
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {self.key}"}
-        req = urllib.request.Request(self.url, json.dumps(body).encode(), headers, method="POST")  # noqa: S310 operator-set URL
-        with urllib.request.urlopen(req, timeout=self.timeout) as r:  # noqa: S310
-            out: dict[str, Any] = json.loads(r.read())
+        # An explicit User-Agent: urllib's default ("Python-urllib/3.x") is blocked by some providers' CDN (Cloudflare 403).
+        headers = {"Content-Type": "application/json", "Accept": "application/json", "User-Agent": "PreClassAI/1.0",
+                   "Authorization": f"Bearer {self.key}"}
+        data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+        req = urllib.request.Request(self.url, data, headers, method="POST")  # noqa: S310 operator-set URL
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as r:  # noqa: S310
+                out: dict[str, Any] = json.loads(r.read())
+        except urllib.error.HTTPError as e:  # status + a short body for the operator; never the key or the request headers
+            detail = e.read(2000).decode("utf-8", "replace").replace(self.key, "***")[:300]
+            raise ProviderHTTPError(e.code, detail) from None
         return out
 
     async def generate(self, req: GenRequest) -> ProviderResult:

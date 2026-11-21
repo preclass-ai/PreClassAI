@@ -3893,6 +3893,13 @@ export interface components {
                 [key: string]: number;
             };
             /**
+             * Chatbymodel
+             * @description Replies per model name (main, fallback, cache).
+             */
+            chatByModel?: {
+                [key: string]: number;
+            };
+            /**
              * Chatfallbackrate
              * @description Share of LLM attempts that fell back to the rule reply.
              * @default 0

@@ -109,6 +109,31 @@ Ba lựa chọn (đều theo chuẩn OpenAI `chat/completions`, đã có sẵn `
 
 Kiểm tra trước khi bật (cần khóa trong môi trường, không lưu khóa): `cd apps/api && PYTHONPATH=. uv run python ../../scripts/ops/llm_smoke.py --extra`. Script chạy 10 câu mẫu và 10 câu tấn công qua model thật cùng bộ lọc của API, in kết quả; thoát 0 khi không có vi phạm. Mặc định giãn cách để không vượt 25 yêu cầu mỗi phút (đặt `LLM_SMOKE_RPM` để đổi), nên với `--extra` mất khoảng 2 phút; chạy được với Groq, DeepSeek và Qwen. Chỉ bật khi 0 vi phạm. Xem tokens và số lần bị chặn: `GET /v1/admin/survey/stats` (`chatBlocked`: `LLM_ANSWER`, `LLM_NUMBER`, `LLM_PII`, `LLM_PROMPT`, `LLM_ERROR`, `LLM_BUDGET`; phần thứ hai bị bỏ không ghi lý do riêng).
 
+## Cấu hình Groq đã kiểm (22/11/2026)
+
+Đã chạy thật: `qwen/qwen3.8-27b` (chính) và `openai/gpt-oss-120b` (dự phòng). So sánh và lý do ở `.agents/LLM-EVAL-2211.md`.
+
+| Biến | Giá trị |
+|---|---|
+| `CHAT_ENABLED` / `CHAT_MODE` | `true` / `llm` (hoặc `rule`, xem dưới) |
+| `CHAT_LLM_BASE_URL` | `https://api.groq.com/openai/v1` |
+| `CHAT_LLM_API_KEY` | khóa Groq, chỉ đặt trên Render |
+| `CHAT_LLM_MODEL` / `CHAT_LLM_MODEL_FALLBACK` | `qwen/qwen3.8-27b` / `openai/gpt-oss-120b` |
+| `CHAT_MAX_OUTPUT_TOKENS` | `220` (gửi dưới tên `max_completion_tokens` khi host là Groq) |
+| `CHAT_DAILY_TOKEN_BUDGET` | `150000` |
+| `CHAT_AI_EXTRA` | `false` |
+| tùy chọn | `CHAT_LLM_TEMPERATURE`, `CHAT_LLM_REASONING_EFFORT` (`off` = không gửi), `CHAT_LLM_TOKEN_PARAM` |
+
+Tham số theo model (mặc định trong code): qwen `temperature 0.5, top_p 0.95, reasoning_effort none, reasoning_format hidden`; gpt-oss `temperature 0.5, top_p 1, reasoning_effort low, include_reasoning false`; luôn `stream=false`. Phần `<think>` hoặc trường reasoning bị cắt trước khi kiểm; đáp án nằm trong phần suy nghĩ cũng tính là vi phạm và rơi về luật.
+
+Thứ tự thử: model chính, lỗi (429, 5xx, quá 9 giây) thì model dự phòng, cuối cùng là luật. Cột `chat_message.model` (migration 0011) và `chatByModel` trong `/v1/admin/survey/stats` cho biết model nào đã trả lời.
+
+Giới hạn gói miễn phí: khoảng 30 yêu cầu mỗi phút và giới hạn token mỗi ngày theo từng model (xem console Groq). Với 150000 token mỗi ngày, mỗi lượt khoảng 365 token, được khoảng 410 lượt.
+
+Khi có sự cố (Groq chậm, 429 liên tục, trả lời lạ): trên Render đổi `CHAT_MODE=rule`, bấm Save, đợi API khởi động lại (khoảng 1 phút). Không cần xóa khóa. Học sinh vẫn có 4 nút gợi ý, câu xã giao và gợi ý bậc 1 đến 3. Kiểm tra: `/v1/auth/config` có `chatMode: "rule"`.
+
+Kiểm trước khi bật (khóa nạp vào môi trường, không in): `cd apps/api && PYTHONPATH=. uv run python ../../scripts/ops/llm_smoke.py --no-fallback` (từng model), rồi `.../habit_redteam.py --live --max-calls 150`.
+
 ## Chọn model cho Groq gói miễn phí (cập nhật 21/11/2026)
 
 Theo một nguồn bên thứ ba, gói Free của Groq hiện không còn `llama-3.3-70b-versatile`; **chưa kiểm chứng trực tiếp**, nên mở console Groq (mục Models và Limits) và xem danh sách model thực tế của tài khoản trước khi đặt `CHAT_LLM_MODEL`. Ứng viên để thử: `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, hoặc một model Qwen có trong gói Free. Mỗi lần đổi model chạy `llm_smoke.py --extra` và chỉ bật khi 0 vi phạm.
