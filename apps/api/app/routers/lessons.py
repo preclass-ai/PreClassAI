@@ -14,6 +14,7 @@ from app.generation import get_job as get_job_service
 from app.lessons import replace_sources as replace_sources_service
 from app.routers._base import errs
 from app.schemas import (
+    BlockCompetency,
     BlockCreate,
     BlockList,
     BlockOut,
@@ -125,6 +126,13 @@ async def create_block(revision_id: UUID, body: BlockCreate, request: Request, c
 async def patch_block(block_id: UUID, body: BlockPatch, request: Request, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> BlockOut:
     raw = (await request.json()).get("payload")
     return await blocks_service.patch_block(db, cu, block_id, raw, body.version)
+
+
+@router.put("/blocks/{block_id}/competency", tags=["blocks"], operation_id="setBlockCompetency", response_model=BlockOut,
+            summary="Set the competency code of a block (author; metadata, does not reset review)",
+            responses=errs(401, 404, 422, _LOCKED))
+async def set_block_competency(block_id: UUID, body: BlockCompetency, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> BlockOut:
+    return await blocks_service.set_competency(db, cu, block_id, body.competency_code)
 
 
 @router.delete("/blocks/{block_id}", tags=["blocks"], status_code=204, operation_id="deleteBlock",

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Badge, Button, ErrorBox, Field, Loading } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api";
@@ -60,6 +61,30 @@ export function ValidationList({ results }: { results: Schemas["ValidationResult
   );
 }
 
+/** Competency of a block (metadata): the teacher can change the default taken from the lesson plan. */
+function CompetencyPicker({ block, canEdit, onChanged }: { block: Schemas["BlockOut"]; canEdit: boolean; onChanged: () => void }) {
+  const cat = useQuery({ queryKey: ["competencies"], queryFn: () => unwrap(api.GET("/v1/lesson-plans/competencies")), staleTime: 600_000 });
+  const set = useMutation({
+    mutationFn: (code: string | null) => unwrap(api.PUT("/v1/blocks/{block_id}/competency", { params: { path: { block_id: block.id } }, body: { competencyCode: code } })),
+    onSuccess: onChanged,
+  });
+  if (!canEdit && !block.competencyCode) return null;
+  return (
+    <section>
+      <h3>Năng lực</h3>
+      <select aria-label="Năng lực của khối" disabled={!canEdit || set.isPending} value={block.competencyCode ?? ""} onChange={(e) => set.mutate(e.target.value || null)}>
+        <option value="">Chưa gắn</option>
+        {(cat.data?.items ?? []).map((c) => (
+          <option key={c.subject + c.code} value={c.code}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+      <ErrorBox error={set.error} />
+    </section>
+  );
+}
+
 /** S03 Source Inspector: links + excerpts, validation, transformation history, reviews of one block. */
 export function SourceInspector({ blockId, sourceRevisionIds, canEdit, onChanged }: {
   blockId: string;
@@ -103,6 +128,7 @@ export function SourceInspector({ blockId, sourceRevisionIds, canEdit, onChanged
           </>
         )}
       </section>
+      <CompetencyPicker block={block} canEdit={canEdit} onChanged={onChanged} />
       <section>
         <h3>Kiểm tra tự động</h3>
         <ValidationList results={validations} />

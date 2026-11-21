@@ -13,6 +13,7 @@ from app.config import get_settings
 from app.db.session import get_db
 from app.errors import ApiError, install_error_handlers
 from app.generation import recover_after_restart
+from app.lessonplan.service import recover_after_restart as recover_plan_jobs
 from app.routers import api_router
 
 DESCRIPTION = """\
@@ -54,6 +55,7 @@ TAGS = [
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await recover_after_restart()  # RUNNING jobs cannot survive a restart
+    await recover_plan_jobs()
     yield
 
 

@@ -316,6 +316,7 @@ class LessonOut(ApiModel):
     author_id: UUID
     current_revision: RevisionOut
     published_version_id: UUID | None = None
+    teach_date: date | None = Field(None, description="First teaching day, when built from a plan that states it.")
     created_at: datetime
     model_config = ex({
         "id": I["lesson"], "title": "Phân bố dân cư theo vùng", "grade": 10, "subject": "GEOGRAPHY",
@@ -489,6 +490,8 @@ class BlockOut(ApiModel):
     review_status: ReviewStatus
     no_source_reason: str | None
     is_factual: bool
+    competency_code: str | None = Field(None, description="Competency of the block (metadata; editing it does not reset review).")
+    objective_id: UUID | None = None
     version: int = Field(description="Optimistic lock: send back in PATCH.")
     link_count: int = 0
     blocker_count: int = Field(0, description="Failed BLOCKER validations at the current hash.")
@@ -701,7 +704,8 @@ class WithdrawRequest(ApiModel):
 class AssignmentCreate(ApiModel):
     class_id: UUID
     open_at: datetime
-    due_at: datetime
+    due_at: datetime | None = Field(None, description="Required unless `teachDate` is given (then: day before it, 23:59 UTC+7).")
+    teach_date: date | None = Field(None, description="Teaching day; used only when `dueAt` is missing.")
     model_config = ex({"classId": I["class"], "openAt": T1, "dueAt": "2026-11-30T23:59:00+07:00"})
 
 
@@ -967,6 +971,7 @@ class PlanMcq(ApiModel):
     correct_option: Literal["A", "B", "C", "D"] | None
     answer_source: Literal["underline", "docx_underline", "teacher"] | None
     needs_confirmation: bool
+    competency_code: str | None = None
 
 
 class PlanItem(ApiModel):
@@ -1006,14 +1011,52 @@ class PlanOut(ApiModel):
     lesson_id: UUID | None = Field(description="Set once 'Tạo bài chuẩn bị' has been used.")
 
 
+class Competency(ApiModel):
+    code: str
+    name: str
+
+
+class SubjectCompetencyOut(Competency):
+    subject: str
+
+
+class CompetencyList(ApiModel):
+    items: list[SubjectCompetencyOut]
+
+
 class PlanDetail(PlanOut):
     sections: list[PlanSection]
     objectives: list[PlanObjective]
     mcqs: list[PlanMcq]
+    competencies: list[Competency] = Field([], description="Competency catalogue of the plan's subject.")
 
 
 class PlanList(ApiModel):
     items: list[PlanOut]
+
+
+class PlanJobOut(ApiModel):
+    id: UUID
+    state: Literal["queued", "parsing", "done", "failed"]
+    file_name: str | None
+    page: int | None = Field(None, description="Page being read (parsing only, best effort).")
+    pages: int | None = None
+    error_code: str | None = None
+    error_title: str | None = Field(None, description="Friendly Vietnamese message when state is failed.")
+    plan_ids: list[UUID] = []
+    created_at: datetime
+
+
+class PlanJobLatest(ApiModel):
+    job: PlanJobOut | None
+
+
+class McqCompetency(ApiModel):
+    competency_code: str | None
+
+
+class BlockCompetency(ApiModel):
+    competency_code: str | None = Field(description="Code from the subject catalogue, or null to clear.")
 
 
 class PlanMcqAnswer(ApiModel):

@@ -356,20 +356,40 @@
             "type": "string"
           },
           "dueAt": {
-            "format": "date-time",
-            "title": "Dueat",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required unless `teachDate` is given (then: day before it, 23:59 UTC+7).",
+            "title": "Dueat"
           },
           "openAt": {
             "format": "date-time",
             "title": "Openat",
             "type": "string"
+          },
+          "teachDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Teaching day; used only when `dueAt` is missing.",
+            "title": "Teachdate"
           }
         },
         "required": [
           "classId",
-          "openAt",
-          "dueAt"
+          "openAt"
         ],
         "title": "AssignmentCreate",
         "type": "object"
@@ -702,6 +722,27 @@
         "title": "AuthConfig",
         "type": "object"
       },
+      "BlockCompetency": {
+        "properties": {
+          "competencyCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Code from the subject catalogue, or null to clear.",
+            "title": "Competencycode"
+          }
+        },
+        "required": [
+          "competencyCode"
+        ],
+        "title": "BlockCompetency",
+        "type": "object"
+      },
       "BlockCounts": {
         "properties": {
           "approved": {
@@ -924,6 +965,18 @@
             "title": "Blockercount",
             "type": "integer"
           },
+          "competencyCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Competency of the block (metadata; editing it does not reset review).",
+            "title": "Competencycode"
+          },
           "contentHash": {
             "description": "Send back in POST /blocks/{id}/reviews (approval is bound to it).",
             "title": "Contenthash",
@@ -969,6 +1022,18 @@
               }
             ],
             "title": "Nosourcereason"
+          },
+          "objectiveId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Objectiveid"
           },
           "parentId": {
             "anyOf": [
@@ -1516,6 +1581,40 @@
           "studentCount"
         ],
         "title": "ClassOut",
+        "type": "object"
+      },
+      "Competency": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "Competency",
+        "type": "object"
+      },
+      "CompetencyList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectCompetencyOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CompetencyList",
         "type": "object"
       },
       "DataFactPayload": {
@@ -2738,6 +2837,19 @@
             "title": "Subject",
             "type": "string"
           },
+          "teachDate": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "First teaching day, when built from a plan that states it.",
+            "title": "Teachdate"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -2815,6 +2927,26 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "McqCompetency": {
+        "properties": {
+          "competencyCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competencycode"
+          }
+        },
+        "required": [
+          "competencyCode"
+        ],
+        "title": "McqCompetency",
+        "type": "object"
+      },
       "OptionPayload": {
         "properties": {
           "label": {
@@ -2859,6 +2991,15 @@
               "type": "string"
             },
             "title": "Activities",
+            "type": "array"
+          },
+          "competencies": {
+            "default": [],
+            "description": "Competency catalogue of the plan's subject.",
+            "items": {
+              "$ref": "#/components/schemas/Competency"
+            },
+            "title": "Competencies",
             "type": "array"
           },
           "grade": {
@@ -3050,6 +3191,123 @@
         "title": "PlanItem",
         "type": "object"
       },
+      "PlanJobLatest": {
+        "properties": {
+          "job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanJobOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "job"
+        ],
+        "title": "PlanJobLatest",
+        "type": "object"
+      },
+      "PlanJobOut": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "errorCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errorcode"
+          },
+          "errorTitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Friendly Vietnamese message when state is failed.",
+            "title": "Errortitle"
+          },
+          "fileName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Page being read (parsing only, best effort).",
+            "title": "Page"
+          },
+          "pages": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pages"
+          },
+          "planIds": {
+            "default": [],
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Planids",
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "queued",
+              "parsing",
+              "done",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "fileName",
+          "createdAt"
+        ],
+        "title": "PlanJobOut",
+        "type": "object"
+      },
       "PlanLessonOut": {
         "properties": {
           "blocks": {
@@ -3119,6 +3377,17 @@
               }
             ],
             "title": "Answersource"
+          },
+          "competencyCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competencycode"
           },
           "correctOption": {
             "anyOf": [
@@ -5174,6 +5443,29 @@
         "title": "StudentOption",
         "type": "object"
       },
+      "SubjectCompetencyOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "subject"
+        ],
+        "title": "SubjectCompetencyOut",
+        "type": "object"
+      },
       "SurveyStats": {
         "examples": [
           {
@@ -6204,6 +6496,89 @@
         ]
       }
     },
+    "/v1/blocks/{block_id}/competency": {
+      "put": {
+        "operationId": "setBlockCompetency",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "block_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Block Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockCompetency"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlockOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "VERSION_CONFLICT (version cũ) hoặc REVISION_LOCKED (bản đã xuất bản không sửa được)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Set the competency code of a block (author; metadata, does not reset review)",
+        "tags": [
+          "blocks"
+        ]
+      }
+    },
     "/v1/blocks/{block_id}/provenance": {
       "get": {
         "description": "Writes an `INSPECT_PROVENANCE` audit entry (no content). Students get 404.",
@@ -7033,7 +7408,7 @@
         ]
       },
       "post": {
-        "description": "One file can hold several lessons: one plan per lesson. Signature blocks and teacher names are removed; an MCQ answer comes from an underline or from the teacher, never from a model. 422: `UNSUPPORTED_FILE`, `SCANNED_PDF`, `PARSE_TIMEOUT` (120 s), `FILE_TOO_LARGE`, `EMPTY_SOURCE`, plus the upload codes of `/sources/file`.",
+        "description": "Returns 202 with a job at once; poll `GET /lesson-plans/jobs/{id}` (queued, parsing with page x/y, done with `planIds`, or failed with a friendly message). One active job per teacher (409 `PARSE_BUSY`). One file can hold several lessons: one plan per lesson. Signature blocks and teacher names are removed; an MCQ answer comes from an underline or from the teacher, never from a model. Quick 422: `UNSUPPORTED_FILE`, `FILE_TOO_LARGE`, `INVALID_FILE`. Reading errors (`SCANNED_PDF`, `PARSE_TIMEOUT` 120 s, `EMPTY_SOURCE`) arrive in the job.",
         "operationId": "uploadLessonPlan",
         "requestBody": {
           "content": {
@@ -7046,11 +7421,11 @@
           "required": true
         },
         "responses": {
-          "201": {
+          "202": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlanList"
+                  "$ref": "#/components/schemas/PlanJobOut"
                 }
               }
             },
@@ -7076,6 +7451,16 @@
             },
             "description": "Sai vai trò (FORBIDDEN_ROLE)."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "PARSE_BUSY"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -7087,7 +7472,162 @@
             "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
           }
         },
-        "summary": "Read a lesson plan (DOCX or PDF with a text layer) into lessons, activities and MCQ (TEACHER, multipart)",
+        "summary": "Start reading a lesson plan in the background (DOCX or PDF with a text layer; TEACHER, multipart)",
+        "tags": [
+          "lesson-plans"
+        ]
+      }
+    },
+    "/v1/lesson-plans/competencies": {
+      "get": {
+        "operationId": "listCompetencies",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetencyList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          }
+        },
+        "summary": "Competency catalogue per subject (TEACHER)",
+        "tags": [
+          "lesson-plans"
+        ]
+      }
+    },
+    "/v1/lesson-plans/jobs/latest": {
+      "get": {
+        "operationId": "getLatestPlanJob",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanJobLatest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          }
+        },
+        "summary": "My most recent reading job, so the page can resume after a reload (TEACHER)",
+        "tags": [
+          "lesson-plans"
+        ]
+      }
+    },
+    "/v1/lesson-plans/jobs/{job_id}": {
+      "get": {
+        "operationId": "getPlanJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanJobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "State of a reading job (owner only)",
         "tags": [
           "lesson-plans"
         ]
@@ -7338,6 +7878,99 @@
           }
         },
         "summary": "The teacher confirms the correct option of an MCQ (answer source = teacher)",
+        "tags": [
+          "lesson-plans"
+        ]
+      }
+    },
+    "/v1/lesson-plans/{plan_id}/mcqs/{mcq_id}/competency": {
+      "put": {
+        "operationId": "setPlanMcqCompetency",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Plan Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "mcq_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Mcq Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McqCompetency"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "The teacher sets the competency of an MCQ (code from the subject catalogue, or null)",
         "tags": [
           "lesson-plans"
         ]

@@ -124,8 +124,9 @@ function AssignPanel({ lesson, publishedId }: { lesson: Lesson; publishedId: str
   const sameGrade = classes.data?.items.filter((c) => c.grade === lesson.grade) ?? [];
   const [classId, setClassId] = useState("");
   const [openAt, setOpenAt] = useState(() => toLocalInput(new Date()));
-  const [dueAt, setDueAt] = useState(() => toLocalInput(new Date(Date.now() + 7 * 86_400_000)));
-  const [lessonDay, setLessonDay] = useState("");
+  // A lesson built from a plan that states the teaching day starts with that day and the due date a day before it; otherwise the day stays empty.
+  const [lessonDay, setLessonDay] = useState(lesson.teachDate ?? "");
+  const [dueAt, setDueAt] = useState(() => (lesson.teachDate ? dueDayBefore(lesson.teachDate) : toLocalInput(new Date(Date.now() + 7 * 86_400_000))));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [done, setDone] = useState<Schemas["AssignmentOut"] | null>(null);
@@ -139,7 +140,7 @@ function AssignPanel({ lesson, publishedId }: { lesson: Lesson; publishedId: str
       const a = await unwrap(
         api.POST("/v1/published/{published_id}/assignments", {
           params: { path: { published_id: publishedId } },
-          body: { classId: classId || sameGrade[0]!.id, openAt: localInputToIso(openAt), dueAt: localInputToIso(dueAt) },
+          body: { classId: classId || sameGrade[0]!.id, openAt: localInputToIso(openAt), dueAt: localInputToIso(dueAt), ...(lessonDay ? { teachDate: lessonDay } : {}) },
         }),
       );
       setDone(a);

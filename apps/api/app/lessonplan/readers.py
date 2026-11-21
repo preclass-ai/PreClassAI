@@ -20,6 +20,12 @@ _LETTER_AFTER = {".", ")"}
 THIN = 1.5  # points: an underline is a line or a rect at most this tall
 UNDER_GAP = 3.0  # points between the letter's bottom and the underline
 MIN_TEXT = 20
+_PROG: Any = None  # shared (page, pages) array set by the child process, so the API can report "page x/y"
+
+
+def set_progress(arr: Any) -> None:
+    global _PROG  # noqa: PLW0603
+    _PROG = arr
 
 
 def _rotated(c: dict[str, Any]) -> bool:
@@ -105,6 +111,8 @@ def read_pdf(data: bytes, max_pages: int = 50) -> tuple[list[Line], int]:
         n = len(pdf.pages)
         if n > max_pages:
             raise ApiError(422, "SOURCE_TOO_LARGE", f"PDF có quá {max_pages} trang")
+        if _PROG is not None:
+            _PROG[1] = n
         for pi in range(n):
             page = pdf.pages[pi]
             try:
@@ -130,6 +138,8 @@ def read_pdf(data: bytes, max_pages: int = 50) -> tuple[list[Line], int]:
                             boxed=(not in_table) and any(_inside(f, x0, top, x1, bottom) for f in frames),
                             table=in_table, opts=option_flags(r["chars"], thin)))
             finally:
+                if _PROG is not None:
+                    _PROG[0] = pi + 1
                 page.flush_cache()  # one page in memory at a time
                 getattr(page, "close", lambda: None)()
     if sum(len(ln.text) for ln in lines) < MIN_TEXT:

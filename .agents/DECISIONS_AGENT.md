@@ -83,7 +83,7 @@
 - **Fixture PDF cần phông có tiếng Việt** (DejaVu trên Linux, Arial trên Windows); test tự bỏ qua nếu máy không có.
 
 ## Giáo án 5512, PR D2 (feat/preclass-from-plan)
-- **Đọc đồng bộ thay vì job nền**: một tệp 25 đến 42 trang mất 20 đến 35 giây, trong giới hạn 120 giây của tiến trình con; giao diện hiện thông báo "có thể mất một phút". Job nền để sau.
+- **Đọc giáo án là job nền** (bổ sung theo yêu cầu 21/11): POST trả 202, trạng thái trong bảng `lesson_plan_job`, tiến độ trang từ tiến trình con qua mảng chia sẻ (bộ nhớ, mất khi khởi động lại thì job thành failed). File giữ trong bộ nhớ của tác vụ, không ghi đĩa cho tới khi đọc xong. Một job mỗi giáo viên; semaphore toàn cục vẫn là 1 (Render 512 MB).
 - **Chưa có ảnh trang có tô vùng**: màn kiểm tra hiện văn bản theo hoạt động kèm số trang. Cần render trang (pypdfium2 đã có sẵn) nếu muốn.
 - **`TEACHER_AUTHORED` bị `generation._persist` đổi thành `AI_PROPOSED`** (mô hình không được tự nhận). Vì vậy khối từ giáo án dùng `ORIGINAL` (trích nguyên văn, có neo) và `SYNTHESISED` (lời giải mẫu, thẻ hỏi); tiêu đề bài là tên bài, không tạo khối tiêu đề.
 - **Mã năng lực chưa gắn vào khối bài** (khối không có trường này). Mã chỉ ở bước đọc (mục tiêu) và cần cột thêm ở PR sau.
