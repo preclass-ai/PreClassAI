@@ -33,8 +33,26 @@ REFUSAL = {
     "ANSWER_REQUEST": "HABIT AI không đưa đáp án, em tự làm nhé. Em có thể xin gợi ý hoặc hỏi cách đọc số liệu.",
     "CONFIRM_OPTION": "HABIT AI không nói phương án nào đúng hay sai, em tự làm nhé. Em thử đọc lại đề rồi xin gợi ý.",
     "UNSAFE": "Mình chỉ hỗ trợ việc học thôi nhé. Nếu cần giúp việc khác, em hỏi thầy cô giúp em nha.",
-    "OFFTOPIC": "Câu này nằm ngoài bài học này, HABIT AI chưa trả lời được. Em hỏi thầy cô giúp em nhé!",
+    "OFFTOPIC": "Câu này nằm ngoài bài học này, HABIT AI chưa trả lời được. Em chọn một gợi ý bên dưới hoặc hỏi thầy cô nhé.",
 }
+
+# Suggestion buttons: structured actions, so they never go through the free-text classifier.
+SUGGESTIONS = [("start", "Gợi ý bước đầu"), ("where_data", "Số liệu cần dùng nằm ở đâu?"),
+               ("formula", "Nhắc lại cách tính"), ("teacher", "Em muốn hỏi thầy cô")]
+QUICK_LEVEL = {"start": 1, "where_data": 2, "formula": 3}
+TEACHER_REPLY = "Em ghi lại câu hỏi rồi hỏi thầy cô trong giờ học nhé. Thầy cô sẽ giải thích kỹ hơn."
+# General "how do I do this" questions are in scope: they get the hint for that step (normalised, so no diacritics needed).
+HOWTO = {
+    1: ("bat dau", "lam sao", "lam the nao", "khong hieu", "khong biet", "goi y", "cach lam", "nen lam gi", "buoc dau", "bi tac"),
+    2: ("nam o dau", "tim o dau", "lay o dau", "du lieu nao", "so lieu nao", "du lieu o dau", "so lieu o dau", "bang o dau"),
+    3: ("cong thuc", "cach tinh", "tinh nhu the nao", "tinh the nao"),
+}
+
+
+def howto(msg: str) -> int | None:
+    n = f" {norm(msg)} "
+    return next((lvl for lvl in (3, 2, 1) if any(c in n for c in HOWTO[lvl])), None)
+
 
 _PHONE = re.compile(r"(?<!\d)(?:\+?84|0)[\d .\-]{8,12}\d(?!\d)")
 _EMAIL = re.compile(r"[\w.+\-]+@[\w\-]+(?:\.[\w\-]+)+")
@@ -186,7 +204,7 @@ def hint(v: ItemView, level: int, salt: int = 0, small: bool = False,
             refs = [b for b in v.blocks if b[1] == "Tiêu đề"][:1]
         else:
             where = f" Hãy tìm dữ liệu có {' và '.join(bits)}." if bits else ""
-            refs = [b for b in v.blocks if b[1] in ("Tiêu đề", "Đoạn văn")][:2]
+            refs = [b for b in v.blocks if b[1] == "Tiêu đề"][:1] or [b for b in v.blocks if b[1] == "Đoạn văn"][:1]
             text = (f"Em xem lại phần nội dung của bài (tiêu đề và đoạn văn bên dưới).{where} "
                     "Chỉ cần xác định đúng dữ liệu cần dùng, chưa cần tính vội.")
     else:
@@ -198,7 +216,7 @@ def ask(v: ItemView, msg: str) -> tuple[str, list[tuple[str, str, str]]] | None:
     """Keyword match against the approved blocks; None when nothing in the lesson matches (→ OFFTOPIC)."""
     q = {t for t in norm(msg).split() if len(t) > 2 and t not in STOP}
     ranked = sorted(((len(q & set(norm(b[2]).split())), b) for b in v.blocks), key=lambda x: -x[0])
-    hits = [b for s, b in ranked if s > 0 and leak(b[2], v) is None][:2]
+    hits = [b for s, b in ranked if s > 0 and leak(b[2], v) is None][:1]  # only the most relevant block
     if hits:
         return "Em thử đối chiếu với phần nội dung đã được thầy cô duyệt dưới đây, rồi tự rút ra câu trả lời nhé.", hits
     if q & (set(norm(v.stem).split()) | set(norm(" ".join(t for _, t in v.options)).split())):
@@ -207,7 +225,7 @@ def ask(v: ItemView, msg: str) -> tuple[str, list[tuple[str, str, str]]] | None:
 
 
 def decide(v: ItemView, action: str, msg: str, used_hints: int, small: bool = False,
-           table_first: bool = False) -> tuple[str, int, list[tuple[str, str, str]], str | None]:
+           table_first: bool = False, quick: str | None = None) -> tuple[str, int, list[tuple[str, str, str]], str | None]:
     """The whole rule-mode decision, pure: (reply, hint level, source refs, refusal reason). `msg` is already redacted."""
     if action == "explain":  # caller guarantees the student answered this item
         return v.explanation or "Câu này chưa có lời giải.", 0, [], None
@@ -215,6 +233,14 @@ def decide(v: ItemView, action: str, msg: str, used_hints: int, small: bool = Fa
     refs: list[tuple[str, str, str]] = []
     if action == "hint":
         level = min(used_hints + 1, 3)
+        text, refs = hint(v, level, salt=used_hints, small=small, table_first=table_first)
+    elif quick:  # a suggestion button: structured, never classified as free text
+        if quick == "teacher":
+            return TEACHER_REPLY, 0, [], None
+        level = QUICK_LEVEL[quick]
+        text, refs = hint(v, level, salt=used_hints, small=small, table_first=table_first)
+    elif (lvl := howto(msg)) is not None and intent(msg, v) is None:  # "how do I start", "where is the data", ...
+        level = lvl
         text, refs = hint(v, level, salt=used_hints, small=small, table_first=table_first)
     else:
         reason = intent(msg, v)

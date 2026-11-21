@@ -88,3 +88,23 @@ Xem tokens và số lần bị chặn: đăng nhập ADMIN rồi `GET /v1/admin/
 ## Seed và dữ liệu khảo sát
 
 `python -m seed.seed` **bỏ qua** khi DB đã có dữ liệu, nên sửa nội dung seed (ví dụ chống lộ đáp án) chỉ có hiệu lực trên DB mới. Reset DB demo xóa bài làm của học sinh: xuất `GET /v1/admin/survey/export.csv` trước, và không reset giữa chừng một đợt khảo sát. Kiểm tra seed không lộ đáp án: `cd apps/api && PYTHONPATH=. uv run python ../../scripts/ops/check_seed_leak.py` (0 vi phạm; CI chạy cùng kiểm tra trong `tests/unit/test_seed_leak.py`).
+
+## HABIT AI với model thật (CHAT_MODE=llm)
+
+Mặc định `CHAT_MODE=rule` (0đ, không gọi model). Bật model thật chỉ khi cần phần diễn đạt tự nhiên hơn và phần "gợi ý thêm". Luật vẫn quyết định trước (không đáp án, không phản hồi gợi đáp án, lọc PII) và kiểm lại sau mỗi câu trả lời của model; lỗi, hết ngân sách hoặc quá 15 giây thì dùng câu trả lời của luật, học sinh không thấy lỗi.
+
+| Biến | Giá trị |
+|---|---|
+| `CHAT_MODE` | `llm` |
+| `CHAT_LLM_BASE_URL`, `CHAT_LLM_API_KEY`, `CHAT_LLM_MODEL` | xem hai lựa chọn dưới đây; khóa chỉ đặt trong biến môi trường của Render, không commit, không dán vào chat |
+| `CHAT_AI_EXTRA` | `true` để thêm phần thứ hai "HABIT AI gợi ý thêm (chưa được thầy cô kiểm chứng)" (kiến thức chung). Mặc định `false`. Chỉ có tác dụng khi `CHAT_MODE=llm` |
+| `CHAT_DAILY_TOKEN_BUDGET` | giữ `300000` (hết thì tự về luật); `CHAT_MAX_OUTPUT_TOKENS=220` |
+
+Ba lựa chọn (đều theo chuẩn OpenAI `chat/completions`, đã có sẵn `OpenAICompatibleProvider`):
+1. **DeepSeek**: `CHAT_LLM_BASE_URL=https://api.deepseek.com`, `CHAT_LLM_MODEL=deepseek-flash`. Tên cũ `deepseek-chat` và `deepseek-reasoner` đã được DeepSeek ngừng (xem https://api-docs.deepseek.com). Không bật chế độ suy luận (`reasoning_effort`): chậm và tốn token hơn, không cần cho gợi ý ngắn.
+2. **Qwen bản quốc tế (DashScope, máy chủ Singapore)**: `CHAT_LLM_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1`, `CHAT_LLM_MODEL=qwen-plus` (hoặc model rẻ hơn cùng họ). Khóa theo vùng: khóa Singapore khác khóa Bắc Kinh. Nguồn: tài liệu "OpenAI compatibility" của Alibaba Cloud Model Studio. Kiểm lại tên model và giá trên trang nhà cung cấp trước khi bật.
+3. **Groq (gói miễn phí, nhanh)**: `CHAT_LLM_BASE_URL=https://api.groq.com/openai/v1`, `CHAT_LLM_MODEL=llama-3.3-70b-versatile` (mặc định đề xuất). Nếu bảng model trong console Groq có model Qwen (ví dụ `qwen/qwen3-32b`), thử bằng cách chỉ đổi `CHAT_LLM_MODEL` rồi chạy `llm_smoke.py`; giữ model nào đạt 0 vi phạm và trả lời ngắn gọn bằng tiếng Việt. Gói miễn phí giới hạn khoảng **30 yêu cầu mỗi phút** (và giới hạn token theo ngày, xem console): vượt thì Groq trả 429, API **tự dùng câu trả lời của luật**, học sinh không thấy lỗi. Với CHAT_AI_EXTRA mỗi câu hỏi tốn 2 yêu cầu. Dữ liệu gửi sang Mỹ (Groq), cùng lưu ý về dữ liệu như trên.
+
+**Dữ liệu gửi ra ngoài:** nội dung câu hỏi của học sinh (đã lọc số điện thoại, email, địa chỉ; không có tên, mã khảo sát hay tài khoản), đề bài, các phương án (không đánh dấu đúng) và đoạn nội dung bài đã duyệt (tối đa 1.200 ký tự). **Không bao giờ** gửi đáp án hoặc lời giải của câu chưa nộp. Nếu ưu tiên dữ liệu, chọn Qwen quốc tế (máy chủ Singapore) và nói rõ với nhà trường trước khi bật. Cả hai nhà cung cấp là bên thứ ba ngoài nước.
+
+Kiểm tra trước khi bật (cần khóa trong môi trường, không lưu khóa): `cd apps/api && PYTHONPATH=. uv run python ../../scripts/ops/llm_smoke.py --extra`. Script chạy 10 câu mẫu và 10 câu tấn công qua model thật cùng bộ lọc của API, in kết quả; thoát 0 khi không có vi phạm. Mặc định giãn cách để không vượt 25 yêu cầu mỗi phút (đặt `LLM_SMOKE_RPM` để đổi), nên với `--extra` mất khoảng 2 phút; chạy được với Groq, DeepSeek và Qwen. Chỉ bật khi 0 vi phạm. Xem tokens và số lần bị chặn: `GET /v1/admin/survey/stats` (`chatBlocked`: `LLM_ANSWER`, `LLM_NUMBER`, `LLM_PII`, `LLM_PROMPT`, `LLM_ERROR`, `LLM_BUDGET`; phần thứ hai bị bỏ không ghi lý do riêng).

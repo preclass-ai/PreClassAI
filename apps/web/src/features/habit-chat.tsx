@@ -4,12 +4,27 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui";
 import { errorCode, errorMessage } from "@/lib/errors";
 import { newRequestId } from "@/lib/uuid";
+import type { Schemas } from "@/lib/api";
 import { askHabit, type ChatReply } from "./habit-api";
 import { HabitMark, SourceRef } from "./habit-parts";
 
-const QUICK = ["Em nên bắt đầu từ đâu?", "Số liệu này nằm ở đâu?", "Công thức tính là gì?"];
+type QuickId = NonNullable<Schemas["ChatRequest"]["quick"]>;
+// Structured buttons: they never go through the free-text classifier on the server.
+const QUICK: { id: QuickId; label: string }[] = [
+  { id: "start", label: "Em nên bắt đầu từ đâu?" },
+  { id: "where_data", label: "Số liệu này nằm ở đâu?" },
+  { id: "formula", label: "Công thức tính là gì?" },
+];
 const MAX = 300;
-type Msg = { id: number; from: "me" | "habit"; text: string; refs?: ChatReply["sourceRefs"]; refused?: boolean };
+type Msg = {
+  id: number;
+  from: "me" | "habit";
+  text: string;
+  refs?: ChatReply["sourceRefs"];
+  refused?: boolean;
+  extra?: string | null;
+  suggestions?: ChatReply["suggestions"];
+};
 
 /** Bottom sheet (narrow) / side panel (wide). Plain text only: replies are rendered as React text, never as HTML. */
 export default function HabitChat({ assignmentId, itemId, answered, explanation, open, onClose }: {
@@ -42,6 +57,24 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
   }, [open]);
 
   useEffect(() => {
+    // Phones: keep the sheet (and its input) above the on-screen keyboard. visualViewport shrinks when the keyboard opens.
+    const vv = window.visualViewport;
+    const d = dlg.current;
+    if (!open || !vv || !d || window.matchMedia("(min-width: 1100px)").matches) return;
+    const fit = () => {
+      d.style.setProperty("--vvh", `${Math.round(vv.height * 0.8)}px`);
+      d.style.setProperty("--vvb", `${Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))}px`);
+    };
+    fit();
+    vv.addEventListener("resize", fit);
+    vv.addEventListener("scroll", fit);
+    return () => {
+      vv.removeEventListener("resize", fit);
+      vv.removeEventListener("scroll", fit);
+    };
+  }, [open]);
+
+  useEffect(() => {
     // Non-modal side panel: Esc must work even when focus fell back to the page (e.g. the button just got disabled).
     if (!open) return;
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -54,7 +87,7 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [msgs, busy]);
 
-  async function send(message: string) {
+  async function send(message: string, quick?: QuickId) {
     const m = message.trim();
     if (!m) return;
     const r = retry.current && retry.current.text === m ? retry.current : { text: m, rid: newRequestId() };
@@ -62,12 +95,12 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
     retry.current = r;
     setBusy(true);
     setErr(null);
-    if (m === text.trim()) setText(""); // clear now, not on success: the student may already be typing the next question
+    if (!quick && m === text.trim()) setText(""); // clear now, not on success: the student may already be typing the next question
     if (first) setMsgs((x) => [...x, { id: ++seq.current, from: "me", text: m }]);
     try {
-      const res = await askHabit(assignmentId, { itemId, action: "ask", message: m, requestId: r.rid });
+      const res = await askHabit(assignmentId, { itemId, action: "ask", ...(quick ? { quick } : { message: m }), requestId: r.rid });
       retry.current = null;
-      setMsgs((x) => [...x, { id: ++seq.current, from: "habit", text: res.reply, refs: res.sourceRefs, refused: !!res.blockedReason }]);
+      setMsgs((x) => [...x, { id: ++seq.current, from: "habit", text: res.reply, refs: res.sourceRefs, refused: !!res.blockedReason, extra: res.extra, suggestions: res.suggestions }]);
     } catch (e) {
       if (errorCode(e) !== "NETWORK") retry.current = null;
       setErr(e);
@@ -94,14 +127,31 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
           ×
         </button>
       </header>
-      <p className="habit-note">HABIT AI không đưa đáp án, em tự làm nhé. Không nhập thông tin cá nhân.</p>
+      <p className="habit-note">HABIT AI không đưa đáp án. Không nhập thông tin cá nhân.</p>
       <div ref={log} className="habit-log" aria-live="polite" aria-busy={busy}>
-        {msgs.map((m) => (
-          <div key={m.id} className={`habit-msg ${m.from}${m.refused ? " refused" : ""}`}>
-            <p>{m.text}</p>
-            {m.refs?.map((s) => (
-              <SourceRef key={s.blockId} label={s.label} excerpt={s.excerpt} />
-            ))}
+        {msgs.map((m, idx) => (
+          <div key={m.id} className="habit-turn">
+            <div className={`habit-msg ${m.from}${m.refused ? " refused" : ""}`}>
+              <p>{m.text}</p>
+              {m.refs?.map((s) => (
+                <SourceRef key={s.blockId} excerpt={s.excerpt} />
+              ))}
+            </div>
+            {m.extra ? (
+              <div className="habit-msg habit habit-extra">
+                <span className="habit-extra-label">HABIT AI gợi ý thêm (chưa được thầy cô kiểm chứng)</span>
+                <p>{m.extra}</p>
+              </div>
+            ) : null}
+            {m.suggestions?.length && idx === msgs.length - 1 && !limited ? (
+              <div className="habit-suggest" role="group" aria-label="Em có thể chọn">
+                {m.suggestions.map((sg) => (
+                  <button key={sg.id} type="button" className="habit-chip" disabled={busy} onClick={() => void send(sg.label, sg.id)}>
+                    {sg.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         ))}
         {busy ? <div className="habit-msg habit habit-think" role="status">HABIT AI đang nghĩ<span className="habit-dots" aria-hidden="true"><i /><i /><i /></span></div> : null}
@@ -123,8 +173,8 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
         <form className="habit-form" onSubmit={submit}>
           <div className="habit-chips">
             {QUICK.map((q) => (
-              <button key={q} type="button" className="habit-chip" disabled={busy || limited} onClick={() => void send(q)}>
-                {q}
+              <button key={q.id} type="button" className="habit-chip" disabled={busy || limited} onClick={() => void send(q.label, q.id)}>
+                {q.label}
               </button>
             ))}
           </div>

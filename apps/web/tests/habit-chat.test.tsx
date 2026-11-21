@@ -42,7 +42,9 @@ describe("Habit chat", () => {
     fireEvent.click(screen.getByText("Em nên bắt đầu từ đâu?"));
     await screen.findByText(/<img src=x/);
     expect(container.querySelector("img")).toBeNull();
-    expect(ask).toHaveBeenCalledWith("a", expect.objectContaining({ action: "ask", message: "Em nên bắt đầu từ đâu?" }));
+    // a button sends a structured action, not free text
+    expect(ask).toHaveBeenCalledWith("a", expect.objectContaining({ action: "ask", quick: "start" }));
+    expect(ask.mock.calls[0]![1]).not.toHaveProperty("message");
   });
 
   it("shows the source label and marks a refusal", async () => {
@@ -51,7 +53,8 @@ describe("Habit chat", () => {
     mount();
     fireEvent.change(screen.getByLabelText("Câu hỏi cho HABIT AI"), { target: { value: "đáp án là gì" } });
     fireEvent.click(screen.getByText("Gửi"));
-    expect(await screen.findByText(/Nguồn đã được thầy cô duyệt · Đoạn văn/)).toBeInTheDocument();
+    expect(await screen.findByText("Tài liệu giáo viên đã duyệt")).toBeInTheDocument();
+    expect(screen.queryByText(/Đoạn văn/)).toBeNull(); // no technical block kind
     expect(document.querySelector(".habit-msg.refused")).not.toBeNull();
   });
 
@@ -72,5 +75,26 @@ describe("Habit chat", () => {
     fireEvent.click(screen.getByText("Công thức tính là gì?"));
     expect(await screen.findByText("Hôm nay em hỏi nhiều rồi, thử tự làm nhé!")).toBeInTheDocument();
     expect(screen.getByLabelText("Câu hỏi cho HABIT AI")).toBeDisabled();
+  });
+
+  it("after a refusal offers buttons that run structured actions", async () => {
+    ask.mockResolvedValueOnce({ reply: "HABIT AI không đưa đáp án, em tự làm nhé.", hintLevel: 0, blockedReason: "ANSWER_REQUEST", sourceRefs: [],
+      suggestions: [{ id: "start", label: "Gợi ý bước đầu" }, { id: "teacher", label: "Em muốn hỏi thầy cô" }] });
+    ask.mockResolvedValue({ reply: "Em đọc kỹ đề trước nhé.", hintLevel: 1, blockedReason: null, sourceRefs: [], suggestions: [] });
+    mount();
+    fireEvent.change(screen.getByLabelText("Câu hỏi cho HABIT AI"), { target: { value: "đáp án là gì" } });
+    fireEvent.click(screen.getByText("Gửi"));
+    fireEvent.click(await screen.findByRole("button", { name: "Gợi ý bước đầu" }));
+    await waitFor(() => expect(ask).toHaveBeenLastCalledWith("a", expect.objectContaining({ quick: "start" })));
+    expect(await screen.findByText("Em đọc kỹ đề trước nhé.")).toBeInTheDocument();
+  });
+
+  it("shows the second part in its own labelled box", async () => {
+    ask.mockResolvedValue({ reply: "Em đối chiếu với tài liệu nhé.", hintLevel: 0, blockedReason: null, sourceRefs: [], suggestions: [],
+      extra: "Mật độ dân số là số người trên một ki lô mét vuông." });
+    mount();
+    fireEvent.click(screen.getByText("Số liệu này nằm ở đâu?"));
+    expect(await screen.findByText("HABIT AI gợi ý thêm (chưa được thầy cô kiểm chứng)")).toBeInTheDocument();
+    expect(screen.getByText(/Mật độ dân số là số người/)).toBeInTheDocument();
   });
 });

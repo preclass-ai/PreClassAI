@@ -1254,6 +1254,18 @@
             "description": "Refusal code (e.g. ANSWER_REQUEST) when the reply is a refusal.",
             "title": "Blockedreason"
           },
+          "extra": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Second part (CHAT_AI_EXTRA): general knowledge, NOT verified by the teacher.",
+            "title": "Extra"
+          },
           "hintLevel": {
             "description": "1..3 for `hint`, 0 otherwise.",
             "title": "Hintlevel",
@@ -1269,6 +1281,14 @@
               "$ref": "#/components/schemas/SourceRef"
             },
             "title": "Sourcerefs",
+            "type": "array"
+          },
+          "suggestions": {
+            "description": "Buttons offered after a refusal or off-topic.",
+            "items": {
+              "$ref": "#/components/schemas/QuickAction"
+            },
+            "title": "Suggestions",
             "type": "array"
           }
         },
@@ -1316,6 +1336,24 @@
             ],
             "description": "Free question for `ask` (PII redacted before storing).",
             "title": "Message"
+          },
+          "quick": {
+            "anyOf": [
+              {
+                "enum": [
+                  "start",
+                  "where_data",
+                  "formula",
+                  "teacher"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Suggestion button instead of free text (with `ask`).",
+            "title": "Quick"
           },
           "requestId": {
             "description": "Idempotency key: a retry returns the stored reply, uncounted.",
@@ -3124,6 +3162,30 @@
           "publishedAt"
         ],
         "title": "PublishedOut",
+        "type": "object"
+      },
+      "QuickAction": {
+        "properties": {
+          "id": {
+            "enum": [
+              "start",
+              "where_data",
+              "formula",
+              "teacher"
+            ],
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "QuickAction",
         "type": "object"
       },
       "ReviewEventOut": {

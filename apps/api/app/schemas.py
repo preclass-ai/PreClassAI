@@ -821,12 +821,14 @@ class AttemptRequest(ApiModel):
 
 # ---------------------------------------------------------------- Habit (CHAT_ENABLED)
 HabitAction = Literal["hint", "ask", "explain"]
+QuickId = Literal["start", "where_data", "formula", "teacher"]
 
 
 class ChatRequest(ApiModel):
     item_id: UUID = Field(description="The item the student is working on (must belong to this assignment).")
     action: HabitAction
     message: str | None = Field(None, max_length=300, description="Free question for `ask` (PII redacted before storing).")
+    quick: QuickId | None = Field(None, description="Suggestion button instead of free text (with `ask`).")
     request_id: UUID = Field(description="Idempotency key: a retry returns the stored reply, uncounted.")
     model_config = ex({"itemId": I["q1"], "action": "hint", "requestId": I["request"]})
 
@@ -837,10 +839,17 @@ class SourceRef(ApiModel):
     excerpt: str = Field(description="Approved text, verbatim from the published snapshot.")
 
 
+class QuickAction(ApiModel):
+    id: QuickId
+    label: str
+
+
 class ChatReply(ApiModel):
     reply: str = Field(description="Plain text. Never contains the answer before the student has answered the item.")
     hint_level: int = Field(description="1..3 for `hint`, 0 otherwise.")
     source_refs: list[SourceRef]
+    extra: str | None = Field(None, description="Second part (CHAT_AI_EXTRA): general knowledge, NOT verified by the teacher.")
+    suggestions: list[QuickAction] = Field(default_factory=list, description="Buttons offered after a refusal or off-topic.")
     blocked_reason: str | None = Field(None, description="Refusal code (e.g. ANSWER_REQUEST) when the reply is a refusal.")
     model_config = ex({"reply": "Em đọc kỹ đề và xác định đề đang hỏi về vùng nào, năm nào nhé.", "hintLevel": 1,
                        "sourceRefs": [], "blockedReason": None})
