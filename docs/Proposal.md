@@ -712,3 +712,20 @@ Giữ ở một nơi duy nhất để tránh lệch: `docs/survey/CHECKLIST-BUOI
 | `docs/demo/PreClass-AI-gioi-thieu-nghien-cuu.md` | Bản giới thiệu nghiên cứu trước đó (chứa một số chi tiết đã cũ, ví dụ phiên bản Postgres và tài khoản demo — nên ưu tiên tài liệu này) |
 | `.agents/PROGRESS.md`, `.agents/handoffs/*` | Tiến độ và bàn giao theo từng nhiệm vụ |
 | `docs/01`–`docs/07` | Tài liệu thiết kế **cũ** (full-stack Next.js, có trợ lí trò chuyện); chỉ để tham khảo |
+
+
+## 8. Hướng nâng cấp phía giáo viên và lộ trình đa môn (bổ sung 21/11/2026)
+
+**Hướng nâng cấp.** Giáo án theo Công văn 5512 trở thành nguồn của bài chuẩn bị trước giờ học: hệ thống đọc giáo án (mục tiêu, 4 hoạt động, câu trắc nghiệm; đáp án chỉ từ gạch chân hoặc giáo viên chọn), giáo viên kiểm tra rồi tạo bản nháp đi qua VAL-01..10 và duyệt từng khối; học sinh làm trước giờ học cùng HABIT AI; bảng insight cho giáo viên biết em vướng ở đâu và đề xuất dạy lại, vẫn qua giáo viên duyệt.
+
+**Cơ sở khoa học (tham khảo, cần kiểm tra trích dẫn đầy đủ trước khi nộp):**
+- Bastani và cộng sự (2025), PNAS: dùng AI sinh nội dung không có rào chắn có thể làm giảm việc học; thiết kế có hướng dẫn giảm tác hại. Liên hệ: HABIT AI không đưa đáp án.
+- Kestin và cộng sự (2025), Scientific Reports: gia sư AI thiết kế theo nguyên tắc sư phạm cho kết quả học tốt hơn một bài giảng chủ động trong lớp ở một thử nghiệm. Hạn chế: một môn, một trường.
+- LearnLM và Eedi (2025): đánh giá gia sư AI so với gia sư người trong toán; cần đọc kỹ phương pháp trước khi viện dẫn số liệu.
+- Adesope và cộng sự (2017), Review of Educational Research: tổng hợp về học bằng kiểm tra (practice testing). Låg và Sæle (2019): tổng hợp về luyện tập truy hồi. Liên hệ: học sinh thử trước rồi xem lời giải.
+- Holstein và cộng sự (2018): bảng điều khiển cho giáo viên trong lớp học có gia sư thông minh. Liên hệ: insight ẩn danh theo câu, không xếp hạng học sinh.
+Không trích số liệu cụ thể cho đến khi nhóm đọc lại từng bài.
+
+**Lộ trình đa môn.** Hiện chỉ Địa lí hoạt động (bảng `subject`, `subject_competency` đã có chỗ cho môn khác). Bộ đọc giáo án không có gì cứng theo Địa lí ngoài hai bảng cấu hình (từ khóa môn, mã năng lực); đã kiểm bằng giáo án mô phỏng môn Lịch sử. Thêm môn mới cần: danh mục năng lực của môn, bộ kiểm tra số liệu/nội dung phù hợp (VAL hiện thiên về số liệu địa lí), và duyệt của giáo viên môn đó.
+
+**Kế hoạch thử nghiệm sau thi.** So sánh hai lớp song song (có HABIT AI trước giờ học và không), đo tỉ lệ đúng lần đầu, tự đánh giá của học sinh và thời gian chuẩn bị của giáo viên; xin phép phụ huynh và nhà trường; dữ liệu ẩn danh. Chưa có số liệu.

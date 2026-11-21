@@ -20,3 +20,9 @@ async def test_tables_exist_and_are_empty(db: AsyncSession, table: str) -> None:
 async def test_answer_and_activity_values_are_constrained(db: AsyncSession) -> None:
     names = {r[0] for r in (await db.execute(text("SELECT conname FROM pg_constraint WHERE conname LIKE 'ck_mcq_%' OR conname LIKE 'ck_section_%'"))).all()}
     assert names == {"ck_mcq_correct", "ck_mcq_source", "ck_mcq_conf", "ck_section_activity", "ck_section_sub"}
+
+
+async def test_only_geography_is_an_active_subject(db: AsyncSession) -> None:
+    rows = (await db.execute(text("SELECT code FROM subject WHERE active"))).all()
+    assert [r[0] for r in rows] == ["DIA_LI"]
+    assert await db.scalar(text("SELECT count(*) FROM subject")) >= 10

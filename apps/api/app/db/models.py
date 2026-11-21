@@ -463,3 +463,12 @@ class ExtractedMcq(Base):
     answer_source: Mapped[str | None] = mapped_column(Text)  # underline | docx_underline | teacher
     confidence: Mapped[str] = mapped_column(Text, server_default="low")
     needs_confirmation: Mapped[bool] = mapped_column(server_default=text("true"))
+
+
+class Subject(Base):
+    """Catalogue of subjects; `active` marks the ones the product supports (only geography for now)."""
+
+    __tablename__ = "subject"
+    code: Mapped[str] = mapped_column(Text, primary_key=True)
+    name_vi: Mapped[str] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(server_default=text("false"))
