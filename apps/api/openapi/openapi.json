@@ -4518,7 +4518,7 @@
             "type": "string"
           },
           "rule": {
-            "description": "VAL-01 … VAL-09",
+            "description": "VAL-01 … VAL-10",
             "title": "Rule",
             "type": "string"
           },

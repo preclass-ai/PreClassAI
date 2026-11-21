@@ -50,3 +50,11 @@
 - **Thích ứng không lưu gì**: tính lại từ attempt + chat_message mỗi lần `/habit`, tránh lưu kết luận về học sinh.
 - **Ngưỡng**: REVIEW khi ≥ 2 câu và sai ≥ 50%; QUIET khi ≥ 3 câu và ≥ 80% đúng ngay không gợi ý (hằng số trong `app/personalization`, test hạ ngưỡng bằng monkeypatch).
 - **E2E personalization chưa chạy được**: tác vụ nền bị hệ thống dừng vì thiếu RAM; không chạy lại theo ghi chú.
+
+## Seed không lộ đáp án (fix/seed-answer-leak, 2026-11-22)
+- **Lỗi thật trong seed:** `data_fact` chỉ có hàng lớn nhất (= đáp án câu 1), đoạn văn thứ hai của 5/6 bài nêu hoặc gợi ý đáp án ("nhóm dịch vụ chiếm tỉ trọng lớn nhất"), đề câu 2 nêu tên đúng hai vùng (đáp án câu 1 nằm trong đó), và đáp án MCQ luôn là A. Bài vẫn "làm được" chỉ vì lộ đáp án.
+- **Sửa seed:** mỗi hàng bảng thành một `data_fact` (HS đọc bảng để tự so sánh), đoạn thứ hai trung tính, đề câu 2 không nêu tên ("giữa vùng cao nhất và thấp nhất"), thứ tự hàng đổi để đáp án đúng ở A/B/C/D khác nhau. MockProvider cũng sinh đủ `data_fact` các hàng và đề trung tính (nếu không VAL-10 chặn mọi bài sinh ra).
+- **VAL-10 là heuristic có mức:** số đáp án / đáp án + "nhất" / chỉ đáp án được nêu ở số liệu = Chặn; từ riêng của đáp án trong câu xếp hạng / câu khác nêu một phần phương án = Cảnh báo. Chọn vậy để không chặn oan giáo viên vì suy đoán; giáo viên duyệt vẫn là chốt cuối.
+- **CUE_TOKEN so khớp có dấu** ("bảng" ≠ "bằng"): so khớp bỏ dấu sinh dương tính giả ngay ở câu hỏi tính chênh lệch.
+- **Migration 0005 đổi CHECK của `validation_result`** (cho VAL-10): không xóa dữ liệu; downgrade dùng `NOT VALID` vì bảng append-only.
+- **DB demo đã seed sẽ KHÔNG đổi** (seed bỏ qua khi đã có dữ liệu). Muốn bài trên Render hết lộ đáp án phải reset + seed lại, mà reset xóa dữ liệu khảo sát: chỉ làm khi chưa/đã xuất xong CSV khảo sát. Xem RUNBOOK.

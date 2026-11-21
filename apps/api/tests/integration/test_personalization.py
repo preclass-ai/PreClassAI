@@ -19,6 +19,7 @@ pytestmark = pytest.mark.db
 ASSIGN = uid("dan-so-vung:assignment")
 URL = f"/v1/student/assignments/{ASSIGN}"
 PREFS = "/v1/student/preferences"
+CORRECT = "C"  # the seed puts the largest row (the answer of the first MCQ) in the third position
 
 
 @pytest.fixture
@@ -119,7 +120,7 @@ async def test_quiet_skill_when_right_first_time_without_hints(client: httpx.Asy
     on.setattr(personalization, "QUIET_MIN_ATTEMPTS", 1)
     await login(client, "HS10-02")
     mcq = next(i for i in (await client.get(URL)).json()["items"] if i["itemType"] == "MCQ")
-    r = await client.post(f"{URL}/attempts", json={"itemId": mcq["id"], "answer": {"choice": "A"}, "requestId": str(uuid.uuid4())})
+    r = await client.post(f"{URL}/attempts", json={"itemId": mcq["id"], "answer": {"choice": CORRECT}, "requestId": str(uuid.uuid4())})
     assert r.json()["isCorrect"] is True
     assert await personalization.skill_advice(db, uid("user:HS10-02")) == {"COMPARE": "QUIET"}
 

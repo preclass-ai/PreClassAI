@@ -21,7 +21,7 @@ Các công cụ AI soạn bài thường cho ra học liệu trôi chảy nhưng
 
 1. **Nguồn bất biến.** Giáo viên dán văn bản hoặc tải DOCX; hệ thống tách thành *anchor* (đoạn, tiêu đề, ô bảng), mỗi anchor có mã và hàm băm. Bản nguồn đã tải lên không bị sửa; sửa nguồn tạo phiên bản mới.
 2. **Sinh học liệu (job bất đồng bộ).** Nhà cung cấp LLM chỉ trả về *bí danh* anchor; máy chủ ánh xạ lại về anchor thật và **không bao giờ tự duyệt**. Bản demo dùng nhà cung cấp mô phỏng (`mock`) để kết quả lặp lại được.
-3. **Kiểm tra bằng quy tắc (VAL-01..09).**
+3. **Kiểm tra bằng quy tắc (VAL-01..10).**
 
    | Quy tắc | Kiểm tra | Mức |
    |---|---|---|

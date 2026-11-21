@@ -115,7 +115,7 @@ Hai điểm cần nhớ:
 flowchart LR
     U[Bước 1: Nhập nguồn<br/>dán văn bản hoặc DOCX] --> P[Bước 2: Tách đoạn nguồn<br/>thành anchor]
     P --> G[Bước 3: AI sinh bản nháp<br/>Phiếu bài tập]
-    G --> V[Bước 4: Kiểm tra tự động<br/>VAL-01..09]
+    G --> V[Bước 4: Kiểm tra tự động<br/>VAL-01..10]
     V --> R[Bước 5: Giáo viên duyệt<br/>từng khối]
     R -->|sửa khối| V
     R --> PG{Bước 6: Cổng xuất bản}
@@ -140,7 +140,7 @@ Nguồn: `docs/v2/CLAUDE_CODE_PROMPT_Backend_v2.md` (bảng nguyên tắc). Gi�
 | PR-07 | Số liệu Địa lí | Mọi con số trong khối (trừ năm và số thứ tự nhỏ) phải xuất hiện trong đoạn nguồn được liên kết; khối "dữ kiện số liệu" phải có đủ giá trị, đơn vị, thời kỳ, vùng. |
 | PR-08 | Học sinh không thấy phần nội bộ | Trước khi học sinh nộp một câu, máy chủ **không gửi** đáp án, giải thích, nguồn, trạng thái duyệt của câu đó. |
 
-### 5.3 Kiểm tra tự động VAL-01..09
+### 5.3 Kiểm tra tự động VAL-01..10
 
 Nguồn: `docs/v2/CLAUDE_CODE_PROMPT_Backend_v2.md` mục 8 và `apps/api/app/validation/__init__.py`. "Chặn" nghĩa là khối còn lỗi này thì không xuất bản được; "Cảnh báo" chỉ nhắc giáo viên.
 
@@ -155,6 +155,7 @@ Nguồn: `docs/v2/CLAUDE_CODE_PROMPT_Backend_v2.md` mục 8 và `apps/api/app/va
 | VAL-07 | Kiểm tra ảnh/bản đồ | Chưa làm (chỗ giữ chỗ, luôn đạt) | — |
 | VAL-08 | Thuật ngữ nghi vấn theo danh sách | Cảnh báo | Câu "Việt Nam không có biển". **Danh sách hiện chỉ có 3 mục mẫu** (`glossary_geo.txt`), cần bộ môn bổ sung |
 | VAL-09 | Nguồn dùng chung trong trường thiếu ghi chú giấy phép/nguồn gốc | Chặn | Bảng số liệu chia sẻ không ghi nguồn |
+| VAL-10 | Học sinh đọc được đáp án của một câu từ chính nội dung hiển thị trước khi nộp: số đáp án xuất hiện ở khối khác, đoạn văn nêu phương án đúng kèm "lớn nhất/đứng đầu", chỉ phương án đúng được nêu ở các số liệu; (Cảnh báo) từ chỉ có ở phương án đúng trong câu xếp hạng, hoặc câu/đoạn khác chỉ nêu một phần phương án gồm đáp án | Chặn / Cảnh báo | Đoạn "nhóm dịch vụ chiếm tỉ trọng lớn nhất" trong khi đáp án là Dịch vụ |
 
 Ngoài ra, các đáp số dẫn xuất (hiệu, tổng, tỉ lệ) được **tính lại** từ ô nguồn bằng số thập phân chính xác và đối chiếu với đáp số trong khối (hàm `derive`, `apps/api/app/validation/__init__.py`).
 
@@ -252,7 +253,7 @@ flowchart TB
       SRC[sources: parse văn bản/DOCX, anchors]
       LES[lessons, blocks]
       GEN[generation: job nền, LLMProvider]
-      VAL[validation: VAL-01..09]
+      VAL[validation: VAL-01..10]
       REV[review và publish: duyệt gắn hash, cổng xuất bản, snapshot]
       STU[student: xem bài đã xuất bản, nộp bài]
       AUD[audit: nhật ký]
@@ -315,7 +316,7 @@ sequenceDiagram
     L-->>API: các khối + bí danh nguồn
     API->>API: ánh xạ bí danh về anchor thật, bí danh lạ bị bỏ và khối bị gắn cờ
     API->>DB: lưu khối (chưa duyệt), liên kết nguồn, lịch sử biến đổi
-    API->>API: chạy VAL-01..09 → AUTO_CHECKED hoặc FLAGGED
+    API->>API: chạy VAL-01..10 → AUTO_CHECKED hoặc FLAGGED
     GV->>API: GET /v1/jobs/{id} cho đến khi xong
 ```
 

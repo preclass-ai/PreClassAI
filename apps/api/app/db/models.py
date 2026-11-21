@@ -253,7 +253,7 @@ class TransformationEvent(Base):
 class ValidationResult(Base):
     __tablename__ = "validation_result"
     __table_args__ = (
-        CheckConstraint("rule ~ '^VAL-0[1-9]$'", name="ck_validation_rule"),
+        CheckConstraint("rule ~ '^VAL-(0[1-9]|1[0-9])$'", name="ck_validation_rule"),
         _in("severity", "BLOCKER", "WARNING"),
         _in("outcome", "PASS", "FAIL"),
     )
