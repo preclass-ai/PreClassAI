@@ -4,7 +4,7 @@ JSON is camelCase on the wire. Examples use the same ids as the seed (app.ids), 
 the real seeded backend return matching shapes. After the v1 freeze: add fields, never rename/remove.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 from uuid import UUID
 
@@ -939,3 +939,78 @@ class AnalyzeOut(ApiModel):
     topics: list[str] = Field(description="3 to 5 short topics students get stuck on (empty when there is no data).")
     generated_by: Literal["rule", "llm"]
     model_config = ex({"topics": ["Chưa biết bắt đầu từ đâu: 5 lượt hỏi"], "generatedBy": "rule"})
+
+
+# ---------------------------------------------------------------- lesson plans (CV 5512), teacher only
+class PlanMcqOption(ApiModel):
+    label: Literal["A", "B", "C", "D"]
+    text: str
+
+
+class PlanMcq(ApiModel):
+    id: UUID
+    position: int
+    stem: str
+    options: list[PlanMcqOption]
+    correct_option: Literal["A", "B", "C", "D"] | None
+    answer_source: Literal["underline", "docx_underline", "teacher"] | None
+    needs_confirmation: bool
+
+
+class PlanItem(ApiModel):
+    anchor_id: UUID
+    page: int | None
+    type: str = Field(description="paragraph, heading, knowledge_box, table_cell or figure_caption.")
+    text: str
+
+
+class PlanSection(ApiModel):
+    kind: str
+    activity_type: Literal["mo_dau", "hinh_thanh", "luyen_tap", "van_dung"] | None
+    sub: str | None
+    items: list[PlanItem]
+
+
+class PlanObjective(ApiModel):
+    text: str
+    competency_code: str | None
+    competency_name: str | None
+
+
+class PlanOut(ApiModel):
+    id: UUID
+    title: str
+    subject: str
+    grade: int | None
+    ppct_period: str | None
+    week: str | None
+    taught_from: date | None
+    taught_to: date | None
+    suggested_due_at: datetime | None = Field(description="Day before the first teaching day, 23:59 (UTC+7).")
+    redacted_count: int
+    activities: list[str]
+    mcq_count: int
+    needs_confirmation_count: int
+    lesson_id: UUID | None = Field(description="Set once 'Tạo bài chuẩn bị' has been used.")
+
+
+class PlanDetail(PlanOut):
+    sections: list[PlanSection]
+    objectives: list[PlanObjective]
+    mcqs: list[PlanMcq]
+
+
+class PlanList(ApiModel):
+    items: list[PlanOut]
+
+
+class PlanMcqAnswer(ApiModel):
+    correct_option: Literal["A", "B", "C", "D"]
+
+
+class PlanLessonOut(ApiModel):
+    lesson_id: UUID
+    blocks: int
+    practice_items: int
+    skipped_unconfirmed: int = Field(description="MCQ left out because the teacher has not confirmed the answer.")
+    left_for_after_class: int = Field(description="Confirmed MCQ beyond the first 5 (not turned into blocks yet).")

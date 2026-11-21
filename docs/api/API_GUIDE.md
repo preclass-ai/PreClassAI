@@ -226,3 +226,12 @@ Khi tắt: các route dưới đây trả 404 và `GET /v1/auth/config` có `per
 - "AI gợi ý bài tập thêm" không có endpoint riêng: giao diện dùng `POST /v1/revisions/{id}/new-revision` (hoặc bản nháp sẵn có) rồi `POST /v1/lessons/{id}/generate` với `mode=append`, `focusSkills` từ `focusSkills` ở trên. Khối AI tạo ra vẫn là AI_PROPOSED, qua VAL-01..10 và phải được giáo viên duyệt như mọi khối; giao bài vẫn là bước riêng.
 - **Mã lỗi đổi:** nộp sau hạn trả 409 `PAST_DUE` (trước đây `ASSIGNMENT_CLOSED`); học sinh vẫn xem được bài và lời giải. Giao diện chấp nhận cả hai mã.
 - Học sinh thấy hạn nộp dạng dd/mm/yyyy ở mọi lớp (kể cả lớp khảo sát); giáo viên có thể chọn "Ngày học" để đặt hạn vào 23:59 của ngày trước đó (chỉ ở giao diện, API vẫn nhận `dueAt`).
+
+## 16. Giáo án CV 5512 (chỉ thêm)
+
+Chỉ TEACHER là chủ giáo án (người khác 404, học sinh 403).
+
+- `POST /v1/lesson-plans` (multipart `file`, DOCX hoặc PDF có chữ): đọc giáo án thành các bài (một tệp nhiều bài là nhiều giáo án), loại chữ ký và tên giáo viên. Đồng bộ, tối đa 120 giây (`PARSE_TIMEOUT`). Lỗi 422: `UNSUPPORTED_FILE`, `SCANNED_PDF`, `FILE_TOO_LARGE`, `EMPTY_SOURCE`, `SOURCE_TOO_LARGE`. Tệp lưu thành một nguồn riêng tư (neo có `locator.type`).
+- `GET /v1/lesson-plans`, `GET /v1/lesson-plans/{id}`: tiêu đề, tiết PPCT, tuần, ngày dạy, `suggestedDueAt` (23:59 ngày trước ngày dạy, giờ Việt Nam; null nếu giáo án không ghi ngày dạy), `activities` (4 hoạt động nhận ra được), mục tiêu kèm mã năng lực, các phần theo hoạt động, câu trắc nghiệm (`correctOption`, `answerSource` underline|docx_underline|teacher, `needsConfirmation`).
+- `PUT /v1/lesson-plans/{id}/mcqs/{mcqId}/answer` `{correctOption}`: giáo viên chọn đáp án (nguồn `teacher`). 422 `INVALID_OPTION`.
+- `POST /v1/lesson-plans/{id}/lesson`: tạo bản nháp bài chuẩn bị (câu khơi gợi, tối đa 2 thẻ đọc và 1 flashcard trích nguyên văn khung kiến thức, tối đa 5 câu luyện tập đã có đáp án kèm lời giải mẫu, 1 nhiệm vụ vận dụng). Khối đi qua VAL-01..10, không có khối nào được duyệt hay xuất bản. Câu chưa có đáp án bị bỏ (`skippedUnconfirmed`). 409 `LESSON_EXISTS`.

@@ -81,3 +81,11 @@
 - **Môn và lớp kế thừa từ bài trước trong cùng tệp** khi tiêu đề bài sau không lặp lại.
 - **Chưa có endpoint và chưa ghi DB** (PR D2): bảng đã có, kiểm tra bằng test schema.
 - **Fixture PDF cần phông có tiếng Việt** (DejaVu trên Linux, Arial trên Windows); test tự bỏ qua nếu máy không có.
+
+## Giáo án 5512, PR D2 (feat/preclass-from-plan)
+- **Đọc đồng bộ thay vì job nền**: một tệp 25 đến 42 trang mất 20 đến 35 giây, trong giới hạn 120 giây của tiến trình con; giao diện hiện thông báo "có thể mất một phút". Job nền để sau.
+- **Chưa có ảnh trang có tô vùng**: màn kiểm tra hiện văn bản theo hoạt động kèm số trang. Cần render trang (pypdfium2 đã có sẵn) nếu muốn.
+- **`TEACHER_AUTHORED` bị `generation._persist` đổi thành `AI_PROPOSED`** (mô hình không được tự nhận). Vì vậy khối từ giáo án dùng `ORIGINAL` (trích nguyên văn, có neo) và `SYNTHESISED` (lời giải mẫu, thẻ hỏi); tiêu đề bài là tên bài, không tạo khối tiêu đề.
+- **Mã năng lực chưa gắn vào khối bài** (khối không có trường này). Mã chỉ ở bước đọc (mục tiêu) và cần cột thêm ở PR sau.
+- **Hint bậc 1 đến 2 duyệt sẵn và câu ôn sau giờ (post_spaced) chưa làm**: cần cột hoặc loại khối mới và chỉnh HABIT AI.
+- **Lời giải mẫu theo khuôn** ("Đáp án đúng là X. <nội dung phương án>") vì chưa bật LLM; khi bật có thể thay bằng lời giải do AI viết có neo.

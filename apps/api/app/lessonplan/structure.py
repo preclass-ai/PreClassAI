@@ -336,7 +336,7 @@ def parse_lesson(lines: list[Line], lesson_index: int, anchors: list[PAnchor]) -
             idx = add(kind, "heading" if kind == "HEADING" else "paragraph", first, u.text)
             attach(idx)
             if st.part == "muc_tieu" and kind == "PARAGRAPH":
-                doc.objectives.append(Objective(u.text, competency(u.text), idx))
+                doc.objectives.append(Objective(u.text.lstrip("-•+* ").strip(), competency(u.text), idx))
             if FIGURE.match(f):
                 anchors[idx].anchor_type = "figure_caption"
                 anchors[idx].locator["type"] = "figure_caption"

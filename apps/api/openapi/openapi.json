@@ -1254,6 +1254,20 @@
         "title": "Body_createSourceRevisionFromDocx",
         "type": "object"
       },
+      "Body_uploadLessonPlan": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_uploadLessonPlan",
+        "type": "object"
+      },
       "CardPayload": {
         "properties": {
           "text": {
@@ -2755,6 +2769,596 @@
           "text"
         ],
         "title": "ParagraphPayload",
+        "type": "object"
+      },
+      "PlanDetail": {
+        "properties": {
+          "activities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Activities",
+            "type": "array"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lessonId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set once 'Tạo bài chuẩn bị' has been used.",
+            "title": "Lessonid"
+          },
+          "mcqCount": {
+            "title": "Mcqcount",
+            "type": "integer"
+          },
+          "mcqs": {
+            "items": {
+              "$ref": "#/components/schemas/PlanMcq"
+            },
+            "title": "Mcqs",
+            "type": "array"
+          },
+          "needsConfirmationCount": {
+            "title": "Needsconfirmationcount",
+            "type": "integer"
+          },
+          "objectives": {
+            "items": {
+              "$ref": "#/components/schemas/PlanObjective"
+            },
+            "title": "Objectives",
+            "type": "array"
+          },
+          "ppctPeriod": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ppctperiod"
+          },
+          "redactedCount": {
+            "title": "Redactedcount",
+            "type": "integer"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/PlanSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          },
+          "suggestedDueAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Day before the first teaching day, 23:59 (UTC+7).",
+            "title": "Suggesteddueat"
+          },
+          "taughtFrom": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taughtfrom"
+          },
+          "taughtTo": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taughtto"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "week": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "subject",
+          "grade",
+          "ppctPeriod",
+          "week",
+          "taughtFrom",
+          "taughtTo",
+          "suggestedDueAt",
+          "redactedCount",
+          "activities",
+          "mcqCount",
+          "needsConfirmationCount",
+          "lessonId",
+          "sections",
+          "objectives",
+          "mcqs"
+        ],
+        "title": "PlanDetail",
+        "type": "object"
+      },
+      "PlanItem": {
+        "properties": {
+          "anchorId": {
+            "format": "uuid",
+            "title": "Anchorid",
+            "type": "string"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "type": {
+            "description": "paragraph, heading, knowledge_box, table_cell or figure_caption.",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "anchorId",
+          "page",
+          "type",
+          "text"
+        ],
+        "title": "PlanItem",
+        "type": "object"
+      },
+      "PlanLessonOut": {
+        "properties": {
+          "blocks": {
+            "title": "Blocks",
+            "type": "integer"
+          },
+          "leftForAfterClass": {
+            "description": "Confirmed MCQ beyond the first 5 (not turned into blocks yet).",
+            "title": "Leftforafterclass",
+            "type": "integer"
+          },
+          "lessonId": {
+            "format": "uuid",
+            "title": "Lessonid",
+            "type": "string"
+          },
+          "practiceItems": {
+            "title": "Practiceitems",
+            "type": "integer"
+          },
+          "skippedUnconfirmed": {
+            "description": "MCQ left out because the teacher has not confirmed the answer.",
+            "title": "Skippedunconfirmed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lessonId",
+          "blocks",
+          "practiceItems",
+          "skippedUnconfirmed",
+          "leftForAfterClass"
+        ],
+        "title": "PlanLessonOut",
+        "type": "object"
+      },
+      "PlanList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlanOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "PlanList",
+        "type": "object"
+      },
+      "PlanMcq": {
+        "properties": {
+          "answerSource": {
+            "anyOf": [
+              {
+                "enum": [
+                  "underline",
+                  "docx_underline",
+                  "teacher"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answersource"
+          },
+          "correctOption": {
+            "anyOf": [
+              {
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correctoption"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "needsConfirmation": {
+            "title": "Needsconfirmation",
+            "type": "boolean"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/PlanMcqOption"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "stem": {
+            "title": "Stem",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "stem",
+          "options",
+          "correctOption",
+          "answerSource",
+          "needsConfirmation"
+        ],
+        "title": "PlanMcq",
+        "type": "object"
+      },
+      "PlanMcqAnswer": {
+        "properties": {
+          "correctOption": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "title": "Correctoption",
+            "type": "string"
+          }
+        },
+        "required": [
+          "correctOption"
+        ],
+        "title": "PlanMcqAnswer",
+        "type": "object"
+      },
+      "PlanMcqOption": {
+        "properties": {
+          "label": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "title": "Label",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "text"
+        ],
+        "title": "PlanMcqOption",
+        "type": "object"
+      },
+      "PlanObjective": {
+        "properties": {
+          "competencyCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competencycode"
+          },
+          "competencyName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competencyname"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "competencyCode",
+          "competencyName"
+        ],
+        "title": "PlanObjective",
+        "type": "object"
+      },
+      "PlanOut": {
+        "properties": {
+          "activities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Activities",
+            "type": "array"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lessonId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set once 'Tạo bài chuẩn bị' has been used.",
+            "title": "Lessonid"
+          },
+          "mcqCount": {
+            "title": "Mcqcount",
+            "type": "integer"
+          },
+          "needsConfirmationCount": {
+            "title": "Needsconfirmationcount",
+            "type": "integer"
+          },
+          "ppctPeriod": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ppctperiod"
+          },
+          "redactedCount": {
+            "title": "Redactedcount",
+            "type": "integer"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          },
+          "suggestedDueAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Day before the first teaching day, 23:59 (UTC+7).",
+            "title": "Suggesteddueat"
+          },
+          "taughtFrom": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taughtfrom"
+          },
+          "taughtTo": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taughtto"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "week": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "subject",
+          "grade",
+          "ppctPeriod",
+          "week",
+          "taughtFrom",
+          "taughtTo",
+          "suggestedDueAt",
+          "redactedCount",
+          "activities",
+          "mcqCount",
+          "needsConfirmationCount",
+          "lessonId"
+        ],
+        "title": "PlanOut",
+        "type": "object"
+      },
+      "PlanSection": {
+        "properties": {
+          "activityType": {
+            "anyOf": [
+              {
+                "enum": [
+                  "mo_dau",
+                  "hinh_thanh",
+                  "luyen_tap",
+                  "van_dung"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activitytype"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlanItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "sub": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub"
+          }
+        },
+        "required": [
+          "kind",
+          "activityType",
+          "sub",
+          "items"
+        ],
+        "title": "PlanSection",
         "type": "object"
       },
       "PreferencesIn": {
@@ -6184,6 +6788,357 @@
         "summary": "Generation job status (author)",
         "tags": [
           "generation"
+        ]
+      }
+    },
+    "/v1/lesson-plans": {
+      "get": {
+        "operationId": "listLessonPlans",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          }
+        },
+        "summary": "My lesson plans (TEACHER)",
+        "tags": [
+          "lesson-plans"
+        ]
+      },
+      "post": {
+        "description": "One file can hold several lessons: one plan per lesson. Signature blocks and teacher names are removed; an MCQ answer comes from an underline or from the teacher, never from a model. 422: `UNSUPPORTED_FILE`, `SCANNED_PDF`, `PARSE_TIMEOUT` (120 s), `FILE_TOO_LARGE`, `EMPTY_SOURCE`, plus the upload codes of `/sources/file`.",
+        "operationId": "uploadLessonPlan",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_uploadLessonPlan"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Read a lesson plan (DOCX or PDF with a text layer) into lessons, activities and MCQ (TEACHER, multipart)",
+        "tags": [
+          "lesson-plans"
+        ]
+      }
+    },
+    "/v1/lesson-plans/{plan_id}": {
+      "get": {
+        "operationId": "getLessonPlan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Plan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "What was read from one lesson plan (owner only)",
+        "tags": [
+          "lesson-plans"
+        ]
+      }
+    },
+    "/v1/lesson-plans/{plan_id}/lesson": {
+      "post": {
+        "description": "Mapping: opening -> 1 trigger question; knowledge boxes -> up to 2 reading cards and 1 flashcard quoted verbatim; up to 5 teacher-confirmed MCQ with a templated explanation; application -> 1 after-class task. MCQ without a confirmed answer are skipped (`skippedUnconfirmed`). 409 `LESSON_EXISTS` when it was already created. Review and publish with the usual lesson workspace.",
+        "operationId": "createLessonFromPlan",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Plan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanLessonOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "LESSON_EXISTS"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create the pre-class lesson draft (DRAFT blocks, validated, never approved or published)",
+        "tags": [
+          "lesson-plans"
+        ]
+      }
+    },
+    "/v1/lesson-plans/{plan_id}/mcqs/{mcq_id}/answer": {
+      "put": {
+        "operationId": "confirmPlanMcqAnswer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Plan Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "mcq_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Mcq Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanMcqAnswer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "The teacher confirms the correct option of an MCQ (answer source = teacher)",
+        "tags": [
+          "lesson-plans"
         ]
       }
     },

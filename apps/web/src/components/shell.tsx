@@ -9,6 +9,7 @@ import { useAuth, type Role } from "@/lib/auth";
 const NAV: { href: string; label: string; roles: Role[] }[] = [
   { href: "/lessons", label: "Bài học", roles: ["TEACHER", "REVIEWER"] },
   { href: "/sources", label: "Nguồn", roles: ["TEACHER"] },
+  { href: "/plans", label: "Giáo án", roles: ["TEACHER"] },
   { href: "/classes", label: "Lớp & bài giao", roles: ["TEACHER"] },
   { href: "/admin/audit", label: "Nhật ký", roles: ["ADMIN"] },
   { href: "/student", label: "Bài của em", roles: ["STUDENT"] },
