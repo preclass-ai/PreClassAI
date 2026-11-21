@@ -46,6 +46,18 @@ python ../scripts/smoke.py --base https://localhost --insecure --password "<SEED
 - Khôi phục DB từ backup: `docker exec -i infra-postgres-1 psql -U preclass -d preclass -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"` rồi `docker exec -i infra-postgres-1 psql -U preclass -d preclass < apps/api/data/backup/predeploy-1911.sql`. Thử khôi phục vào DB tạm `preclass_restore_check` trước. Chỉ đụng database `preclass`, không xoá volume.
 - Reset về seed sạch: `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` trên `preclass`, rồi migrate + seed như trên.
 
+## Giới hạn nạp tệp (DOCX, PDF, XLSX, PPTX)
+
+| Biến môi trường | Mặc định | Ý nghĩa |
+|---|---|---|
+| `SOURCE_MAX_PDF_PAGES` | 50 | Số trang PDF tối đa |
+| `SOURCE_MAX_XLSX_SHEETS` / `SOURCE_MAX_XLSX_CELLS` | 5 / 2000 | Số sheet; số ô có dữ liệu mỗi sheet |
+| `SOURCE_MAX_PPTX_SLIDES` | 60 | Số slide |
+| `SOURCE_PARSE_TIMEOUT_S` | 30 | Quá hạn thì tiến trình con bị kill (422 `PARSE_TIMEOUT`) |
+| `SOURCE_PARSE_MEM_MB` | 600 | `RLIMIT_AS` của tiến trình con (chỉ Linux). Hạ xuống nếu Render báo thiếu RAM; tăng nếu tệp hợp lệ bị `INVALID_FILE` do hết bộ nhớ. 0 = không giới hạn |
+
+Cứng trong code: 10 MB mỗi tệp, ≤ 1000 entry, ≤ 20 MB giải nén. Mỗi lúc chỉ chạy một parse. Không có quét mã độc và không OCR: PDF scan được lưu ở trạng thái FAILED (`SCANNED_PDF`). Triệu chứng và cách xử: nhiều `PARSE_TIMEOUT` → tệp quá nặng, yêu cầu GV xuất lại; `INVALID_FILE` hàng loạt sau khi deploy → kiểm tra `SOURCE_PARSE_MEM_MB`.
+
 ## Habit (chat và thói quen học)
 
 | Biến môi trường | Mặc định | Ý nghĩa |
