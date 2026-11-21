@@ -80,16 +80,20 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
 
   return (
     <article className="student">
-      <p className="crumbs">
-        <Link href="/student">← Bài của em</Link>
-      </p>
-      <header className="lesson-hero">
-        <p className="eyebrow">BÀI KHÁM PHÁ ĐỊA LÍ</p>
-        <h1>{data.title}</h1>
-        <p>Quan sát, suy nghĩ và chọn câu trả lời của riêng em.</p>
-        <div className="lesson-hero-meta">{user?.isGuest ? null : <span>◷ Hạn nộp {fmtDate(data.dueAt)}</span>}<strong>{answered}/{data.items.length} câu đã làm</strong></div>
-        <div className="bar" aria-label={`Đã làm ${answered}/${data.items.length} câu`}><span style={{ width: `${data.items.length ? (100 * answered) / data.items.length : 0}%` }} /></div>
-      </header>
+      {inFocus ? null : (
+        <p className="crumbs">
+          <Link href="/student">← Bài của em</Link>
+        </p>
+      )}
+      {inFocus ? null : (
+        <header className="lesson-hero">
+          <p className="eyebrow">BÀI KHÁM PHÁ ĐỊA LÍ</p>
+          <h1>{data.title}</h1>
+          <p>Quan sát, suy nghĩ và chọn câu trả lời của riêng em.</p>
+          <div className="lesson-hero-meta">{user?.isGuest ? null : <span>◷ Hạn nộp {fmtDate(data.dueAt)}</span>}<strong>{answered}/{data.items.length} câu đã làm</strong></div>
+          <div className="bar" aria-label={`Đã làm ${answered}/${data.items.length} câu`}><span style={{ width: `${data.items.length ? (100 * answered) / data.items.length : 0}%` }} /></div>
+        </header>
+      )}
       {inFocus ? null : <DataNotice />}
       {inFocus ? null : <HabitBar assignmentId={assignmentId} />}
       <PersonalizationBar focus={focus} onFocus={(on) => { setFocus(on); setIdx(0); }} />

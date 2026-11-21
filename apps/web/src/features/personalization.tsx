@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Notice } from "@/components/ui";
 import { api, unwrap } from "@/lib/api";
 
@@ -33,47 +33,62 @@ export function PersonalizationBar({ focus, onFocus }: { focus: boolean; onFocus
   const on = usePersonalizationOn();
   const prefs = usePrefs(on);
   const qc = useQueryClient();
-  const [busy, setBusy] = useState(false);
+  const inflight = useRef(0);
+  const [mine, setMine] = useState<Record<string, string> | null>(null);
+  const view = mine ?? prefs;
   if (!on) return null;
 
   async function save(preferences: Record<string, "on" | "off" | "5" | "10">) {
-    setBusy(true);
+    // Optimistic and synchronous (local state, not the query cache): a controlled checkbox must follow the click at once.
+    const next = { ...view };
+    for (const [k, v] of Object.entries(preferences)) {
+      if (v === "off") delete next[k];
+      else next[k] = v;
+    }
+    setMine(next);
+    inflight.current += 1;
     try {
       const res = await unwrap(api.PUT("/v1/student/preferences", { body: { preferences } }));
-      qc.setQueryData(KEY, res);
+      // Answers can arrive out of order: only the last one may overwrite what the student already sees.
+      if (inflight.current === 1) {
+        qc.setQueryData(KEY, res);
+        setMine(null);
+      }
+    } catch {
+      if (inflight.current === 1) setMine(null); // refused or offline: back to what the server has
     } finally {
-      setBusy(false);
+      inflight.current -= 1;
     }
   }
   async function reset() {
-    setBusy(true);
     try {
       qc.setQueryData(KEY, await unwrap(api.DELETE("/v1/student/preferences")));
-    } finally {
-      setBusy(false);
+      setMine(null);
+    } catch {
+      /* keep the current state */
     }
   }
   function toggleFocus() {
     const next = !focus;
     onFocus(next);
-    if (next && !prefs.focus_mode_used) void save({ focus_mode_used: "on" }); // only so the survey can count "used at least once"
+    if (next && !view.focus_mode_used) void save({ focus_mode_used: "on" }); // only so the survey can count "used at least once"
   }
 
   return (
     <section className="pers-bar" aria-label="Cách học hôm nay">
       <details>
         <summary>Em muốn học theo cách nào hôm nay?</summary>
-        <fieldset className="pers-options" disabled={busy}>
+        <fieldset className="pers-options">
           <legend className="muted small">Các lựa chọn chỉ của riêng em, đổi bất cứ lúc nào.</legend>
           {TOGGLES.map(([key, label]) => (
             <label key={key} className="pers-option">
-              <input type="checkbox" checked={prefs[key] === "on"} onChange={(e) => void save({ [key]: e.target.checked ? "on" : "off" })} />
+              <input type="checkbox" checked={view[key] === "on"} onChange={(e) => void save({ [key]: e.target.checked ? "on" : "off" })} />
               {label}
             </label>
           ))}
           <label className="pers-option">
             Hẹn giờ tập trung
-            <select value={prefs.hen_gio_tap_trung ?? "off"} onChange={(e) => void save({ hen_gio_tap_trung: e.target.value as "off" | "5" | "10" })}>
+            <select value={view.hen_gio_tap_trung ?? "off"} onChange={(e) => void save({ hen_gio_tap_trung: e.target.value as "off" | "5" | "10" })}>
               <option value="off">Tắt</option>
               <option value="5">5 phút</option>
               <option value="10">10 phút</option>

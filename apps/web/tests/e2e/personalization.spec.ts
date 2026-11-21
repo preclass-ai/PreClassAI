@@ -2,11 +2,11 @@ import { expect, test } from "@playwright/test";
 import { expectNoHorizontalScroll, login } from "./helpers";
 
 // One student per project (preferences persist). Needs the API with CHAT_ENABLED=true and PERSONALIZATION_ENABLED=true.
-const STUDENT: Record<string, string> = { "mobile-390": "HS10-01", "tablet-768": "HS10-02", "desktop-1280": "HS10-03", "webkit-390": "HS10-04" };
+const STUDENT: Record<string, string> = { "mobile-390": "HS10-13", "tablet-768": "HS10-14", "desktop-1280": "HS10-15", "webkit-390": "HS10-11" };
 const shot = (name: string, project: string) => `test-results/personalization/${name}-${project}.png`;
 
 test("student picks options, uses focus mode with a timer, and the choices persist", async ({ page }, info) => {
-  await login(page, STUDENT[info.project.name] ?? "HS10-05");
+  await login(page, STUDENT[info.project.name] ?? "HS10-06");
   await page.locator(".assignment-card").first().click();
   await expect(page.locator("section.item").first()).toBeVisible({ timeout: 30_000 });
 
