@@ -693,16 +693,39 @@
         "examples": [
           {
             "chatEnabled": false,
+            "chatMode": "rule",
             "guestEnabled": true,
             "personalizationEnabled": false
           }
         ],
         "properties": {
+          "aiProvider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Host of the AI service when chatMode is llm, else null.",
+            "title": "Aiprovider"
+          },
           "chatEnabled": {
             "default": false,
             "description": "True when Habit (hints + chat) is on (CHAT_ENABLED).",
             "title": "Chatenabled",
             "type": "boolean"
+          },
+          "chatMode": {
+            "default": "rule",
+            "description": "rule: nothing leaves the server; llm: filtered text goes to aiProvider.",
+            "enum": [
+              "rule",
+              "llm"
+            ],
+            "title": "Chatmode",
+            "type": "string"
           },
           "guestEnabled": {
             "description": "True when anonymous guest access is switched on (GUEST_ACCESS_ENABLED).",

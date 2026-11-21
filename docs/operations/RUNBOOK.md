@@ -108,3 +108,13 @@ Ba lựa chọn (đều theo chuẩn OpenAI `chat/completions`, đã có sẵn `
 **Dữ liệu gửi ra ngoài:** nội dung câu hỏi của học sinh (đã lọc số điện thoại, email, địa chỉ; không có tên, mã khảo sát hay tài khoản), đề bài, các phương án (không đánh dấu đúng) và đoạn nội dung bài đã duyệt (tối đa 1.200 ký tự). **Không bao giờ** gửi đáp án hoặc lời giải của câu chưa nộp. Nếu ưu tiên dữ liệu, chọn Qwen quốc tế (máy chủ Singapore) và nói rõ với nhà trường trước khi bật. Cả hai nhà cung cấp là bên thứ ba ngoài nước.
 
 Kiểm tra trước khi bật (cần khóa trong môi trường, không lưu khóa): `cd apps/api && PYTHONPATH=. uv run python ../../scripts/ops/llm_smoke.py --extra`. Script chạy 10 câu mẫu và 10 câu tấn công qua model thật cùng bộ lọc của API, in kết quả; thoát 0 khi không có vi phạm. Mặc định giãn cách để không vượt 25 yêu cầu mỗi phút (đặt `LLM_SMOKE_RPM` để đổi), nên với `--extra` mất khoảng 2 phút; chạy được với Groq, DeepSeek và Qwen. Chỉ bật khi 0 vi phạm. Xem tokens và số lần bị chặn: `GET /v1/admin/survey/stats` (`chatBlocked`: `LLM_ANSWER`, `LLM_NUMBER`, `LLM_PII`, `LLM_PROMPT`, `LLM_ERROR`, `LLM_BUDGET`; phần thứ hai bị bỏ không ghi lý do riêng).
+
+## Chọn model cho Groq gói miễn phí (cập nhật 21/11/2026)
+
+Theo một nguồn bên thứ ba, gói Free của Groq hiện không còn `llama-3.3-70b-versatile`; **chưa kiểm chứng trực tiếp**, nên mở console Groq (mục Models và Limits) và xem danh sách model thực tế của tài khoản trước khi đặt `CHAT_LLM_MODEL`. Ứng viên để thử: `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, hoặc một model Qwen có trong gói Free. Mỗi lần đổi model chạy `llm_smoke.py --extra` và chỉ bật khi 0 vi phạm.
+
+Giới hạn tham khảo: khoảng 200 nghìn token mỗi ngày cho mỗi model (kiểm tra lại trong console). Tiết kiệm token:
+- giữ `CHAT_MODE=rule` làm mặc định, bật `llm` chỉ cho buổi demo;
+- `CHAT_AI_EXTRA=false` (mỗi câu hỏi chỉ 1 lời gọi);
+- `CHAT_DAILY_TOKEN_BUDGET` thấp hơn giới hạn của nhà cung cấp (ví dụ 150000) để API tự chuyển sang luật trước khi bị 429;
+- hint bậc 1 đến 2 và phân tích của giáo viên dùng luật hoặc bản ghi sẵn: đặt `DEMO_REPLAY=true` cho buổi trình diễn không có mạng (nhãn "bản ghi sẵn" hiện trên màn giáo viên; `replay.json` là mẫu viết tay, hãy thay bằng kết quả một lần chạy thật sau khi bật model).

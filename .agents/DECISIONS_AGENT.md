@@ -95,4 +95,10 @@
 - **Nhóm câu hỏi theo câu dùng cùng bộ luật chủ đề của PR C** (0đ). Số học sinh mỗi cụm chưa hiện (chỉ số lượt hỏi) để tránh nhận diện trong lớp nhỏ.
 - **"Đề xuất dạy lại" = trích nguyên văn đoạn nguồn + câu luyện thêm qua Generate sẵn có**, không gọi LLM mới; khối tạo ra là `instruction` ORIGINAL kèm cờ `remediation_draft` (migration 0009). Các câu luyện thêm sinh qua Generate chưa mang cờ này (Generate không biết ngữ cảnh dạy lại).
 - **`replay.json` là mẫu viết tay, chưa phải kết quả của một lần chạy model thật**; phải ghi lại sau khi bật Groq. Giao diện gắn nhãn "bản ghi sẵn" để không bị hiểu là kết quả trực tiếp.
+- Gọi `reteach` hai lần sẽ thêm khối lần hai vào cùng bản nháp (chưa chống trùng).
+
+## Đa môn tối thiểu, PR D4 (feat/multisubject-ready)
+- Bảng `subject` (catalogue GDPT, chỉ `DIA_LI` hoạt động, migration 0008). Chưa thêm cột `subject` vào bảng `lesson`: bài vẫn là Địa lí cố định ở API (`subject = GEOGRAPHY`), `lesson_plan.subject` đã có.
+- Căn cứ pháp lý mới ghi trong `docs/security/PHAP-LY-DU-LIEU.md` kèm cảnh báo chưa kiểm chứng; không sửa ADR-0013 cho đến khi có văn bản gốc.
+- Trang "Dữ liệu của em đi đâu" chưa làm (cần quyết định thời hạn lưu).
 - `reteach` idempotent theo đoạn nguồn: bản nháp dạy lại chưa xử lý thì mở lại, không thêm trùng; giao diện cũng không sinh thêm câu luyện khi `alreadyExists`.

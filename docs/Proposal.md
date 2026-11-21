@@ -712,3 +712,17 @@ Giữ ở một nơi duy nhất để tránh lệch: `docs/survey/CHECKLIST-BUOI
 | `docs/demo/PreClass-AI-gioi-thieu-nghien-cuu.md` | Bản giới thiệu nghiên cứu trước đó (chứa một số chi tiết đã cũ, ví dụ phiên bản Postgres và tài khoản demo — nên ưu tiên tài liệu này) |
 | `.agents/PROGRESS.md`, `.agents/handoffs/*` | Tiến độ và bàn giao theo từng nhiệm vụ |
 | `docs/01`–`docs/07` | Tài liệu thiết kế **cũ** (full-stack Next.js, có trợ lí trò chuyện); chỉ để tham khảo |
+
+
+## 8. Hướng nâng cấp phía giáo viên và lộ trình đa môn (bổ sung 21/11/2026)
+
+**Hướng nâng cấp.** Giáo án theo Công văn 5512 trở thành nguồn của bài chuẩn bị trước giờ học: hệ thống đọc giáo án (mục tiêu, 4 hoạt động, câu trắc nghiệm; đáp án chỉ từ gạch chân hoặc giáo viên chọn), giáo viên kiểm tra rồi tạo bản nháp đi qua VAL-01..10 và duyệt từng khối; học sinh làm trước giờ học cùng HABIT AI; bảng insight cho giáo viên biết em vướng ở đâu và đề xuất dạy lại, vẫn qua giáo viên duyệt.
+
+**Cơ sở khoa học (kiểm chứng ngày 21/11/2026: chỉ ghi điều đọc được từ chính bài).**
+- **LearnLM và Eedi (2025), bản thảo arXiv 2512.23633, chưa qua bình duyệt, đọc được phần tóm tắt.** Thử nghiệm đối chứng ngẫu nhiên thăm dò, 165 học sinh ở năm trường trung học Anh, toán, trên nền tảng Eedi. Gia sư người giám sát trực tiếp mô hình LearnLM và sửa từng tin trước khi gửi. Họ duyệt 76,4% tin nháp với không sửa hoặc sửa tối thiểu. Học sinh được LearnLM hỗ trợ làm được ít nhất ngang học sinh chat với gia sư người ở mọi chỉ số đo; tỉ lệ giải đúng bài toán mới ở chủ đề sau là 66,2% so với 60,7% (hơn 5,5 điểm phần trăm). Hạn chế theo chính bài: thăm dò, mẫu nhỏ, có người giám sát từng tin. Liên hệ với PreClass AI: tin do AI soạn vẫn qua người kiểm trước khi đến học sinh; ta không có đo lường tương tự và không được nói là có.
+- **Holstein, McLaren và Aleven, Journal of Learning Analytics 6(2), 2019, tr. 27 đến 52: đọc được tóm tắt.** Đọc từ tệp PDF ở đường dẫn ERIC EJ1224130. Nghiên cứu đồng thiết kế công cụ Lumilo cho giáo viên trong lớp học có gia sư thông minh. Đây **không phải** bài AIED 2018 (chương sách Springer) đã ghi trong bản thảo trước; bài AIED 2018 bị chặn đăng nhập nên chưa đọc được. Chỉ viện dẫn bài JLA nếu cần, và chỉ cho ý "đồng thiết kế công cụ phân tích với giáo viên".
+- **Chưa đọc được nguồn, không ghi số liệu và không ghi kết luận:** Bastani và cộng sự (2025), PNAS (trang trả lỗi 403); Kestin và cộng sự (2025), Scientific Reports (chuyển hướng đăng nhập); Låg và Sæle (2019), AERA Open (đường dẫn ERIC EJ1224130 trong yêu cầu thực tế trả về bài của Holstein và cộng sự trên Journal of Learning Analytics, không phải bài Låg và Sæle, nên đường dẫn đó cần được sửa); Adesope, Trevors và Nesbit (2017), Review of Educational Research (chưa tìm được bản đọc được). Nhóm cần tự đọc bản gốc rồi mới viện dẫn; các câu mô tả kết quả của những bài này trong bản thảo trước đã bị gỡ vì không đối chiếu được.
+
+**Lộ trình đa môn.** Hiện chỉ Địa lí hoạt động (bảng `subject`, `subject_competency` đã có chỗ cho môn khác). Bộ đọc giáo án không có gì cứng theo Địa lí ngoài hai bảng cấu hình (từ khóa môn, mã năng lực); đã kiểm bằng giáo án mô phỏng môn Lịch sử. Thêm môn mới cần: danh mục năng lực của môn, bộ kiểm tra số liệu/nội dung phù hợp (VAL hiện thiên về số liệu địa lí), và duyệt của giáo viên môn đó.
+
+**Kế hoạch thử nghiệm sau thi.** So sánh hai lớp song song (có HABIT AI trước giờ học và không), đo tỉ lệ đúng lần đầu, tự đánh giá của học sinh và thời gian chuẩn bị của giáo viên; xin phép phụ huynh và nhà trường; dữ liệu ẩn danh. Chưa có số liệu.

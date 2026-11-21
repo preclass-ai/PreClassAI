@@ -470,6 +470,15 @@ class ExtractedMcq(Base):
     competency_code: Mapped[str | None] = mapped_column(Text)
 
 
+class Subject(Base):
+    """Catalogue of subjects; `active` marks the ones the product supports (only geography for now)."""
+
+    __tablename__ = "subject"
+    code: Mapped[str] = mapped_column(Text, primary_key=True)
+    name_vi: Mapped[str] = mapped_column(Text)
+    active: Mapped[bool] = mapped_column(server_default=text("false"))
+
+
 class LessonPlanJob(Base):
     """Background reading of one uploaded plan. The file itself is held in memory only: a restart fails the job."""
 

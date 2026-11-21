@@ -1,11 +1,21 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 
 /** Shown to the person before an anonymous account is created (login page and /thu). */
 export const GUEST_NOTICE =
   "Không thu tên hay email. Kết quả làm bài chỉ dùng cho nghiên cứu và không gắn với danh tính của em.";
+
+/** Link to the page that says what is collected, where it is stored and for how long. */
+export function DataLink() {
+  return (
+    <Link href="/du-lieu" className="small">
+      Dữ liệu của em đi đâu
+    </Link>
+  );
+}
 
 // Only an https link is ever rendered as a href (a mistyped javascript: value must not become a link).
 const RAW_SURVEY_URL = process.env.NEXT_PUBLIC_SURVEY_URL ?? "";
