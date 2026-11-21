@@ -14,3 +14,10 @@ def test_no_em_dash_or_spaced_en_dash_in_habit_strings() -> None:
             if tok.type == tokenize.STRING and ("—" in tok.string or " – " in tok.string):
                 bad.append(f"{f.name}:{tok.start[0]}")
     assert bad == [], bad
+
+
+def test_replies_call_the_assistant_habit_ai() -> None:
+    from app.habit import llm, rules
+
+    texts = [*rules.REFUSAL.values(), llm.SYSTEM]
+    assert not [t for t in texts if "Habit" in t.replace("HABIT AI", "")], texts

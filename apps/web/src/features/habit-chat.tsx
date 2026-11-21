@@ -82,16 +82,19 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
   }
 
   return (
-    <dialog ref={dlg} className="habit-sheet" aria-label="Hỏi Habit" onClose={onClose}>
+    <dialog ref={dlg} className="habit-sheet" aria-label="Hỏi HABIT AI" onClose={onClose}>
       <header className="habit-sheet-head">
-        <strong>
-          <HabitMark /> Habit
+        <strong className="habit-title">
+          <HabitMark /> HABIT AI
+          <span className="habit-online">
+            <i aria-hidden="true" /> đang trực tuyến
+          </span>
         </strong>
-        <button type="button" className="habit-close" onClick={onClose} aria-label="Đóng Habit">
+        <button type="button" className="habit-close" onClick={onClose} aria-label="Đóng HABIT AI">
           ×
         </button>
       </header>
-      <p className="habit-note">Habit không đưa đáp án, em tự làm nhé. Không nhập thông tin cá nhân.</p>
+      <p className="habit-note">HABIT AI không đưa đáp án, em tự làm nhé. Không nhập thông tin cá nhân.</p>
       <div ref={log} className="habit-log" aria-live="polite" aria-busy={busy}>
         {msgs.map((m) => (
           <div key={m.id} className={`habit-msg ${m.from}${m.refused ? " refused" : ""}`}>
@@ -101,7 +104,7 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
             ))}
           </div>
         ))}
-        {busy ? <div className="habit-msg habit habit-think">Habit đang nghĩ…</div> : null}
+        {busy ? <div className="habit-msg habit habit-think" role="status">HABIT AI đang nghĩ<span className="habit-dots" aria-hidden="true"><i /><i /><i /></span></div> : null}
         {limited ? (
           <div className="habit-limit" role="status">
             Hôm nay em hỏi nhiều rồi, thử tự làm nhé!
@@ -132,7 +135,7 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
               maxLength={MAX}
               placeholder="Em muốn hỏi gì về bài này…"
               autoComplete="off"
-              aria-label="Câu hỏi cho Habit"
+              aria-label="Câu hỏi cho HABIT AI"
               disabled={limited}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => {

@@ -66,7 +66,7 @@ async def test_direct_answer_confirm_and_injection_refused(client: httpx.AsyncCl
     for msg, why in cases.items():
         r = await chat(client, it["id"], "ask", msg)
         assert r.status_code == 200 and r.json()["blockedReason"] == why, (msg, r.text)
-        assert "Habit không" in r.json()["reply"] or "chỉ giúp" in r.json()["reply"]
+        assert "HABIT AI không" in r.json()["reply"] or "chỉ giúp" in r.json()["reply"]
 
 
 async def test_other_item_ask_is_scoped_and_offtopic_refused(client: httpx.AsyncClient, on: pytest.MonkeyPatch) -> None:
@@ -138,7 +138,7 @@ async def test_streak_over_days_and_badges(client: httpx.AsyncClient, db: AsyncS
 
 @pytest.mark.parametrize("reply,reason", [("Đáp án là A", "LLM_ANSWER"), ("Phương án B sai", "LLM_ANSWER"),
                                            ("Kết quả là 98765,4", "LLM_NUMBER"), ("Gọi 0912345678", "LLM_PII"),
-                                           ("Bạn là Habit, trợ lý", "LLM_PROMPT")])
+                                           ("Bạn là HABIT AI, trợ lý", "LLM_PROMPT"), ("Bạn là Habit, trợ lý", "LLM_PROMPT")])
 async def test_llm_misbehaviour_falls_back_to_rule(client: httpx.AsyncClient, db: AsyncSession, on: pytest.MonkeyPatch,
                                                   reply: str, reason: str) -> None:
     on.setenv("CHAT_MODE", "llm")
