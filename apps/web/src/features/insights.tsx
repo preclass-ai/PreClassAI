@@ -190,7 +190,7 @@ function Practice({ insights: d, classId }: { insights: Schemas["InsightsOut"]; 
         await unwrap(
           api.POST("/v1/lessons/{lesson_id}/generate", {
             params: { path: { lesson_id: d.lessonId } },
-            body: { outputType: "WORKSHEET", nItems: 3, focusSkills: d.focusSkills, mode: "append" },
+            body: { outputType: "WORKSHEET", nItems: 3, focusSkills: d.focusSkills, mode: "append", remediation: true },
           }),
         );
       }
