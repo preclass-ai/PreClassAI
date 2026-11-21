@@ -2883,6 +2883,7 @@ export interface components {
          *         {
          *           "answeredCount": 0,
          *           "classCode": "10A1",
+         *           "className": "10A1",
          *           "dueAt": "2026-11-30T23:59:00+07:00",
          *           "id": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
          *           "itemCount": 2,
@@ -2961,6 +2962,7 @@ export interface components {
          * @example {
          *       "answeredCount": 0,
          *       "classCode": "10A1",
+         *       "className": "10A1",
          *       "dueAt": "2026-11-30T23:59:00+07:00",
          *       "id": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
          *       "itemCount": 2,
@@ -2974,6 +2976,11 @@ export interface components {
             answeredCount: number;
             /** Classcode */
             classCode: string;
+            /**
+             * Classname
+             * @description Class display name, e.g. 10A1 (falls back to the code).
+             */
+            className?: string | null;
             /**
              * Dueat
              * Format: date-time

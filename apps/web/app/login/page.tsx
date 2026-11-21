@@ -99,9 +99,8 @@ function LoginForm() {
   return (
     <form className="card login-card" method="post" onSubmit={submit}>
       <p className="login-brand">◉ <span>PreClass AI</span></p>
-      <p className="eyebrow">MỖI CÂU HỎI LÀ MỘT KHÁM PHÁ</p>
       <h1>Chào mừng trở lại!</h1>
-      <p className="muted">Đăng nhập để tiếp tục hành trình Địa lí của em.</p>
+      <p className="muted">Đăng nhập để tiếp tục hành trình học tập của em.</p>
       <ErrorBox error={error} />
       {cfg.isPending && !waited ? (
         <Loading /> // brief: avoids flashing the account form and then collapsing it when guest access is on
@@ -145,7 +144,6 @@ function LoginForm() {
           {accountFields}
         </>
       )}
-      <p className="login-footnote">Bài học có nguồn kiểm chứng · Lời giải được thầy cô duyệt</p>
     </form>
   );
 }
@@ -155,10 +153,9 @@ export default function LoginPage() {
     <main className="login-page">
       <div className="login-layout">
         <section className="login-story" aria-label="Giới thiệu PreClass AI">
-          <div className="login-story-top"><span className="story-symbol" aria-hidden="true">✦</span> ATLAS HỌC TẬP</div>
-          <div className="login-story-copy"><p className="eyebrow">HỌC ĐỊA LÍ THEO CÁCH CỦA EM</p><h2>Đi xa hơn cùng mỗi câu hỏi.</h2><p>Đọc, quan sát và kết nối thế giới xung quanh qua những bài học có nguồn rõ ràng.</p></div>
-          <div className="atlas-graphic" aria-hidden="true"><span className="atlas-ring atlas-ring-one" /><span className="atlas-ring atlas-ring-two" /><span className="atlas-center">⌖</span><span className="atlas-label atlas-label-one">21° BẮC</span><span className="atlas-label atlas-label-two">105° ĐÔNG</span></div>
-          <p className="login-story-bottom">Địa lí 10–11 <span>•</span> Học để hiểu thế giới</p>
+          <div className="login-story-top"><span className="story-symbol" aria-hidden="true">✦</span> Gia sư AI cá nhân</div>
+          <div className="login-story-copy"><p className="eyebrow">Cùng học</p><h2>Làm bài trước, hiểu bài sau.</h2><p>Em tự làm, xin gợi ý khi cần, rồi xem lời giải thầy cô đã duyệt.</p></div>
+          <div className="atlas-graphic" aria-hidden="true"><span className="atlas-ring atlas-ring-one" /><span className="atlas-ring atlas-ring-two" /><span className="atlas-center">✦</span></div>
         </section>
         <Suspense>
           <LoginForm />

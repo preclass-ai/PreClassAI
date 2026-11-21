@@ -27,7 +27,7 @@ export function EvidenceList({ links }: { links: Schemas["ProvenanceLinkOut"][] 
           <div className="evidence-head">
             <span className="mono">{l.anchor.code}</span>
             <span>{RELATION[l.relation]}</span>
-            {l.status === "UNRESOLVED" ? <Badge tone="danger">Nguồn đã đổi – cần gán lại</Badge> : null}
+            {l.status === "UNRESOLVED" ? <Badge tone="danger">Nguồn đã đổi, cần gán lại</Badge> : null}
           </div>
           <blockquote>{l.anchor.excerpt}</blockquote>
           <div className="muted small">

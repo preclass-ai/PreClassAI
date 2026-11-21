@@ -36,7 +36,7 @@ export function GuestBanner() {
   return (
     <div className="alert alert-info guest-banner" role="status">
       <span>
-        Mã khảo sát của em: <strong className="guest-code">{user.surveyCode}</strong> — ghi mã này vào phiếu khảo sát.
+        Mã khảo sát của em là <strong className="guest-code">{user.surveyCode}</strong>. Em ghi mã này vào phiếu khảo sát.
       </span>
       <CopyCode code={user.surveyCode} />
     </div>

@@ -45,7 +45,7 @@ async def test_blocks_are_flat_ordered_and_carry_status(client: httpx.AsyncClien
     r = await client.get(f"/v1/revisions/{LREV}/blocks")
     assert r.status_code == 200
     items = r.json()["items"]
-    assert [i["position"] for i in items] == sorted(i["position"] for i in items) and len(items) == 18
+    assert [i["position"] for i in items] == sorted(i["position"] for i in items) and len(items) == 19
     q1 = next(i for i in items if i["id"] == str(B("q1")))
     assert q1["kind"] == "worksheet_item" and q1["parentId"] is None and q1["reviewStatus"] == "AUTO_CHECKED"
     assert next(i for i in items if i["id"] == str(B("q1k")))["linkCount"] == 4  # provenance count
@@ -58,7 +58,7 @@ async def test_lessons_list_get_history_and_idor(client: httpx.AsyncClient) -> N
     pub = next(x for x in mine if x["title"].startswith("Phân bố dân cư"))
     assert pub["currentRevision"]["state"] == "PUBLISHED" and pub["publishedVersionId"] == str(uid(f"{LOCKED}:published"))
     h = (await client.get(f"/v1/lessons/{uid(f'{L}:lesson')}/history")).json()
-    assert h["revisions"][0]["revisionNo"] == 1 and h["revisions"][0]["blockCount"] == 18 and h["events"]
+    assert h["revisions"][0]["revisionNo"] == 1 and h["revisions"][0]["blockCount"] == 19 and h["events"]
     client.cookies.clear()
     await login(client, "gv.khac@preclass.local")
     assert [x["title"] for x in (await client.get("/v1/lessons")).json()["items"]] == ["Xuất khẩu hàng hóa chủ lực"]
@@ -214,7 +214,7 @@ async def test_create_block_at_position_shifts_followers(client: httpx.AsyncClie
         "kind": "paragraph", "position": 2, "payload": {"text": "Chèn vào vị trí 2"}})
     assert r.status_code == 201 and r.json()["position"] == 2
     items = (await client.get(f"/v1/revisions/{LREV}/blocks")).json()["items"]
-    assert [i["position"] for i in items] == list(range(1, 20))
+    assert [i["position"] for i in items] == list(range(1, 21))
     assert items[1]["id"] == r.json()["id"]
 
 

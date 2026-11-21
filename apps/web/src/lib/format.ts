@@ -3,20 +3,20 @@ const dateTime = new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-di
 const dateOnly = new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
 
 export function fmtDate(iso: string | null | undefined): string {
-  return iso ? dateOnly.format(new Date(iso)) : "—";
+  return iso ? dateOnly.format(new Date(iso)) : "Chưa có";
 }
 const number = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 });
 
 export function fmtDateTime(iso: string | null | undefined): string {
-  return iso ? dateTime.format(new Date(iso)) : "—";
+  return iso ? dateTime.format(new Date(iso)) : "Chưa có";
 }
 
 export function fmtNumber(n: number | null | undefined): string {
-  return n === null || n === undefined ? "—" : number.format(n);
+  return n === null || n === undefined ? "Chưa có" : number.format(n);
 }
 
 export function fmtPercent(rate: number | null | undefined): string {
-  return rate === null || rate === undefined ? "—" : `${Math.round(rate * 100)}%`;
+  return rate === null || rate === undefined ? "Chưa có" : `${Math.round(rate * 100)}%`;
 }
 
 /** `<input type="datetime-local">` value (local time) → ISO-8601 with offset, as the API expects. */

@@ -91,7 +91,7 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
           ×
         </button>
       </header>
-      <p className="habit-note">Habit không đưa đáp án — em tự làm nhé! Không nhập thông tin cá nhân.</p>
+      <p className="habit-note">Habit không đưa đáp án, em tự làm nhé. Không nhập thông tin cá nhân.</p>
       <div ref={log} className="habit-log" aria-live="polite" aria-busy={busy}>
         {msgs.map((m) => (
           <div key={m.id} className={`habit-msg ${m.from}${m.refused ? " refused" : ""}`}>

@@ -101,7 +101,7 @@ async def get_assignment(db: AsyncSession, user: CurrentUser, assignment_id: UUI
 
 async def list_assignments(db: AsyncSession, user: CurrentUser) -> StudentAssignmentList:
     rows = (await db.execute(
-        select(m.Assignment, m.PublishedVersion, m.Class.code)
+        select(m.Assignment, m.PublishedVersion, m.Class.code, m.Class.name)
         .join(m.PublishedVersion, m.PublishedVersion.id == m.Assignment.published_version_id)
         .join(m.Class, m.Class.id == m.Assignment.class_id)
         .join(m.ClassMember, (m.ClassMember.class_id == m.Class.id) & (m.ClassMember.user_id == user.id)
@@ -110,12 +110,13 @@ async def list_assignments(db: AsyncSession, user: CurrentUser) -> StudentAssign
         .order_by(m.Assignment.due_at))).all()
     now = _now()
     out: list[StudentAssignmentSummary] = []
-    for a, pv, code in rows:
+    for a, pv, code, cname in rows:
         n, answered = len(_items(pv.snapshot)), len(await _attempts(db, a.id, user.id))
         status = ("DONE" if n and answered >= n else "CLOSED" if now > a.due_at
                   else "IN_PROGRESS" if answered else "NOT_STARTED")
-        out.append(StudentAssignmentSummary(id=a.id, title=pv.snapshot["title"], class_code=code, open_at=a.open_at,
-                                            due_at=a.due_at, status=status, answered_count=answered, item_count=n))
+        out.append(StudentAssignmentSummary(
+            id=a.id, title=pv.snapshot["title"], class_code=code, class_name=cname or code, open_at=a.open_at,
+            due_at=a.due_at, status=status, answered_count=answered, item_count=n))
     return StudentAssignmentList(items=out)
 
 

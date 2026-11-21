@@ -58,3 +58,9 @@
 - **CUE_TOKEN so khớp có dấu** ("bảng" ≠ "bằng"): so khớp bỏ dấu sinh dương tính giả ngay ở câu hỏi tính chênh lệch.
 - **Migration 0005 đổi CHECK của `validation_result`** (cho VAL-10): không xóa dữ liệu; downgrade dùng `NOT VALID` vì bảng append-only.
 - **DB demo đã seed sẽ KHÔNG đổi** (seed bỏ qua khi đã có dữ liệu). Muốn bài trên Render hết lộ đáp án phải reset + seed lại, mà reset xóa dữ liệu khảo sát: chỉ làm khi chưa/đã xuất xong CSV khảo sát. Xem RUNBOOK.
+
+## Câu chữ và nhận diện (feat/team-copy, 2026-11-22)
+- **Không thay số liệu thật**: chỉ xác minh được số dân ĐBSH (22,5) và Tây Nguyên (5,8) từ nguồn công khai, nso.gov.vn không mở được từ máy dev. Trộn số thật và số giả trong một bảng tệ hơn giữ nguyên. Việc còn lại ghi ở `.agents/DATA-SOURCES.md` kèm cách làm.
+- **Nhãn "DỮ LIỆU MINH HỌA" bỏ khỏi trang học sinh**, thay bằng đúng một dòng dưới bảng ("Số liệu dùng để luyện tập."), là một khối `paragraph` ORIGINAL có nguồn nên không phá bất biến "mọi nội dung đều truy được nguồn". Trang giáo viên giữ một dòng "Môi trường thử nghiệm".
+- **`class.name` là cột mới (migration 0006)**: bảng class chỉ có `code`, đề bài nói "class.name = 10A1" nhưng chưa có cột. Thêm cột nullable; lớp KS đặt tên "10A1", mã `KS` giữ nguyên.
+- **Dấu gạch dài**: ô trống từng hiện "—" nay hiện "Chưa có" hoặc "Không có". Test quét: `apps/web/tests/copy.test.ts` (chuỗi UI), `apps/api/tests/unit/test_copy.py` (mẫu trả lời Habit).

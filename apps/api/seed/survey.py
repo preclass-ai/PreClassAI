@@ -10,7 +10,7 @@ import os
 from datetime import UTC, datetime, timedelta
 
 from argon2 import PasswordHasher
-from sqlalchemy import delete, exists, select
+from sqlalchemy import delete, exists, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 
@@ -31,7 +31,8 @@ async def ensure_survey_class(conn: AsyncConnection, code: str) -> int:
     if teacher is None:
         return 0  # empty DB: seed.seed first
     cid = uid(f"class:{code}")
-    await conn.execute(insert(m.Class.__table__).values(id=cid, code=code, grade=10).on_conflict_do_nothing())  # type: ignore[arg-type]
+    await conn.execute(insert(m.Class.__table__).values(id=cid, code=code, grade=10, name="10A1").on_conflict_do_nothing())  # type: ignore[arg-type]
+    await conn.execute(update(m.Class.__table__).where(m.Class.__table__.c.id == cid, m.Class.__table__.c.name.is_(None)).values(name="10A1"))  # type: ignore[arg-type]
     await conn.execute(insert(m.ClassMember.__table__).values(  # type: ignore[arg-type]
         class_id=cid, user_id=teacher, role_in_class="TEACHER").on_conflict_do_nothing())
     seed_pvs = select(m.PublishedVersion.id).join(
