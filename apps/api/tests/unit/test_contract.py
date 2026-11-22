@@ -42,7 +42,7 @@ def test_every_operation_has_id_summary_and_error_model() -> None:
             assert op.get("summary") or path == "/v1/health", (method, path)
             assert op["operationId"] not in ids
             ids.add(op["operationId"])
-    assert len(ids) == 67  # update when endpoints are added (additive only after the v1 freeze)
+    assert len(ids) == 68  # update when endpoints are added (additive only after the v1 freeze)
 
 
 def test_every_endpoint_is_implemented_and_errors_are_problem_json() -> None:

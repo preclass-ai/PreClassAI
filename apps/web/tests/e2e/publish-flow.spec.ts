@@ -4,6 +4,7 @@ import { login } from "./helpers";
 // Changes data (adds a revision to the seeded lesson each run): desktop only, dev/staging seed only.
 test("new revision → approve block by block → publish → assign (S04–S06)", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop-1280", "write flow runs once");
+  test.setTimeout(150_000); // approving block by block takes about 30 s on a fresh seed and longer after the other specs added revisions
   page.on("dialog", (d) => void d.accept());
   await login(page, "gv.dia@preclass.local");
   await page.getByRole("link", { name: "Phân bố dân cư theo vùng" }).click();

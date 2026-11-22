@@ -53,6 +53,12 @@ export function Insights({ classId, assignmentId }: { classId: string; assignmen
       )}
 
       {(d.competencies ?? []).length ? <Heatmap d={d} /> : null}
+      <p>
+        <a className="btn btn-secondary" href={`/v1/classes/${classId}/assignments/${assignmentId}/insights/results.csv`} download>
+          Tải bảng số liệu (CSV)
+        </a>{" "}
+        <span className="muted small">Mã ẩn danh, đúng hay sai từng câu, số gợi ý, có ôn trước không. Không có nội dung chat.</span>
+      </p>
       {d.reviewImpact ? (
         <div className="card stack" aria-label="Ôn nhanh trước khi làm bài">
           <strong>Ôn nhanh trước khi làm bài</strong>

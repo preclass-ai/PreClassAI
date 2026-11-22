@@ -9,8 +9,8 @@ const shot = (name: string, project: string) => `test-results/habit-mobile/${nam
 test("HABIT AI sheet on a phone: messages are readable, last message in view, chips scroll sideways", async ({ page }, info) => {
   const n = info.project.name;
   await login(page, STUDENT[n] ?? "HS10-08");
-  await page.locator(".assignment-card").first().click();
-  const item = page.locator("section.item").first();
+  await page.locator(".assignment-card").filter({ hasText: "Phân bố dân cư theo vùng" }).first().click(); // other specs add lessons with a review step
+  const item = page.locator("section.item").filter({ has: page.getByRole("button", { name: "Hỏi HABIT AI" }) }).first(); // an item the student has not answered
   await expect(item).toBeVisible({ timeout: 30_000 });
   await item.getByRole("button", { name: "Hỏi HABIT AI" }).click();
   const sheet = page.getByRole("dialog", { name: "Hỏi HABIT AI" });

@@ -41,6 +41,12 @@ export default function DataPage() {
             <p>Hiện HABIT AI chạy bằng các quy tắc có sẵn trên máy chủ của mình. Câu hỏi của em không gửi tới dịch vụ AI nào bên ngoài.</p>
           )}
         </section>
+        <section aria-labelledby="d-giaoan">
+          <h2 id="d-giaoan">Giáo án và bài ôn nháp</h2>
+          <p>
+            Nội dung giáo án (đã che tên, chữ ký) được gửi tới dịch vụ AI để soạn câu hỏi và bài ôn nháp; giáo viên duyệt trước khi học sinh thấy.
+          </p>
+        </section>
         <section aria-labelledby="d-giu">
           <h2 id="d-giu">Giữ bao lâu, xóa thế nào</h2>
           <p>Không có việc tự động xóa. Sau khi đợt khảo sát kết thúc, nhóm nghiên cứu làm hai việc bằng tay:</p>

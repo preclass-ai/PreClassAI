@@ -538,6 +538,18 @@
           }
         ],
         "properties": {
+          "correctAnswer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Right answer ('B. text' or value and unit); after the attempt.",
+            "title": "Correctanswer"
+          },
           "explanation": {
             "anyOf": [
               {
@@ -566,6 +578,18 @@
             "format": "uuid",
             "title": "Itemid",
             "type": "string"
+          },
+          "sourceQuote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "'Theo giáo án' passage (AI-drafted questions); after the attempt.",
+            "title": "Sourcequote"
           }
         },
         "required": [
@@ -6525,6 +6549,18 @@
             "title": "Skill",
             "type": "string"
           },
+          "sourceQuote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Plan passage an AI-drafted question is based on.",
+            "title": "Sourcequote"
+          },
           "stem": {
             "title": "Stem",
             "type": "string"
@@ -7715,6 +7751,90 @@
           }
         },
         "summary": "3 to 5 topics students get stuck on (rules, or one model call when CHAT_MODE=llm)",
+        "tags": [
+          "insights"
+        ]
+      }
+    },
+    "/v1/classes/{class_id}/assignments/{assignment_id}/insights/results.csv": {
+      "get": {
+        "description": "Only a TEACHER of the class; anything else is 404. Anonymous: no student id, name or survey code in the answer. One row per student (anonymous code, right/wrong per item, hints per item, reviewed or not, last submit time in UTC), then totals: completion rate, rate per item and per skill. Never includes chat text.",
+        "operationId": "exportAssignmentResultsCsv",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "class_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Class Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "UTF-8 with BOM, opens in Excel."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anonymous results table of one assignment as CSV (class teacher)",
         "tags": [
           "insights"
         ]

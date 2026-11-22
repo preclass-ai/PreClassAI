@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import insights as svc
@@ -41,3 +42,15 @@ async def analyze(class_id: UUID, assignment_id: UUID, cu: Teacher, db: Db) -> A
              responses=errs(401, 403, 404, (409, "NOTHING_TO_RETEACH, DRAFT_EXISTS")))
 async def reteach(class_id: UUID, assignment_id: UUID, cu: Teacher, db: Db) -> ReteachOut:
     return await svc.reteach(db, cu, class_id, assignment_id)
+
+
+@router.get("/results.csv", operation_id="exportAssignmentResultsCsv", response_class=Response,
+            responses={200: {"content": {"text/csv": {"schema": {"type": "string"}}}, "description": "UTF-8 with BOM, opens in Excel."},
+                       **errs(401, 403, 404)},
+            summary="Anonymous results table of one assignment as CSV (class teacher)",
+            description=_NOTE + " One row per student (anonymous code, right/wrong per item, hints per item, reviewed or not, last submit "
+            "time in UTC), then totals: completion rate, rate per item and per skill. Never includes chat text.")
+async def results_csv(class_id: UUID, assignment_id: UUID, cu: Teacher, db: Db) -> Response:
+    body = await svc.results_csv(db, cu, class_id, assignment_id)
+    return Response(body.encode("utf-8"), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="ket-qua-bai.csv"', "Cache-Control": "no-store"})

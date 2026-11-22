@@ -1,26 +1,60 @@
 # Handoff: AI quiz and quick review from a lesson plan
 
-Branch `feat/ai-quiz-from-plan` (from `origin/main`, plus cherry-pick of `62bb974`: llm mode no longer blocks free questions by keyword).
-Decision record: `docs/adr/ADR-0015-ai-quiz-from-plan.md`. Not pushed, not merged, nothing written to any cloud service.
+Branch `feat/ai-quiz-from-plan`, rebased on `origin/main` (cd2de17, which already holds `62bb974` and `7cfb945`). Not pushed.
+Decision record: `docs/adr/ADR-0015-ai-quiz-from-plan.md`. `apps/api/app/sources/formats.py` has the `timeout_s <= 0` branch (fix `7cfb945`).
 
-## Commits
+## What changed
 
-1. `feat(api)`: migration 0012, `app/lessonplan/quizgen.py`, endpoints, `review_card` block, student review progress, openapi + client types.
-2. `feat(web)`: plan card status, AI review screen (labels, source quote, Sửa / Duyệt / Loại), review card editor.
-3. `feat(habit)`: limits from env, hint 10, `source`, fallback log, seed label removed, `scripts/ops/fix_seed_label.py`.
-4. `fix(web)`: HABIT AI bottom sheet on phones (part E).
-5. Part F: student two-step flow, Habit pointing to review cards, insights review impact, tests.
+1. API: migration 0012, `app/lessonplan/quizgen.py` (drafting + validators), plan endpoints `ai-items` (list, patch, regenerate), `review_card` block kind, student review progress.
+2. Teacher UI: plan card status, review screen with tabs Câu hỏi / Ôn tập, label "AI soạn", source quote, Sửa / Duyệt / Loại.
+3. Habit: chat limits from env, hint limit 10, reply `source` (llm|rule|guard), log of each rule fallback, "Mở thẻ ôn".
+4. HABIT AI sheet on phones (part E).
+5. Student flow "1. Ôn nhanh" then "2. Làm bài kiểm tra"; insights review impact (needs 5 students per group).
+6. After a student submits: right answer, explanation and "Theo giáo án: <quote>" (AI-drafted questions carry `sourceQuote` in the item payload) or "Nguồn: tài liệu giáo viên đã duyệt".
+7. Insights: "Tải bảng số liệu (CSV)" per assignment (`GET .../insights/results.csv`): anonymous code, right/wrong and hints per item, reviewed or not, last submit time, then totals (completion, rate per item and per skill). UTF-8 with BOM, no chat text.
+8. `/du-lieu` states that the plan text (names and signatures removed) goes to the AI service and that the teacher approves before students see anything.
+9. ESLint ignores `.next-e2e/`.
+
+### Regression found and fixed: habit-panel 63 vs 64
+
+`habit-panel.spec` at 1280 failed (panel top 63, header bottom 65). Green on `origin/main`, red on this branch, so it was this branch: the review link used the class `.link-btn`, which already exists (the logout button in the header uses it), and my rule made the header taller. Fixed by a separate class `.review-link` (commit "fix(web): do not redefine .link-btn ...").
+
+## Environment variables (names as in `apps/api/app/config.py`)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `CHAT_MAX_MSGS_PER_ITEM` | 20 | Typed questions per student per question. Hint presses do not count. |
+| `CHAT_MAX_MSGS_PER_DAY` | 100 | Typed questions per student per day. |
+| `HINT_MAX_PER_ITEM` | 10 | Hint presses per question (429 `HINT_LIMIT`). |
+| `QUIZ_GEN_ENABLED` | false | Draft questions and review cards after a plan is read. Needs `CHAT_LLM_*`. |
+| `QUIZ_GEN_PER_LESSON` | 8 | Questions per plan. |
+| `QUIZ_GEN_MIN_MCQ` | 5 | A plan with fewer extracted MCQ gets drafted questions (review cards are always drafted). |
+| `QUIZ_GEN_DAILY_TOKENS` | 100000 | Own daily token budget; over budget the step is skipped (`aiState=skipped`). |
+| `QUIZ_GEN_TIMEOUT_S` | 150 | Time limit per plan. |
+| `QUIZ_GEN_MOCK` | false | Stand-in model built from the plan text. Dev and e2e only, never on a real server. |
+
+Removed: `CHAT_MAX_PER_DAY_PER_STUDENT`, `CHAT_MAX_PER_ITEM`. Existing unchanged: `CHAT_ENABLED`, `CHAT_MODE`, `CHAT_LLM_*`, `CHAT_DAILY_TOKEN_BUDGET`.
+
+## Migration and ops
+
+- `0012_ai_quiz`: additive. Columns `lesson_plan.ai_state/ai_stats/ai_tokens/ai_at`, tables `plan_ai_item` and `review_progress`; `chat_message.hint_level` check widened from 0..3 to 0..30. Downgrade drops the tables and columns and restores the old check as NOT VALID.
+- Old label in an existing database: `cd apps/api; uv run python ../../scripts/ops/fix_seed_label.py` (dry run, default) then `... --apply`. It rewrites only `source_asset.title/license_note` and `lesson.title`; immutable rows (anchors, snapshots, approved blocks) are only counted.
+- Real-model numbers: `uv run python ../../scripts/ops/quizgen_real_run.py "<plan>" --lesson 1` with `CHAT_LLM_*` set. Prints counts only. Not run yet (the key file could not be read in the agent session).
 
 ## Verify
 
 ```text
 cd apps/api && uv run ruff check . && uv run mypy --strict app && uv run pytest
-cd apps/web && pnpm lint && pnpm typecheck && pnpm test      # build locally with VERCEL=1 API_ORIGIN=https://x.example.com (Windows cannot create the standalone symlinks)
-E2E_BASE_URL=... pnpm exec playwright test tests/e2e/ai-quiz.spec.ts   # API with CHAT_ENABLED=true QUIZ_GEN_ENABLED=true QUIZ_GEN_MOCK=true
+cd apps/web && pnpm lint && pnpm typecheck && pnpm test
+VERCEL=1 API_ORIGIN=https://x.example.com pnpm build      # Windows cannot create the standalone symlinks
+# e2e: API with CHAT_ENABLED=true PERSONALIZATION_ENABLED=true QUIZ_GEN_ENABLED=true QUIZ_GEN_MOCK=true on a freshly seeded DB
+E2E_BASE_URL=... pnpm exec playwright test
 ```
 
-## Open
+## Remaining limits
 
-- Real-model run: `scripts/ops/quizgen_real_run.py "<plan>" --lesson 1` with `CHAT_LLM_*` set. Prints counts only.
-- Set `QUIZ_GEN_ENABLED=true` (and `CHAT_LLM_*`) on the server to switch the feature on; it is off by default.
-- Existing databases: run `scripts/ops/fix_seed_label.py` (dry run first) to remove the old label from titles and notes.
+- Drafts must be approved before "Tạo bài chuẩn bị"; afterwards they are frozen (edit the lesson itself).
+- "Reviewed" means the student opened at least one card, not that it happened before the first answer.
+- The real model's draft quality is unmeasured; the e2e uses the mock model.
+- Hints 4 to 10 depend on `CHAT_MODE=llm`; in rule mode they repeat hint 3 plus a pointer to the source.
+- The CSV "ôn trước" column says `khong_co_bai_on` for lessons without review cards.

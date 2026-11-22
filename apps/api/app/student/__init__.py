@@ -75,7 +75,17 @@ def _grade(item_type: str, key: dict[str, Any] | None, ans: AnswerIn) -> bool | 
 
 def _result(snap: dict[str, Any], item_id: str, is_correct: bool | None) -> AttemptResult:
     exp = next(iter(_children(snap, item_id, "explanation")), None)
-    return AttemptResult(item_id=UUID(item_id), is_correct=is_correct, explanation=exp["payload"]["text"] if exp else None)
+    item = next((i for i in _items(snap) if i["id"] == item_id), None)
+    key = next(iter(_children(snap, item_id, "answer_key")), None)
+    right: str | None = None
+    if key and item and item["payload"]["itemType"] == "MCQ" and key["payload"].get("correct"):
+        label = key["payload"]["correct"]
+        text = next((o["payload"]["text"] for o in _children(snap, item_id, "option") if o["payload"]["label"] == label), "")
+        right = f"{label}. {text}".strip()
+    elif key and key["payload"].get("value") is not None:
+        right = f"{key['payload']['value']} {key['payload'].get('unit') or ''}".strip()
+    return AttemptResult(item_id=UUID(item_id), is_correct=is_correct, explanation=exp["payload"]["text"] if exp else None,
+                         correct_answer=right, source_quote=(item["payload"].get("sourceQuote") if item else None))
 
 
 async def _attempts(db: AsyncSession, assignment_id: UUID, student_id: UUID) -> dict[UUID, m.StudentAttempt]:

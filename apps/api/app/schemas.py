@@ -450,6 +450,7 @@ class WorksheetItemPayload(ApiModel):
     item_type: ItemType
     skill: Skill
     hints: list[str] | None = Field(None, description="Fixed hints 1..3 (AI-drafted questions); never shown outside Habit.")
+    source_quote: str | None = Field(None, description="Plan passage an AI-drafted question is based on.")
 
 
 class ReviewCheckPayload(ApiModel):
@@ -783,6 +784,8 @@ class AttemptResult(ApiModel):
     item_id: UUID
     is_correct: bool | None = Field(None, description="null for SHORT / rubric items.")
     explanation: str | None = Field(None, description="Approved explanation; only present after the attempt.")
+    correct_answer: str | None = Field(None, description="Right answer ('B. text' or value and unit); after the attempt.")
+    source_quote: str | None = Field(None, description="'Theo giáo án' passage (AI-drafted questions); after the attempt.")
     model_config = ex({"itemId": I["q1"], "isCorrect": True,
                        "explanation": "Đồng bằng sông Hồng có số dân cao nhất (23,2 triệu người)."})
 

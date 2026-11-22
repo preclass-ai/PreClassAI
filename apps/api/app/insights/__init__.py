@@ -5,10 +5,13 @@ Anonymous by construction: the output has question texts (PII already redacted w
 student id, name or survey code. Grouping is rule based (0đ); the model is only used when the teacher presses "AI phân tích".
 """
 
+import csv
+import io
 import json
 import time
 import uuid
 from collections import Counter, defaultdict
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -24,6 +27,7 @@ from app.db import models as m
 from app.errors import ApiError
 from app.habit import llm, rules
 from app.habit.activity import day_start_utc
+from app.hashing import sha256_hex
 from app.schemas import (
     AnalyzeOut,
     BlockedReason,
@@ -72,6 +76,69 @@ async def _assignment(db: AsyncSession, user: CurrentUser, class_id: UUID, assig
     if row is None:
         raise NOT_FOUND
     return row[0], row[1], row[2]
+
+
+def _pct(ok: int, n: int) -> str:
+    return f"{ok / n:.0%}" if n else ""
+
+
+async def results_csv(db: AsyncSession, user: CurrentUser, class_id: UUID, assignment_id: UUID) -> str:
+    """Anonymous results table for Excel: one row per student (code, right or wrong per item, hints, reviewed, last submit time),
+    then a summary (completion, rate per item and per skill). Counts and codes only: no names, no chat text."""
+    a, pv, _ = await _assignment(db, user, class_id, assignment_id)
+    items = sorted(student._items(pv.snapshot), key=lambda i: i["position"])  # noqa: SLF001
+    students = (await db.execute(
+        select(m.AppUser.id, m.AppUser.survey_code).join(m.ClassMember, m.ClassMember.user_id == m.AppUser.id)
+        .where(m.ClassMember.class_id == class_id, m.ClassMember.role_in_class == "STUDENT"))).all()
+    att = {(r[0], r[1]): (r[2], r[3]) for r in (await db.execute(
+        select(m.StudentAttempt.student_id, m.StudentAttempt.item_block_id, m.StudentAttempt.is_correct, m.StudentAttempt.created_at)
+        .where(m.StudentAttempt.assignment_id == a.id))).all()}
+    S, M = m.ChatSession, m.ChatMessage  # noqa: N806
+    hints = {(r[0], r[1]): r[2] for r in (await db.execute(
+        select(S.student_id, S.item_block_id, func.count()).join(M, M.session_id == S.id)
+        .where(S.assignment_id == a.id, M.role == "assistant", M.action == "hint").group_by(S.student_id, S.item_block_id))).all()}
+    seen = {r[0] for r in (await db.execute(select(m.ReviewProgress.student_id).where(
+        m.ReviewProgress.assignment_id == a.id, func.cardinality(m.ReviewProgress.seen_ids) > 0))).all()}
+    has_cards = any(b["kind"] == "review_card" for b in pv.snapshot["blocks"])
+    iid = [UUID(i["id"]) for i in items]
+
+    def code(sid: UUID, survey: str | None) -> str:
+        return survey or "HS-" + sha256_hex(f"{assignment_id}:{sid}")[:6].upper()  # stable per assignment, not a student id
+
+    buf = io.StringIO()
+    w = csv.writer(buf, lineterminator="\r\n")
+    w.writerow(["ma_an_danh", *[f"C{n}_dung_sai" for n in range(1, len(items) + 1)], *[f"C{n}_goi_y" for n in range(1, len(items) + 1)],
+                "tong_goi_y", "on_truoc", "nop_luc_cuoi_utc"])
+    started = done = 0
+    per_item = [[0, 0] for _ in items]  # [graded, right]
+    per_skill: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    for sid, survey in sorted(students, key=lambda s: code(s[0], s[1])):
+        row = [att.get((sid, i)) for i in iid]
+        answered = [r for r in row if r is not None]
+        started += bool(answered)
+        done += bool(items) and len(answered) == len(items)
+        for n, (it, r) in enumerate(zip(items, row, strict=True)):
+            if r is not None and r[0] is not None:
+                per_item[n][0] += 1
+                per_item[n][1] += bool(r[0])
+                per_skill[it["payload"]["skill"]][0] += 1
+                per_skill[it["payload"]["skill"]][1] += bool(r[0])
+        hs = [hints.get((sid, i), 0) for i in iid]
+        last = max((r[1] for r in answered), default=None)
+        w.writerow([code(sid, survey), *[("" if r is None or r[0] is None else int(r[0])) for r in row], *hs, sum(hs),
+                    ("co" if sid in seen else "khong") if has_cards else "khong_co_bai_on", last.astimezone(UTC).isoformat(timespec="seconds") if last else ""])
+    w.writerow([])
+    w.writerow(["TONG HOP"])
+    w.writerow(["so_hoc_sinh", len(students)])
+    w.writerow(["ty_le_lam_bai (da nop it nhat 1 cau)", _pct(started, len(students))])
+    w.writerow(["ty_le_hoan_thanh (nop du cac cau)", _pct(done, len(students))])
+    w.writerow(["theo_cau", "so_bai_cham", "ty_le_dung"])
+    for n, (g, ok) in enumerate(per_item, 1):
+        w.writerow([f"C{n}", g, _pct(ok, g)])
+    w.writerow(["theo_ky_nang", "so_bai_cham", "ty_le_dung"])
+    for sk, (g, ok) in sorted(per_skill.items()):
+        w.writerow([sk, g, _pct(ok, g)])
+    return "\ufeff" + buf.getvalue()  # BOM: Excel reads the file as UTF-8
 
 
 MIN_GROUP = 5  # each group needs this many students before a comparison is shown (small groups mislead and can identify children)

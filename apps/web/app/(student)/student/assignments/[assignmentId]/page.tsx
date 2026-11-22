@@ -306,7 +306,13 @@ function Result({ result }: { result: Schemas["AttemptResult"] }) {
   return (
     <div className={`alert alert-${tone}`} role="status">
       <strong>{label}</strong>
+      {result.correctAnswer ? (
+        <p className="answer-reveal">
+          <strong>Đáp án đúng:</strong> {result.correctAnswer}
+        </p>
+      ) : null}
       {result.explanation ? <p className="explanation">{result.explanation}</p> : null}
+      <p className="source-line muted small">{result.sourceQuote ? `Theo giáo án: ${result.sourceQuote}` : "Nguồn: tài liệu giáo viên đã duyệt"}</p>
     </div>
   );
 }

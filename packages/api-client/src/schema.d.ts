@@ -311,6 +311,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/classes/{class_id}/assignments/{assignment_id}/insights/results.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anonymous results table of one assignment as CSV (class teacher)
+         * @description Only a TEACHER of the class; anything else is 404. Anonymous: no student id, name or survey code in the answer. One row per student (anonymous code, right/wrong per item, hints per item, reviewed or not, last submit time in UTC), then totals: completion rate, rate per item and per skill. Never includes chat text.
+         */
+        get: operations["exportAssignmentResultsCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/classes/{class_id}/assignments/{assignment_id}/insights/reteach": {
         parameters: {
             query?: never;
@@ -1406,6 +1426,11 @@ export interface components {
          */
         AttemptResult: {
             /**
+             * Correctanswer
+             * @description Right answer ('B. text' or value and unit); after the attempt.
+             */
+            correctAnswer?: string | null;
+            /**
              * Explanation
              * @description Approved explanation; only present after the attempt.
              */
@@ -1420,6 +1445,11 @@ export interface components {
              * Format: uuid
              */
             itemId: string;
+            /**
+             * Sourcequote
+             * @description 'Theo giáo án' passage (AI-drafted questions); after the attempt.
+             */
+            sourceQuote?: string | null;
         };
         /**
          * AuditLogList
@@ -4456,6 +4486,11 @@ export interface components {
              * @enum {string}
              */
             skill: "READ_TABLE" | "COMPARE" | "CALCULATE" | "EXPLAIN";
+            /**
+             * Sourcequote
+             * @description Plan passage an AI-drafted question is based on.
+             */
+            sourceQuote?: string | null;
             /** Stem */
             stem: string;
         };
@@ -5340,6 +5375,65 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyzeOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exportAssignmentResultsCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: string;
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description UTF-8 with BOM, opens in Excel. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
                 };
             };
             /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */

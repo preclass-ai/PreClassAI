@@ -181,3 +181,5 @@ async def test_whole_flow_review_cards_gate_and_habit_points_to_a_card(client: h
     assert r["openReview"] in (c0, c1) and r["source"] == "rule" and "xem hết thẻ ôn" in r["reply"]
     hint = (await client.post(f"{url_s}/chat", json={"itemId": item["id"], "action": "hint", "requestId": "22222222-2222-4222-8222-222222222222"})).json()
     assert hint["hintLevel"] == 1 and hint["reply"] == next(b for b in ai_items if b["id"] == item["id"])["payload"]["hints"][0]  # AI hints are fixed
+    done = (await client.post(f"{url_s}/attempts", json={"itemId": item["id"], "answer": {"choice": "A"}, "requestId": "33333333-3333-4333-8333-333333333333"})).json()
+    assert done["sourceQuote"] and done["correctAnswer"].startswith(("A.", "B.", "C.", "D.")) and done["explanation"]  # "Theo giáo án: <quote>"

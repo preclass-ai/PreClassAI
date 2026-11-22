@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { expectNoHorizontalScroll, login } from "./helpers";
 
 // One fresh student per project: attempts are write-once. Needs the API with CHAT_ENABLED=true.
-const STUDENT: Record<string, string> = { "mobile-390": "HS10-01", "tablet-768": "HS10-02", "desktop-1280": "HS10-03", "webkit-390": "HS10-04" };
+const STUDENT: Record<string, string> = { "mobile-390": "HS10-01", "tablet-768": "HS10-02", "desktop-1280": "HS10-08", "webkit-390": "HS10-04" };
 const shot = (name: string, project: string) => `test-results/habit/${name}-${project}.png`;
 
 test("Habit: hints 1 to 3 of 10, refusals, answer, explanation, goal", async ({ page }, info) => {

@@ -220,3 +220,24 @@ async def test_review_impact_is_hidden_until_both_groups_have_five(client: httpx
     assert r["reviewedStudents"] == 5 and r["otherStudents"] == 5 and r["reviewRate"] == 0.5
     assert r["avgCorrectWithReview"] == 1.0 and r["avgCorrectWithoutReview"] == 0.0 and "chưa phải nhân quả" in r["note"]
     assert "studentId" not in json.dumps(r)  # aggregates only
+
+
+async def test_results_csv_is_anonymous_excel_ready_and_class_teacher_only(client: httpx.AsyncClient) -> None:
+    await login(client, "HS10-01")
+    items = (await client.get(S_URL)).json()["items"]
+    r = await client.post(f"{S_URL}/attempts", json={"itemId": items[0]["id"], "answer": {"choice": "A"}, "requestId": str(uuid.uuid4())})
+    assert r.status_code == 201 and r.json()["correctAnswer"] and r.json()["sourceQuote"] is None  # right answer shown after the attempt
+    assert (await client.get(f"{URL}/results.csv")).status_code == 403
+    client.cookies.clear()
+    await login(client, "gv.dia@preclass.local")
+    res = await client.get(f"{URL}/results.csv")
+    assert res.status_code == 200 and res.headers["content-type"].startswith("text/csv") and "attachment" in res.headers["content-disposition"]
+    body = res.content.decode("utf-8")
+    assert body.startswith("﻿ma_an_danh,C1_dung_sai") and "TONG HOP" in body and "theo_ky_nang" in body
+    lines = body.splitlines()
+    assert len(lines[1].split(",")) == len(lines[0].split(","))  # rectangular
+    assert "HS10-01" not in body and "minh họa" not in body and "ty_le_lam_bai" in body  # codes only, never names or login ids
+    assert sum(1 for ln in lines if ln.startswith("HS-")) >= 15
+    client.cookies.clear()
+    await login(client, "gv.khac@preclass.local")
+    assert (await client.get(f"{URL}/results.csv")).status_code == 404

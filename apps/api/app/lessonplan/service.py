@@ -483,7 +483,8 @@ async def build_lesson(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> Pl
             continue
         ai_q += 1
         k = f"aq{ai_q}"
-        add(k, "worksheet_item", {"stem": d["stem"], "itemType": "MCQ", "skill": d["skill_tag"], "hints": d["hints"]}, src, tr="AI_PROPOSED",
+        add(k, "worksheet_item", {"stem": d["stem"], "itemType": "MCQ", "skill": d["skill_tag"], "hints": d["hints"],
+                          "sourceQuote": it.source_quote[:500]}, src, tr="AI_PROPOSED",
             more=_number_sources(d["stem"], src, by))
         for i, o in enumerate(d["options"]):
             add(f"{k}{chr(97 + i)}", "option", {"label": chr(65 + i), "text": o}, src, parent=k, tr="AI_PROPOSED", more=_number_sources(o, src, by))
