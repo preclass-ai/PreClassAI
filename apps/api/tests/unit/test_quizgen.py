@@ -327,7 +327,7 @@ def test_prompt_is_cut_to_the_budget_appendix_first_then_the_tail() -> None:
 def test_jobs_run_one_at_a_time_in_arrival_order(monkeypatch: pytest.MonkeyPatch) -> None:
     log: list[str] = []
 
-    async def fake_run_plan(db: object, plan_id: object, client: object = None) -> dict[str, object]:
+    async def fake_run_plan(db: object, plan_id: object, client: object = None, spec: object = None) -> dict[str, object]:
         log.append(f"start {plan_id}")
         await asyncio.sleep(0.02)
         log.append(f"end {plan_id}")
@@ -374,3 +374,51 @@ def test_quiz_client_uses_the_quiz_model_pair(monkeypatch: pytest.MonkeyPatch) -
         assert quizgen.get_client().models == ["openai/gpt-oss-120b", "qwen/qwen3.8-27b"]  # type: ignore[union-attr]
     finally:
         get_settings.cache_clear()
+
+
+# ---- part III: numeric answers the server works out again
+NUM_PLAN = Source("Năm 2021 dân số vùng Đồng bằng sông Hồng là 23,2 triệu người, vùng Trung du và miền núi phía Bắc là 12,9 triệu người trong cả nước.")
+
+
+def num(**kw: object) -> quizgen.AiNumeric:
+    base: dict[str, object] = {
+        "stem": "Dân số vùng Đồng bằng sông Hồng là 23,2 triệu người, vùng Trung du và miền núi phía Bắc là 12,9 triệu người. Tính chênh lệch.",
+        "op": "diff", "operands": [23.2, 12.9], "unit": "triệu người", "answer": 10.3, "explanation": "Lấy 23,2 trừ 12,9 được 10,3 triệu người.",
+        "hints": ["Em tìm hai số cần dùng.", "Em chọn phép trừ.", "Em chú ý đơn vị."], "source_sentence_ids": [1]}
+    return quizgen.AiNumeric.model_validate({**base, **kw})
+
+
+def test_a_numeric_answer_that_follows_from_the_quote_passes() -> None:
+    d = num()
+    assert check_question_numeric(d) is None and d.answer == 10.3
+
+
+def check_question_numeric(d: quizgen.AiNumeric) -> str | None:
+    return quizgen.check_numeric(d, NUM_PLAN)
+
+
+def test_a_wrong_numeric_answer_is_rejected_even_when_the_figures_are_in_the_quote() -> None:
+    assert check_question_numeric(num(answer=11.3)) == "answer_mismatch"
+    assert check_question_numeric(num(op="sum", answer=10.3)) == "answer_mismatch"
+    assert not quizgen.numeric_math_ok(num(op="ratio", operands=[23.2, 0], answer=0))  # division by zero cannot be recomputed
+
+
+def test_numeric_operands_and_stem_figures_must_be_in_the_quote() -> None:
+    assert check_question_numeric(num(operands=[23.2, 14.9], answer=8.3)) == "number_not_in_quote"
+    assert check_question_numeric(num(stem="Dân số là 23,2 triệu người ở vùng này và 99 triệu người ở vùng kia. Tính chênh lệch.")) == "number_not_in_quote"
+
+
+def test_a_numeric_hint_must_not_give_the_answer() -> None:
+    assert check_question_numeric(num(hints=["Em tìm hai số.", "Kết quả là 10,3 em nhé.", "Em chú ý đơn vị."])) == "hint_leaks_answer"
+
+
+def test_the_stored_numeric_answer_is_the_servers_result() -> None:
+    d = num(operands=[23.2, 12.9], answer=10.31)  # within tolerance: the model rounded badly
+    assert check_question_numeric(d) is None and d.answer == 10.3
+    assert quizgen.numeric_math_ok(num()) and not quizgen.numeric_math_ok(num(answer=50))
+
+
+def test_mock_numeric_output_passes_the_validator() -> None:
+    raw, _, _ = asyncio.run(MockQuizLLM().complete(quizgen.SYSTEM_NUMERIC, f"<plan>\n{quizgen.numbered(NUM_PLAN)}\n</plan>\nSoạn cần 2 câu hỏi", 100))
+    ok, bad = parse_items(raw, "numeric", quizgen.AiNumeric)
+    assert ok and bad == 0 and all(quizgen.check_numeric(x, NUM_PLAN) is None for x in ok)  # type: ignore[arg-type]

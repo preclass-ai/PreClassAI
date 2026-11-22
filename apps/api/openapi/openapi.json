@@ -3335,7 +3335,7 @@
           },
           "payload": {
             "additionalProperties": true,
-            "description": "quiz: stem, options[4], correct_index, explanation, hints[3], skill_tag. review: title, points, example, check{statement, answer_true, explanation}.",
+            "description": "quiz: stem, options[4], correct_index, explanation, hints[3], skill_tag, level (`item_type` MCQ); NUMERIC: stem, op, operands, unit, answer, explanation, hints. review: title, points, example, check{statement, answer_true, explanation}.",
             "title": "Payload",
             "type": "object"
           },
@@ -3420,6 +3420,53 @@
           "items"
         ],
         "title": "PlanAiList",
+        "type": "object"
+      },
+      "PlanAiRegenerate": {
+        "description": "What the teacher wants drafted, by part of the national exam format (from 2025). Part II (true/false x4) is not offered.",
+        "examples": [
+          {
+            "level": "THONG_HIEU",
+            "mcq": 6,
+            "numeric": 2
+          }
+        ],
+        "properties": {
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "NHAN_BIET",
+                  "THONG_HIEU",
+                  "VAN_DUNG"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Suggested level label for each question.",
+            "title": "Level"
+          },
+          "mcq": {
+            "default": 6,
+            "description": "Part I: multiple choice questions.",
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Mcq",
+            "type": "integer"
+          },
+          "numeric": {
+            "default": 2,
+            "description": "Part III: one-number answer, recomputed by the server.",
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Numeric",
+            "type": "integer"
+          }
+        },
+        "title": "PlanAiRegenerate",
         "type": "object"
       },
       "PlanDetail": {
@@ -6723,6 +6770,23 @@
             "title": "Itemtype",
             "type": "string"
           },
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "NHAN_BIET",
+                  "THONG_HIEU",
+                  "VAN_DUNG"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Suggested level label; the teacher can change it.",
+            "title": "Level"
+          },
           "skill": {
             "enum": [
               "READ_TABLE",
@@ -8876,7 +8940,7 @@
     },
     "/v1/lesson-plans/{plan_id}/ai-items/regenerate": {
       "post": {
-        "description": "Poll `GET /lesson-plans/{id}` for `aiState`. 409: `QUIZ_GEN_OFF`, `AI_BUSY`, `LESSON_EXISTS`.",
+        "description": "Body (optional): how many multiple choice (part I) and numeric (part III) questions, and a level label. Defaults 6 and 2; the total may not exceed `QUIZ_GEN_PER_LESSON` (422 `QUIZ_COUNT`). Poll `GET /lesson-plans/{id}` for `aiState`. 409: `QUIZ_GEN_OFF`, `AI_BUSY`, `LESSON_EXISTS`.",
         "operationId": "regeneratePlanAiItems",
         "parameters": [
           {
@@ -8890,6 +8954,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PlanAiRegenerate"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "202": {
             "content": {
@@ -8945,11 +9026,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Problem"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
           }
         },
         "summary": "Redraft questions and review cards in the background; approved items stay",

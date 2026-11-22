@@ -108,11 +108,11 @@ async def test_approve_edit_reject_regenerate(client: httpx.AsyncClient, db: Asy
     assert bad.status_code == 422
     assert (await client.patch(f"{url}/{quiz[2]['id']}", json={"status": "rejected"}, headers=H)).json()["status"] == "rejected"
     started: list[object] = []
-    gen.setattr(quizgen, "start", started.append)  # the real one runs in its own session, outside this test transaction
+    gen.setattr(quizgen, "start", lambda pid, spec=None: started.append((pid, spec)))  # the real one runs in its own session, outside this test transaction
     r = await client.post(f"{url}/regenerate", headers=H)
     assert r.status_code == 202 and r.json()["aiState"] == "queued" and len(started) == 1
     assert (await client.post(f"{url}/regenerate", headers=H)).status_code == 409  # already queued
-    await quizgen.run_plan(db, UUID(p["id"]))  # what the background task does
+    await quizgen.run_plan(db, UUID(p["id"]), spec=started[0][1])  # what the background task does
     after = (await client.get(url)).json()["items"]
     assert any(i["id"] == quiz[0]["id"] and i["status"] == "approved" for i in after)  # approved stays
     assert not any(i["id"] in (quiz[1]["id"], quiz[2]["id"]) for i in after)  # drafts and rejected ones were replaced
@@ -341,3 +341,47 @@ async def test_the_wait_between_provider_calls_does_not_block_the_server(client:
         if (await client.get(f"/v1/lesson-plans/jobs/{r.json()['id']}")).json()["state"] == "done":
             break
         await asyncio.sleep(0.5)
+
+
+# ---- the teacher chooses the parts, the counts and the level
+async def test_the_teacher_chooses_counts_and_level_and_numeric_answers_are_recomputed(
+    client: httpx.AsyncClient, db: AsyncSession, gen: pytest.MonkeyPatch
+) -> None:
+    await login(client, "gv.dia@preclass.local")
+    p = await upload(client)
+    url = f"/v1/lesson-plans/{p['id']}/ai-items"
+    started: list[tuple[object, quizgen.QuizSpec | None]] = []
+    gen.setattr(quizgen, "start", lambda pid, spec=None: started.append((pid, spec)))
+    too_many = await client.post(f"{url}/regenerate", json={"mcq": 6, "numeric": 3}, headers=H)
+    assert too_many.status_code == 422 and too_many.json()["code"] == "QUIZ_COUNT"  # more than QUIZ_GEN_PER_LESSON (8) in total
+    assert not started
+    ok = await client.post(f"{url}/regenerate", json={"mcq": 3, "numeric": 1, "level": "VAN_DUNG"}, headers=H)
+    assert ok.status_code == 202 and started[0][1] == quizgen.QuizSpec(3, 1, "VAN_DUNG")
+    await quizgen.run_plan(db, UUID(p["id"]), spec=started[0][1])
+    quiz = [i for i in (await client.get(url)).json()["items"] if i["kind"] == "quiz"]
+    mcq = [i for i in quiz if i["payload"]["item_type"] == "MCQ"]
+    numeric = [i for i in quiz if i["payload"]["item_type"] == "NUMERIC"]
+    assert len(mcq) == 3 and len(numeric) == 1
+    assert {i["payload"]["level"] for i in quiz} == {"VAN_DUNG"}  # the label is on every question
+    n = numeric[0]["payload"]
+    assert n["op"] == "diff" and n["answer"] == pytest.approx(n["operands"][0] - n["operands"][1])  # the server's own result
+    assert numeric[0]["status"] == "draft" and numeric[0]["needsConfirmation"]
+
+    bad = await client.patch(f"{url}/{numeric[0]['id']}", json={"payload": {**n, "answer": n["answer"] + 5}}, headers=H)
+    assert bad.status_code == 422  # an edit that breaks the sum is refused
+    edited = await client.patch(f"{url}/{numeric[0]['id']}", json={"payload": {**n, "level": "NHAN_BIET"}}, headers=H)
+    assert edited.status_code == 200 and edited.json()["payload"]["level"] == "NHAN_BIET"  # the teacher can change the label
+    assert (await client.patch(f"{url}/{numeric[0]['id']}", json={"status": "approved"}, headers=H)).status_code == 200
+
+    out = (await client.post(f"/v1/lesson-plans/{p['id']}/lesson", headers=H)).json()
+    rev = (await client.get(f"/v1/lessons/{out['lessonId']}")).json()["currentRevision"]["id"]
+    blocks = (await client.get(f"/v1/revisions/{rev}/blocks")).json()["items"]
+    item = next(b for b in blocks if b["kind"] == "worksheet_item" and b["payload"].get("itemType") == "NUMERIC")
+    assert item["payload"]["level"] == "NHAN_BIET" and item["transformation"] == "AI_PROPOSED"
+    key = next(b for b in blocks if b["kind"] == "answer_key" and b["parentId"] == item["id"])
+    assert key["payload"]["value"] == pytest.approx(n["answer"]) and key["payload"]["derivation"]["op"] == "diff" and key["payload"]["unit"]
+    for b in blocks:  # no blocker: the usual per-block approval works for the numeric item too
+        if b["id"] in (item["id"], key["id"]):
+            r = await client.post(f"/v1/blocks/{b['id']}/reviews", json={"action": "APPROVE", "contentHash": b["contentHash"]})
+            ev = (await db.execute(text("SELECT rule, evidence FROM validation_result WHERE block_id=:i AND outcome='FAIL'"), {"i": b["id"]})).all()
+            assert r.status_code == 201, (b["kind"], ev)
