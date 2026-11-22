@@ -63,7 +63,7 @@ export const RELATION: Record<Schemas["LinkIn"]["relation"], string> = {
 };
 
 export const CHECK: Record<Schemas["PublishCheckItem"]["code"], string> = {
-  ALL_APPROVED: "Mọi khối đã được duyệt",
+  ALL_APPROVED: "Thầy/cô đã duyệt tất cả các nguồn cần duyệt",
   NO_BLOCKERS: "Không còn lỗi chặn",
   SOURCES_VALID: "Nguồn của các khối còn hợp lệ",
   HAS_ITEMS: "Có ít nhất một câu hỏi",

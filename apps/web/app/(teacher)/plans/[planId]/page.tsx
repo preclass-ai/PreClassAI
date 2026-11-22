@@ -115,9 +115,9 @@ export default function PlanPage() {
             ))}
             {p.competencies.length ? (
               <label className="small">
-                Năng lực{" "}
+                Năng lực (không bắt buộc){" "}
                 <select value={q.competencyCode ?? ""} onChange={(e) => competency.mutate({ mcq: q.id, code: e.target.value || null })}>
-                  <option value="">Chưa gắn</option>
+                  <option value="">Không bắt buộc</option>
                   {p.competencies.map((c) => (
                     <option key={c.code} value={c.code}>
                       {c.name}

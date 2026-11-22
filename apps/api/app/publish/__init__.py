@@ -121,7 +121,7 @@ def _gate(blocks: list[m.ContentBlock], evaluated: dict[UUID, list[R]]) -> list[
     has_items = any(b.kind == "worksheet_item" for b in blocks)
     return [
         PublishCheckItem(code="ALL_APPROVED", ok=not not_approved, block_ids=not_approved,
-                         message="Mọi khối đã được duyệt." if not not_approved
+                         message="Thầy/cô đã duyệt tất cả các nguồn cần duyệt." if not not_approved
                          else f"Còn {len(not_approved)} khối chưa được duyệt hoặc duyệt không còn hiệu lực."),
         PublishCheckItem(code="NO_BLOCKERS", ok=not blockers, block_ids=blockers,
                          message="Không còn cảnh báo chặn." if not blockers else f"Còn {len(blockers)} khối có lỗi chặn."),

@@ -45,6 +45,15 @@ test("new revision → approve block by block → publish → assign (S04–S06)
   await page.getByRole("button", { name: "Xuất bản", exact: true }).click();
   await expect(page.getByText(/đã xuất bản\./)).toBeVisible();
   await expect(page.getByRole("link", { name: "Tiếp: Giao bài" })).toBeVisible();
+  // K5: a lesson day on or before the due day asks for confirmation before anything is saved
+  await page.getByLabel("Ngày học (không bắt buộc)").fill("2030-05-10");
+  await page.getByLabel("Hạn nộp", { exact: true }).fill("2030-05-10T23:59");
+  await page.getByRole("button", { name: "Giao bài", exact: true }).click();
+  const warn = page.getByRole("alertdialog", { name: "Xác nhận hạn nộp" });
+  await expect(warn).toBeVisible();
+  await expect(page.getByText(/Đã giao cho lớp/)).toHaveCount(0);
+  await warn.getByRole("button", { name: "Sửa lại hạn" }).click();
+  await page.getByLabel("Ngày học (không bắt buộc)").fill("2030-05-11"); // due moves to the day before: no warning
   await page.getByRole("button", { name: "Giao bài", exact: true }).click();
   await expect(page.getByText(/Đã giao cho lớp/)).toBeVisible();
 

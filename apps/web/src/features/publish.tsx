@@ -6,7 +6,7 @@ import { useState, type FormEvent } from "react";
 import { Badge, Button, ErrorBox, Field, Loading, Notice } from "@/components/ui";
 import { api, ApiError, unwrap, type Schemas } from "@/lib/api";
 import { isLocked, summarize } from "@/lib/blocks";
-import { dueDayBefore, fmtDateTime, localInputToIso, toLocalInput } from "@/lib/format";
+import { dueDayBefore, dueNotBeforeLesson, fmtDate, fmtDateTime, localInputToIso, toLocalInput } from "@/lib/format";
 import { CHECK } from "@/lib/labels";
 import { keys, useBlocks, useRefreshLesson } from "./lesson-data";
 
@@ -131,8 +131,16 @@ function AssignPanel({ lesson, publishedId }: { lesson: Lesson; publishedId: str
   const [error, setError] = useState<unknown>(null);
   const [done, setDone] = useState<Schemas["AssignmentOut"] | null>(null);
 
+  const [warned, setWarned] = useState(false);
+  const clash = dueNotBeforeLesson(lessonDay, dueAt);
+
   async function assign(e: FormEvent) {
     e.preventDefault();
+    if (clash && !warned) {
+      setWarned(true); // ask before saving: the lesson day is on or before the due time
+      return;
+    }
+    setWarned(false);
     setBusy(true);
     setError(null);
     setDone(null);
@@ -189,11 +197,28 @@ function AssignPanel({ lesson, publishedId }: { lesson: Lesson; publishedId: str
             </Field>
           </div>
           {lessonDay ? <p className="muted small">Hạn nộp đã đặt trước buổi học 1 ngày. Thầy cô vẫn sửa được ô "Hạn nộp".</p> : null}
-          <div>
-            <Button type="submit" variant="primary" busy={busy}>
-              Giao bài
-            </Button>
-          </div>
+          {clash && warned ? (
+            <div className="alert alert-warning" role="alertdialog" aria-label="Xác nhận hạn nộp">
+              <p>
+                Ngày học {fmtDate(`${lessonDay}T00:00:00`)} không sau hạn nộp ({fmtDateTime(localInputToIso(dueAt))}). Học sinh có thể nộp bài sau khi đã học.
+                Thầy cô vẫn giao bài với hạn này?
+              </p>
+              <div className="row-actions">
+                <Button type="submit" variant="primary" busy={busy}>
+                  Vẫn giao bài
+                </Button>
+                <Button variant="secondary" onClick={() => setWarned(false)}>
+                  Sửa lại hạn
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <Button type="submit" variant="primary" busy={busy}>
+                Giao bài
+              </Button>
+            </div>
+          )}
         </>
       )}
     </form>

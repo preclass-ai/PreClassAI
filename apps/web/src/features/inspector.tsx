@@ -71,9 +71,9 @@ function CompetencyPicker({ block, canEdit, onChanged }: { block: Schemas["Block
   if (!canEdit && !block.competencyCode) return null;
   return (
     <section>
-      <h3>Năng lực</h3>
+      <h3>Năng lực (không bắt buộc)</h3>
       <select aria-label="Năng lực của khối" disabled={!canEdit || set.isPending} value={block.competencyCode ?? ""} onChange={(e) => set.mutate(e.target.value || null)}>
-        <option value="">Chưa gắn</option>
+        <option value="">Không bắt buộc</option>
         {(cat.data?.items ?? []).map((c) => (
           <option key={c.subject + c.code} value={c.code}>
             {c.name}
