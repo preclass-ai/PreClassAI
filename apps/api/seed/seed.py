@@ -170,7 +170,7 @@ async def seed(conn: AsyncConnection, pw_by_role: dict[str, str]) -> None:
                        "numbers": parse_numbers(ex)} for n, (k, ex, loc) in cells.items()}
         text = "\n".join(c[1] for c in cells.values())
         await ins(conn, m.SourceAsset, [{"id": asset, "owner_id": author, "title": spec["title"],
-                                         "license_note": f"{NOTE}: số liệu giả, không phải số liệu chính thức.",
+                                         "license_note": f"{NOTE}. Khi dạy thật, thầy cô thay bằng số liệu trong Niên giám thống kê (Tổng cục Thống kê).",
                                          "visibility": spec["visibility"]}])
         src_sha = sha256_hex(text)
         await ins(conn, m.SourceRevision, [{"id": rev, "asset_id": asset, "version": 1, "sha256": src_sha,
