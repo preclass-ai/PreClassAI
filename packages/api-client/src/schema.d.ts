@@ -357,7 +357,7 @@ export interface paths {
         };
         /**
          * Results of an assignment as CSV (TEACHER of that class)
-         * @description Like a Google Form response sheet: one row per student of the class (login or survey code, never a name; sorted by code, never ranked), status, counts, then the answer and Đúng/Sai of each item. UTF-8 with BOM for Excel. Another class's or teacher's assignment → 404. Audited as `EXPORT_RESULTS`.
+         * @description Like a Google Form response sheet: one row per student of the class (login code; guests are `Khách 001`… in joining order, never their survey code, which logs them back in; never a name, never ranked), status, counts, then the answer and Đúng/Sai of each item. UTF-8 with BOM for Excel. Another class's or teacher's assignment → 404. Audited as `EXPORT_RESULTS`.
          */
         get: operations["exportAssignmentResults"];
         put?: never;

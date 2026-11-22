@@ -8,7 +8,7 @@ from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -168,13 +168,25 @@ async def _teacher_assignment(db: AsyncSession, user: CurrentUser, class_id: UUI
 
 
 async def _class_students(db: AsyncSession, class_id: UUID) -> list[tuple[UUID, str]]:
-    """(id, code) of every student of the class, by code. The code is the login / survey code: never a name."""
+    """(id, label) of every student of the class: never a name. Account students by login code (it needs a password).
+    Guests get "Khách 001", "Khách 002"... in the order they joined: never the survey code, which alone logs a guest
+    back in (POST /auth/guest/resume), nor the display name, which contains it."""
     rows = (await db.execute(
-        select(m.AppUser.id, func.coalesce(m.AppUser.survey_code, m.AppUser.login_code, ""))
+        select(m.AppUser.id, m.AppUser.is_guest, m.AppUser.login_code)
         .join(m.ClassMember, m.ClassMember.user_id == m.AppUser.id)
         .where(m.ClassMember.class_id == class_id, m.ClassMember.role_in_class == "STUDENT")
-        .order_by(func.coalesce(m.AppUser.survey_code, m.AppUser.login_code)))).all()
-    return [(r[0], r[1]) for r in rows]
+        # a guest's login_code IS its survey code: guests are ordered by when they joined, never by code
+        .order_by(m.AppUser.is_guest, case((m.AppUser.is_guest, None), else_=m.AppUser.login_code),
+                  m.AppUser.created_at, m.AppUser.id))).all()
+    out: list[tuple[UUID, str]] = []
+    guests = 0
+    for sid, is_guest, code in rows:
+        if is_guest:
+            guests += 1
+            out.append((sid, f"Khách {guests:03d}"))
+        else:
+            out.append((sid, code or ""))
+    return out
 
 
 async def progress(db: AsyncSession, user: CurrentUser, class_id: UUID, assignment_id: UUID) -> ProgressOut:
@@ -219,8 +231,9 @@ def _answer_text(answer: dict[str, Any]) -> str:
 
 
 async def export_results_csv(db: AsyncSession, user: CurrentUser, class_id: UUID, assignment_id: UUID) -> tuple[str, str]:
-    """(file name, CSV) like a Google Form response sheet: one row per student of the class (by code, never a name,
-    never ranked), one answer and one Đúng/Sai column per item. Starts with a BOM so Excel reads Vietnamese."""
+    """(file name, CSV) like a Google Form response sheet: one row per student of the class (login code, or
+    "Khách 001"... for guests: never a name nor a survey code; never ranked), one answer and one Đúng/Sai
+    column per item. Starts with a BOM so Excel reads Vietnamese."""
     a, pv = await _teacher_assignment(db, user, class_id, assignment_id)
     items = _items(pv.snapshot)
     students = await _class_students(db, class_id)

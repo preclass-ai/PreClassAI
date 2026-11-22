@@ -91,24 +91,28 @@ function Progress({ classId, assignmentId }: { classId: string; assignmentId: st
   if (progress.isPending) return <Loading />;
   if (!progress.data) return <ErrorBox error={progress.error} />;
   const p = progress.data;
-  const notStarted = Math.max(0, p.studentCount - p.completedCount - p.inProgressCount);
+  // Vercel can go live before the API on Render: an older API has no counts and no results.csv, so show neither.
+  const hasCounts = typeof p.completedCount === "number" && typeof p.inProgressCount === "number";
+  const notStarted = hasCounts ? Math.max(0, p.studentCount - p.completedCount - p.inProgressCount) : 0;
   return (
     <>
-      <div className="section-head">
-        <div>
-          <p className="muted small">
-            {p.completedCount}/{p.studentCount} em đã làm xong · {p.inProgressCount} em đang làm · {notStarted} em chưa
-            làm
-          </p>
+      {hasCounts ? (
+        <div className="section-head">
+          <div>
+            <p className="muted small">
+              {p.completedCount}/{p.studentCount} em đã làm xong · {p.inProgressCount} em đang làm · {notStarted} em
+              chưa làm
+            </p>
+          </div>
+          <a
+            className="btn btn-secondary"
+            href={`/v1/classes/${classId}/assignments/${assignmentId}/results.csv`}
+            download
+          >
+            Tải kết quả (CSV)
+          </a>
         </div>
-        <a
-          className="btn btn-secondary"
-          href={`/v1/classes/${classId}/assignments/${assignmentId}/results.csv`}
-          download
-        >
-          Tải kết quả (CSV)
-        </a>
-      </div>
+      ) : null}
       <div className="table-wrap">
         <table>
           <thead>
