@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, use } from "react";
 import { StateBadge } from "@/components/badges";
 import { ErrorBox, Loading, PageHeader } from "@/components/ui";
+import { LessonAssignments } from "@/features/assignments";
 import { Editor } from "@/features/editor";
 import { History } from "@/features/history";
 import { useLesson } from "@/features/lesson-data";
@@ -53,6 +54,7 @@ function LessonWorkspace({ lessonId }: { lessonId: string }) {
           </>
         }
       />
+      {isTeacher ? <LessonAssignments lessonId={l.id} /> : null}
       <nav className="tabs" role="tablist" aria-label="Các bước của bài">
         {tabs.map((t) => (
           <button

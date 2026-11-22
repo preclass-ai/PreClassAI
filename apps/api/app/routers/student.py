@@ -11,6 +11,7 @@ from app.routers._base import errs
 from app.schemas import (
     AttemptRequest,
     AttemptResult,
+    PracticeRequest,
     ReviewProgressIn,
     ReviewState,
     StudentAssignmentList,
@@ -44,6 +45,17 @@ async def get_assignment(assignment_id: UUID, cu: Annotated[CurrentUser, Depends
                             (409, "PAST_DUE (sau hạn, vẫn xem lại được bài) hoặc ALREADY_ANSWERED (câu này đã trả lời).")))
 async def submit_attempt(assignment_id: UUID, body: AttemptRequest, cu: Annotated[CurrentUser, Depends(require_role("STUDENT"))], db: Annotated[AsyncSession, Depends(get_db)]) -> AttemptResult:
     return await svc.submit_attempt(db, cu, assignment_id, body)
+
+
+@router.post("/assignments/{assignment_id}/practice", status_code=201, operation_id="submitPractice",
+             response_model=AttemptResult,
+             summary="Practise an item again after the first attempt (\"Làm lại\")",
+             description="Graded and explained like an attempt, but never counted in the teacher's results, insights or CSV "
+             "(they keep the first attempt); only the number of redos is exported. Allowed after the due date. "
+             "409 `NOT_ANSWERED` before the first attempt.",
+             responses=errs(401, 403, 404, 410, 422, (409, "NOT_ANSWERED.")))
+async def submit_practice(assignment_id: UUID, body: PracticeRequest, cu: Annotated[CurrentUser, Depends(require_role("STUDENT"))], db: Annotated[AsyncSession, Depends(get_db)]) -> AttemptResult:
+    return await svc.submit_practice(db, cu, assignment_id, body)
 
 
 @router.put("/assignments/{assignment_id}/review", operation_id="saveReviewProgress", response_model=ReviewState,

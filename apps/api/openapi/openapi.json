@@ -512,6 +512,26 @@
         "title": "AssignmentOut",
         "type": "object"
       },
+      "AssignmentUpdate": {
+        "examples": [
+          {
+            "dueAt": "2026-12-05T23:59:00+07:00"
+          }
+        ],
+        "properties": {
+          "dueAt": {
+            "description": "New due time; must be after the opening time.",
+            "format": "date-time",
+            "title": "Dueat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dueAt"
+        ],
+        "title": "AssignmentUpdate",
+        "type": "object"
+      },
       "AttemptRequest": {
         "examples": [
           {
@@ -4125,6 +4145,32 @@
         "title": "PlanSection",
         "type": "object"
       },
+      "PracticeRequest": {
+        "examples": [
+          {
+            "answer": {
+              "choice": "B"
+            },
+            "itemId": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73"
+          }
+        ],
+        "properties": {
+          "answer": {
+            "$ref": "#/components/schemas/AnswerIn"
+          },
+          "itemId": {
+            "format": "uuid",
+            "title": "Itemid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemId",
+          "answer"
+        ],
+        "title": "PracticeRequest",
+        "type": "object"
+      },
       "PreferencesIn": {
         "examples": [
           {
@@ -6893,7 +6939,7 @@
     },
     "/v1/auth/guest/resume": {
       "post": {
-        "description": "For a lost cookie / another device. 5 wrong codes per IP per 15 minutes → 429 `RATE_LIMITED`.",
+        "description": "For a lost cookie / another device. 20 wrong tries per survey code per 10 minutes (never per IP) → 429 `RATE_LIMITED`.",
         "operationId": "resumeGuest",
         "requestBody": {
           "content": {
@@ -7621,6 +7667,174 @@
           }
         },
         "summary": "Assignments of a class (TEACHER of that class)",
+        "tags": [
+          "classes"
+        ]
+      }
+    },
+    "/v1/classes/{class_id}/assignments/{assignment_id}": {
+      "delete": {
+        "description": "Soft cancel: students stop seeing it, answers already given stay. Audited as `ASSIGN_CANCEL`.",
+        "operationId": "cancelAssignment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "class_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Class Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel an assignment (TEACHER of that class)",
+        "tags": [
+          "classes"
+        ]
+      },
+      "patch": {
+        "operationId": "updateAssignment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "class_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Class Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Change the due time of an assignment (TEACHER of that class)",
         "tags": [
           "classes"
         ]
@@ -9188,6 +9402,69 @@
         "summary": "One lesson with its current revision",
         "tags": [
           "lessons"
+        ]
+      }
+    },
+    "/v1/lessons/{lesson_id}/assignments": {
+      "get": {
+        "operationId": "listLessonAssignments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Lesson Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Classes this lesson is assigned to (author)",
+        "tags": [
+          "publish"
         ]
       }
     },
@@ -11118,6 +11395,110 @@
         "summary": "Study habit of the student for this assignment (streak, daily goal, badges, hints used)",
         "tags": [
           "habit"
+        ]
+      }
+    },
+    "/v1/student/assignments/{assignment_id}/practice": {
+      "post": {
+        "description": "Graded and explained like an attempt, but never counted in the teacher's results, insights or CSV (they keep the first attempt); only the number of redos is exported. Allowed after the due date. 409 `NOT_ANSWERED` before the first attempt.",
+        "operationId": "submitPractice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttemptResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "NOT_ANSWERED."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Đã thu hồi (WITHDRAWN)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Practise an item again after the first attempt (\"Làm lại\")",
+        "tags": [
+          "student"
         ]
       }
     },

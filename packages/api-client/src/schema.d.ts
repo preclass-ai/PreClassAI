@@ -109,7 +109,7 @@ export interface paths {
         put?: never;
         /**
          * Come back as the same guest with the survey code
-         * @description For a lost cookie / another device. 5 wrong codes per IP per 15 minutes → 429 `RATE_LIMITED`.
+         * @description For a lost cookie / another device. 20 wrong tries per survey code per 10 minutes (never per IP) → 429 `RATE_LIMITED`.
          */
         post: operations["resumeGuest"];
         delete?: never;
@@ -269,6 +269,27 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/v1/classes/{class_id}/assignments/{assignment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Cancel an assignment (TEACHER of that class)
+         * @description Soft cancel: students stop seeing it, answers already given stay. Audited as `ASSIGN_CANCEL`.
+         */
+        delete: operations["cancelAssignment"];
+        options?: never;
+        head?: never;
+        /** Change the due time of an assignment (TEACHER of that class) */
+        patch: operations["updateAssignment"];
         trace?: never;
     };
     "/v1/classes/{class_id}/assignments/{assignment_id}/insights": {
@@ -632,6 +653,23 @@ export interface paths {
         };
         /** One lesson with its current revision */
         get: operations["getLesson"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/lessons/{lesson_id}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Classes this lesson is assigned to (author) */
+        get: operations["listLessonAssignments"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1089,6 +1127,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/student/assignments/{assignment_id}/practice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Practise an item again after the first attempt ("Làm lại")
+         * @description Graded and explained like an attempt, but never counted in the teacher's results, insights or CSV (they keep the first attempt); only the number of redos is exported. Allowed after the due date. 409 `NOT_ANSWERED` before the first attempt.
+         */
+        post: operations["submitPractice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/student/assignments/{assignment_id}/review": {
         parameters: {
             query?: never;
@@ -1406,6 +1464,20 @@ export interface components {
              * @description Revision number of the lesson that was published ("Bản #n").
              */
             revisionNo: number;
+        };
+        /**
+         * AssignmentUpdate
+         * @example {
+         *       "dueAt": "2026-12-05T23:59:00+07:00"
+         *     }
+         */
+        AssignmentUpdate: {
+            /**
+             * Dueat
+             * Format: date-time
+             * @description New due time; must be after the opening time.
+             */
+            dueAt: string;
         };
         /**
          * AttemptRequest
@@ -3131,6 +3203,23 @@ export interface components {
             kind: string;
             /** Sub */
             sub: string | null;
+        };
+        /**
+         * PracticeRequest
+         * @example {
+         *       "answer": {
+         *         "choice": "B"
+         *       },
+         *       "itemId": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73"
+         *     }
+         */
+        PracticeRequest: {
+            answer: components["schemas"]["AnswerIn"];
+            /**
+             * Itemid
+             * Format: uuid
+             */
+            itemId: string;
         };
         /**
          * PreferencesIn
@@ -5333,6 +5422,126 @@ export interface operations {
             };
         };
     };
+    cancelAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: string;
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: string;
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignmentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getAssignmentInsights: {
         parameters: {
             query?: never;
@@ -6518,6 +6727,55 @@ export interface operations {
             };
             /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listLessonAssignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lesson_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentList"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8028,6 +8286,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submitPractice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PracticeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttemptResult"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description NOT_ANSWERED. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Đã thu hồi (WITHDRAWN). */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };

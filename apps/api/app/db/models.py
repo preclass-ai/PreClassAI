@@ -337,6 +337,19 @@ class Assignment(Base):
     class_id: Mapped[uuid.UUID] = fk("class.id")
     open_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # soft cancel: history stays
+    created_at: Mapped[datetime] = ts()
+
+
+class PracticeAttempt(Base):
+    """A practice run of an item the student already answered. The first attempt (student_attempt) is what teachers see."""
+    __tablename__ = "practice_attempt"  # append-only (trigger)
+    id: Mapped[uuid.UUID] = pk()
+    assignment_id: Mapped[uuid.UUID] = fk("assignment.id")
+    student_id: Mapped[uuid.UUID] = fk("app_user.id")
+    item_block_id: Mapped[uuid.UUID] = fk("content_block.id")
+    answer: Mapped[dict[str, Any]] = jsonb()
+    is_correct: Mapped[bool | None] = mapped_column(Boolean)
     created_at: Mapped[datetime] = ts()
 
 

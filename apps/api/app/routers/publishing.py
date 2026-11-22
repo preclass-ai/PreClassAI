@@ -10,6 +10,7 @@ from app.db.session import get_db
 from app.routers._base import errs
 from app.schemas import (
     AssignmentCreate,
+    AssignmentList,
     AssignmentOut,
     PublishCheckOut,
     PublishedOut,
@@ -72,6 +73,13 @@ async def new_revision(revision_id: UUID, cu: Annotated[CurrentUser, Depends(req
              description="Students then get 410 `WITHDRAWN`. The reason is logged.", responses=errs(401, 404, 422))
 async def withdraw(published_id: UUID, body: WithdrawRequest, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> PublishedOut:
     return await svc.withdraw(db, cu, published_id, body.reason)
+
+
+@router.get("/lessons/{lesson_id}/assignments", tags=["publish"], operation_id="listLessonAssignments",
+            response_model=AssignmentList, summary="Classes this lesson is assigned to (author)",
+            responses=errs(401, 403))
+async def list_lesson_assignments(lesson_id: UUID, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> AssignmentList:
+    return await svc.list_lesson_assignments(db, cu, lesson_id)
 
 
 @router.post("/published/{published_id}/assignments", tags=["publish"], status_code=201,

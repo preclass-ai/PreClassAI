@@ -211,6 +211,9 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed, onOp
   // Same requestId for retries of one answer: a resend after a network error returns the stored result.
   const requestId = useRef<string | null>(null);
   const result = item.result ?? local;
+  // "Làm lại": practice after the first attempt. Graded and explained, but teachers keep seeing the first attempt only.
+  const [redo, setRedo] = useState(false);
+  const [practice, setPractice] = useState<Schemas["AttemptResult"] | null>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -218,9 +221,23 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed, onOp
     if (item.itemType === "MCQ") answer = { choice: choice as "A" | "B" | "C" | "D" };
     else if (item.itemType === "NUMERIC") answer = { value: Number(value.replace(",", ".")) };
     else answer = { text: text.trim() };
-    requestId.current ??= newRequestId();
     setBusy(true);
     setError(null);
+    if (redo) {
+      try {
+        setPractice(await unwrap(api.POST("/v1/student/assignments/{assignment_id}/practice", { params: { path: { assignment_id: assignmentId } }, body: { itemId: item.id, answer } })));
+        setRedo(false);
+        setChoice("");
+        setValue("");
+        setText("");
+      } catch (err) {
+        setError(err);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    requestId.current ??= newRequestId();
     try {
       const res = await unwrap(
         api.POST("/v1/student/assignments/{assignment_id}/attempts", {
@@ -250,10 +267,18 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed, onOp
         {item.stem}
       </p>
       <HabitItem assignmentId={assignmentId} itemId={item.id} answered={!!result} explanation={result?.explanation ?? null} onOpenReview={onOpenReview} />
-      {result ? (
-        <Result result={result} />
+      {result && !redo ? (
+        <>
+          <Result result={result} />
+          {practice ? <Result result={practice} title="Lần làm lại" /> : null}
+          <div>
+            <Button onClick={() => { setPractice(null); setRedo(true); }}>Làm lại</Button>{" "}
+            <span className="muted small">Làm lại để luyện tập. Thầy cô vẫn xem lần làm đầu của em.</span>
+          </div>
+        </>
       ) : (
         <form className="stack" onSubmit={submit}>
+          {redo ? <p className="muted small">Lượt luyện tập: không thay đổi kết quả thầy cô thấy.</p> : null}
           {item.itemType === "MCQ" ? (
             <div className="options" role="radiogroup">
               {item.options?.map((o) => (
@@ -263,7 +288,7 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed, onOp
                     name={`q-${item.id}`}
                     value={o.label}
                     checked={choice === o.label}
-                    disabled={disabled}
+                    disabled={disabled && !redo}
                     onChange={() => setChoice(o.label)}
                   />
                   <span>
@@ -278,7 +303,7 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed, onOp
               aria-label="Đáp số"
               placeholder="Nhập đáp số"
               value={value}
-              disabled={disabled}
+              disabled={disabled && !redo}
               onChange={(e) => setValue(e.target.value)}
             />
           ) : (
@@ -286,18 +311,18 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed, onOp
               rows={3}
               aria-label="Câu trả lời"
               value={text}
-              disabled={disabled}
+              disabled={disabled && !redo}
               onChange={(e) => setText(e.target.value)}
               maxLength={2000}
             />
           )}
           {error ? <div className="alert alert-danger" role="alert">{errorMessage(error)}</div> : null}
           <div className="submit-row">
-            <Button type="submit" variant="primary" className="submit-btn" busy={busy} disabled={disabled || !ready}>
-              Nộp câu trả lời
+            <Button type="submit" variant="primary" className="submit-btn" busy={busy} disabled={(disabled && !redo) || !ready}>
+              {redo ? "Nộp lần làm lại" : "Nộp câu trả lời"}
             </Button>
             <span className="submit-note" id={`note-${item.id}`}>
-              {ready ? "Em chỉ nộp một lần. Lời giải hiện sau khi nộp." : item.itemType === "MCQ" ? "Chọn một đáp án để nộp." : item.itemType === "NUMERIC" ? "Nhập đáp số để nộp." : "Viết câu trả lời để nộp."}
+              {ready ? (redo ? "Lời giải hiện sau khi nộp." : "Em chỉ nộp một lần. Lời giải hiện sau khi nộp.") : item.itemType === "MCQ" ? "Chọn một đáp án để nộp." : item.itemType === "NUMERIC" ? "Nhập đáp số để nộp." : "Viết câu trả lời để nộp."}
             </span>
           </div>
         </form>
@@ -306,12 +331,12 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed, onOp
   );
 }
 
-function Result({ result }: { result: Schemas["AttemptResult"] }) {
+function Result({ result, title }: { result: Schemas["AttemptResult"]; title?: string }) {
   const tone = result.isCorrect === true ? "success" : result.isCorrect === false ? "danger" : "info";
   const label = result.isCorrect === true ? "Đúng" : result.isCorrect === false ? "Chưa đúng" : "Đã ghi nhận câu trả lời";
   return (
     <div className={`alert alert-${tone}`} role="status">
-      <strong>{label}</strong>
+      <strong>{title ? `${title}: ${label}` : label}</strong>
       {result.correctAnswer ? (
         <p className="answer-reveal">
           <strong>Đáp án đúng:</strong> {result.correctAnswer}

@@ -750,6 +750,11 @@ class AssignmentOut(ApiModel):
                        "dueAt": "2026-11-30T23:59:00+07:00"})
 
 
+class AssignmentUpdate(ApiModel):
+    due_at: datetime = Field(description="New due time; must be after the opening time.")
+    model_config = ex({"dueAt": "2026-12-05T23:59:00+07:00"})
+
+
 class AssignmentList(Page):
     items: list[AssignmentOut]
     model_config = ex({"items": [e0(AssignmentOut)], "nextCursor": None})
@@ -878,6 +883,12 @@ class AttemptRequest(ApiModel):
     answer: AnswerIn
     request_id: UUID = Field(description="Idempotency key (retry of the same submit). One attempt per item.")
     model_config = ex({"itemId": I["q1"], "answer": {"choice": "A"}, "requestId": I["request"]})
+
+
+class PracticeRequest(ApiModel):
+    item_id: UUID
+    answer: AnswerIn
+    model_config = ex({"itemId": I["q1"], "answer": {"choice": "B"}})
 
 
 # ---------------------------------------------------------------- Habit (CHAT_ENABLED)

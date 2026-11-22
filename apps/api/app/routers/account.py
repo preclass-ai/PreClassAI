@@ -20,10 +20,14 @@ from app.config import get_settings
 from app.db import models as m
 from app.db.session import get_db
 from app.errors import ApiError
+from app.publish import cancel_assignment as cancel_assignment_service
 from app.publish import list_class_assignments as list_class_assignments_service
+from app.publish import update_assignment as update_assignment_service
 from app.routers._base import errs
 from app.schemas import (
     AssignmentList,
+    AssignmentOut,
+    AssignmentUpdate,
     AuditLogList,
     AuditLogOut,
     ClassList,
@@ -51,7 +55,7 @@ async def login(
     body: LoginRequest, request: Request, response: Response, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> UserOut:
     ident = body.identifier.strip().lower()
-    key = f"{ident}|{request.client.host if request.client else '-'}"
+    key = ident
     login_limiter.check(key)
     user = await db.scalar(
         select(m.AppUser).where(
@@ -132,6 +136,21 @@ async def list_classes(
             responses=errs(401, 403, 404))
 async def list_class_assignments(class_id: UUID, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> AssignmentList:
     return await list_class_assignments_service(db, cu, class_id)
+
+
+@router.patch("/classes/{class_id}/assignments/{assignment_id}", tags=["classes"], operation_id="updateAssignment",
+              response_model=AssignmentOut, summary="Change the due time of an assignment (TEACHER of that class)",
+              responses=errs(401, 403, 404, 422))
+async def update_assignment(class_id: UUID, assignment_id: UUID, body: AssignmentUpdate, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> AssignmentOut:
+    return await update_assignment_service(db, cu, class_id, assignment_id, body)
+
+
+@router.delete("/classes/{class_id}/assignments/{assignment_id}", tags=["classes"], status_code=204,
+               operation_id="cancelAssignment", summary="Cancel an assignment (TEACHER of that class)",
+               description="Soft cancel: students stop seeing it, answers already given stay. Audited as `ASSIGN_CANCEL`.",
+               responses=errs(401, 403, 404))
+async def cancel_assignment(class_id: UUID, assignment_id: UUID, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> None:
+    await cancel_assignment_service(db, cu, class_id, assignment_id)
 
 
 @router.get("/classes/{class_id}/assignments/{assignment_id}/progress", tags=["classes"],

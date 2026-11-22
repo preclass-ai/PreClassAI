@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Empty, ErrorBox, Loading, PageHeader } from "@/components/ui";
 import { api, unwrap } from "@/lib/api";
+import { AssignmentActions } from "@/features/assignments";
 import { Insights } from "@/features/insights";
 import { RequireRole } from "@/lib/auth";
 import { fmtDateTime, fmtPercent } from "@/lib/format";
@@ -32,7 +33,7 @@ function ClassesView() {
         sub="Xem lớp làm bài đến đâu. Trên trang là số liệu của cả lớp; tệp kết quả tải về ghi bài làm theo mã học sinh, không có họ tên."
         actions={
           <Link className="btn btn-primary" href="/lessons">
-            Chọn bài để giao
+            Giao bài mới
           </Link>
         }
       />
@@ -76,6 +77,7 @@ function ClassesView() {
                   {open === a.id ? "Ẩn tiến độ" : "Xem tiến độ và câu hỏi"}
                 </button>
               </div>
+              {classId ? <AssignmentActions classId={classId} assignment={a} /> : null}
               {open === a.id && classId ? (
                 <>
                   <Progress classId={classId} assignmentId={a.id} />

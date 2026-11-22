@@ -5,6 +5,7 @@ edit/review are serialised: whichever wins, the other sees the committed state a
 """
 
 import uuid
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func, insert, select, update
@@ -22,6 +23,7 @@ from app.schemas import (
     AssignmentCreate,
     AssignmentList,
     AssignmentOut,
+    AssignmentUpdate,
     PublishCheckItem,
     PublishCheckOut,
     PublishedOut,
@@ -279,7 +281,59 @@ async def list_class_assignments(db: AsyncSession, user: CurrentUser, class_id: 
         .join(m.PublishedVersion, m.PublishedVersion.id == m.Assignment.published_version_id)
         .join(m.LessonRevision, m.LessonRevision.id == m.PublishedVersion.lesson_revision_id)
         .join(m.Lesson, m.Lesson.id == m.LessonRevision.lesson_id)
-        .where(m.Assignment.class_id == class_id).order_by(m.Assignment.open_at.desc()))).all()
+        .where(m.Assignment.class_id == class_id, m.Assignment.cancelled_at.is_(None))
+        .order_by(m.Assignment.open_at.desc()))).all()
     return AssignmentList(items=[_assignment_out(a, cls.code, t, lid, no) for a, t, lid, no in rows])
+
+
+async def _teacher_class_assignment(db: AsyncSession, user: CurrentUser, class_id: UUID, assignment_id: UUID
+                                    ) -> tuple[m.Assignment, m.Class, m.Lesson, int]:
+    """An open (not cancelled) assignment of a class the teacher belongs to; anything else is a 404."""
+    row = (await db.execute(
+        select(m.Assignment, m.Class, m.Lesson, m.LessonRevision.revision_no)
+        .join(m.Class, m.Class.id == m.Assignment.class_id)
+        .join(m.ClassMember, (m.ClassMember.class_id == m.Class.id) & (m.ClassMember.user_id == user.id)
+              & (m.ClassMember.role_in_class == "TEACHER"))
+        .join(m.PublishedVersion, m.PublishedVersion.id == m.Assignment.published_version_id)
+        .join(m.LessonRevision, m.LessonRevision.id == m.PublishedVersion.lesson_revision_id)
+        .join(m.Lesson, m.Lesson.id == m.LessonRevision.lesson_id)
+        .where(m.Assignment.id == assignment_id, m.Assignment.class_id == class_id,
+               m.Assignment.cancelled_at.is_(None)).with_for_update(of=m.Assignment))).first()
+    if row is None:
+        raise NOT_FOUND
+    return row[0], row[1], row[2], row[3]
+
+
+async def update_assignment(db: AsyncSession, user: CurrentUser, class_id: UUID, assignment_id: UUID,
+                            body: AssignmentUpdate) -> AssignmentOut:
+    a, cls, lesson, no = await _teacher_class_assignment(db, user, class_id, assignment_id)
+    if body.due_at <= a.open_at:
+        raise ApiError(422, "INVALID_WINDOW", "Hạn nộp phải sau thời điểm mở bài")
+    a.due_at = body.due_at
+    audit(db, user.id, "ASSIGN_UPDATE", "assignment", a.id)
+    await db.commit()
+    return _assignment_out(a, cls.code, lesson.title, lesson.id, no)
+
+
+async def cancel_assignment(db: AsyncSession, user: CurrentUser, class_id: UUID, assignment_id: UUID) -> None:
+    a, *_ = await _teacher_class_assignment(db, user, class_id, assignment_id)
+    a.cancelled_at = datetime.now(UTC)  # students stop seeing it; their attempts stay in the results
+    audit(db, user.id, "ASSIGN_CANCEL", "assignment", a.id)
+    await db.commit()
+
+
+async def list_lesson_assignments(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -> AssignmentList:
+    """"Đã giao cho: 10A1 (hạn …)" on the lesson page: author only."""
+    rows = (await db.execute(
+        select(m.Assignment, m.Class.code, m.Lesson.title, m.LessonRevision.revision_no)
+        .join(m.PublishedVersion, m.PublishedVersion.id == m.Assignment.published_version_id)
+        .join(m.LessonRevision, m.LessonRevision.id == m.PublishedVersion.lesson_revision_id)
+        .join(m.Lesson, m.Lesson.id == m.LessonRevision.lesson_id)
+        .join(m.Class, m.Class.id == m.Assignment.class_id)
+        .join(m.ClassMember, (m.ClassMember.class_id == m.Class.id) & (m.ClassMember.user_id == user.id)
+              & (m.ClassMember.role_in_class == "TEACHER"))
+        .where(m.Lesson.id == lesson_id, m.Lesson.author_id == user.id, m.Assignment.cancelled_at.is_(None))
+        .order_by(m.Assignment.due_at))).all()
+    return AssignmentList(items=[_assignment_out(a, code, t, lesson_id, no) for a, code, t, no in rows])
 
 
