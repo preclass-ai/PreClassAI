@@ -348,6 +348,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/classes/{class_id}/assignments/{assignment_id}/results.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Results of an assignment as CSV (TEACHER of that class)
+         * @description Like a Google Form response sheet: one row per student of the class (login or survey code, never a name; sorted by code, never ranked), status, counts, then the answer and Đúng/Sai of each item. UTF-8 with BOM for Excel. Another class's or teacher's assignment → 404. Audited as `EXPORT_RESULTS`.
+         */
+        get: operations["exportAssignmentResults"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/health": {
         parameters: {
             query?: never;
@@ -2951,6 +2971,8 @@ export interface components {
          * ProgressOut
          * @example {
          *       "assignmentId": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
+         *       "completedCount": 9,
+         *       "inProgressCount": 3,
          *       "items": [
          *         {
          *           "answeredCount": 12,
@@ -2968,6 +2990,18 @@ export interface components {
              * Format: uuid
              */
             assignmentId: string;
+            /**
+             * Completedcount
+             * @description Students of the class who answered every item.
+             * @default 0
+             */
+            completedCount: number;
+            /**
+             * Inprogresscount
+             * @description Students who answered some items but not all.
+             * @default 0
+             */
+            inProgressCount: number;
             /** Items */
             items: components["schemas"]["ProgressItem"][];
             /** Studentcount */
@@ -5135,6 +5169,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProgressOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exportAssignmentResults: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: string;
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "text/csv": string;
                 };
             };
             /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */

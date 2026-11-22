@@ -26,7 +26,7 @@ function ClassesView() {
 
   return (
     <>
-      <PageHeader title="Lớp & bài giao" sub="Tiến độ chỉ gồm số liệu tổng hợp của lớp, không có câu trả lời từng học sinh." />
+      <PageHeader title="Lớp & bài giao" sub="Tiến độ trên trang là số liệu tổng hợp của lớp. Tệp kết quả tải về ghi câu trả lời theo mã học sinh, không có họ tên." />
       <ErrorBox error={classes.error} />
       {classes.isPending ? (
         <Loading />
@@ -91,34 +91,52 @@ function Progress({ classId, assignmentId }: { classId: string; assignmentId: st
   if (progress.isPending) return <Loading />;
   if (!progress.data) return <ErrorBox error={progress.error} />;
   const p = progress.data;
+  const notStarted = Math.max(0, p.studentCount - p.completedCount - p.inProgressCount);
   return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Câu</th>
-            <th>Đã trả lời</th>
-            <th>Đúng ngay lần đầu</th>
-          </tr>
-        </thead>
-        <tbody>
-          {p.items.map((i, idx) => (
-            <tr key={i.itemBlockId}>
-              <td>
-                {idx + 1}. {i.stem}
-              </td>
-              <td>
-                {i.answeredCount}/{p.studentCount}
-                <div className="bar" aria-hidden="true">
-                  <span style={{ width: `${p.studentCount ? (100 * i.answeredCount) / p.studentCount : 0}%` }} />
-                </div>
-              </td>
-              <td>{fmtPercent(i.firstAttemptCorrectRate)}</td>
+    <>
+      <div className="section-head">
+        <div>
+          <p className="muted small">
+            {p.completedCount}/{p.studentCount} em đã làm xong · {p.inProgressCount} em đang làm · {notStarted} em chưa
+            làm
+          </p>
+        </div>
+        <a
+          className="btn btn-secondary"
+          href={`/v1/classes/${classId}/assignments/${assignmentId}/results.csv`}
+          download
+        >
+          Tải kết quả (CSV)
+        </a>
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Câu</th>
+              <th>Đã trả lời</th>
+              <th>Đúng ngay lần đầu</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {p.items.map((i, idx) => (
+              <tr key={i.itemBlockId}>
+                <td>
+                  {idx + 1}. {i.stem}
+                </td>
+                <td>
+                  {i.answeredCount}/{p.studentCount}
+                  <div className="bar" aria-hidden="true">
+                    <span style={{ width: `${p.studentCount ? (100 * i.answeredCount) / p.studentCount : 0}%` }} />
+                  </div>
+                </td>
+                <td>{fmtPercent(i.firstAttemptCorrectRate)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 

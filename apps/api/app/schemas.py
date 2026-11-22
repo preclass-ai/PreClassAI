@@ -744,8 +744,10 @@ class ProgressItem(ApiModel):
 class ProgressOut(ApiModel):
     assignment_id: UUID
     student_count: int
+    completed_count: int = Field(0, description="Students of the class who answered every item.")
+    in_progress_count: int = Field(0, description="Students who answered some items but not all.")
     items: list[ProgressItem]
-    model_config = ex({"assignmentId": I["assign"], "studentCount": 15, "items": [
+    model_config = ex({"assignmentId": I["assign"], "studentCount": 15, "completedCount": 9, "inProgressCount": 3, "items": [
         {"itemBlockId": I["q1"], "stem": "Theo bảng số liệu, vùng nào có số dân cao nhất?", "answeredCount": 12,
          "firstAttemptCorrectRate": 0.75}]})
 

@@ -1,9 +1,12 @@
 """Student side (PR-08): whitelist DTOs built from the published snapshot only. Never touches provenance, review,
 validation or the live (editable) blocks."""
 
+import csv
+import io
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -150,7 +153,9 @@ async def submit_attempt(db: AsyncSession, user: CurrentUser, assignment_id: UUI
     return _result(snap, item["id"], ok)
 
 
-async def progress(db: AsyncSession, user: CurrentUser, class_id: UUID, assignment_id: UUID) -> ProgressOut:
+async def _teacher_assignment(db: AsyncSession, user: CurrentUser, class_id: UUID,
+                              assignment_id: UUID) -> tuple[m.Assignment, m.PublishedVersion]:
+    """The assignment, only for a TEACHER of that class; anything else is 404."""
     row = (await db.execute(
         select(m.Assignment, m.PublishedVersion)
         .join(m.PublishedVersion, m.PublishedVersion.id == m.Assignment.published_version_id)
@@ -159,16 +164,94 @@ async def progress(db: AsyncSession, user: CurrentUser, class_id: UUID, assignme
         .where(m.Assignment.id == assignment_id, m.Assignment.class_id == class_id))).first()
     if row is None:
         raise NOT_FOUND
-    a, pv = row
+    return row[0], row[1]
+
+
+async def _class_students(db: AsyncSession, class_id: UUID) -> list[tuple[UUID, str]]:
+    """(id, code) of every student of the class, by code. The code is the login / survey code: never a name."""
+    rows = (await db.execute(
+        select(m.AppUser.id, func.coalesce(m.AppUser.survey_code, m.AppUser.login_code, ""))
+        .join(m.ClassMember, m.ClassMember.user_id == m.AppUser.id)
+        .where(m.ClassMember.class_id == class_id, m.ClassMember.role_in_class == "STUDENT")
+        .order_by(func.coalesce(m.AppUser.survey_code, m.AppUser.login_code)))).all()
+    return [(r[0], r[1]) for r in rows]
+
+
+async def progress(db: AsyncSession, user: CurrentUser, class_id: UUID, assignment_id: UUID) -> ProgressOut:
+    a, pv = await _teacher_assignment(db, user, class_id, assignment_id)
     students = await db.scalar(select(func.count()).select_from(m.ClassMember).where(
         m.ClassMember.class_id == class_id, m.ClassMember.role_in_class == "STUDENT")) or 0
     stats = {r[0]: (r[1], r[2], r[3]) for r in (await db.execute(
         select(m.StudentAttempt.item_block_id, func.count(), func.count(m.StudentAttempt.is_correct),
                func.count().filter(m.StudentAttempt.is_correct.is_(True)))
         .where(m.StudentAttempt.assignment_id == a.id).group_by(m.StudentAttempt.item_block_id))).all()}
+    item_ids = [UUID(it["id"]) for it in _items(pv.snapshot)]
+    per_student = (await db.execute(
+        select(func.count(m.StudentAttempt.item_block_id.distinct()))
+        .join(m.ClassMember, (m.ClassMember.user_id == m.StudentAttempt.student_id)
+              & (m.ClassMember.class_id == class_id) & (m.ClassMember.role_in_class == "STUDENT"))
+        .where(m.StudentAttempt.assignment_id == a.id, m.StudentAttempt.item_block_id.in_(item_ids))
+        .group_by(m.StudentAttempt.student_id))).scalars().all()
+    completed = sum(1 for n in per_student if item_ids and n >= len(item_ids))
     items = []
     for it in _items(pv.snapshot):
         n, graded, right = stats.get(UUID(it["id"]), (0, 0, 0))
         items.append(ProgressItem(item_block_id=UUID(it["id"]), stem=it["payload"]["stem"], answered_count=n,
                                   first_attempt_correct_rate=right / graded if graded else None))
-    return ProgressOut(assignment_id=a.id, student_count=students, items=items)
+    return ProgressOut(assignment_id=a.id, student_count=students, completed_count=completed,
+                       in_progress_count=len(per_student) - completed, items=items)
+
+
+VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+
+
+def _safe(cell: str) -> str:
+    return "'" + cell if cell[:1] in ("=", "+", "-", "@", "\t", "\r") else cell  # CSV formula injection
+
+
+def _answer_text(answer: dict[str, Any]) -> str:
+    if answer.get("choice") is not None:
+        return str(answer["choice"])
+    if answer.get("value") is not None:
+        v = float(answer["value"])
+        return (str(int(v)) if v.is_integer() else str(v)).replace(".", ",")  # Vietnamese decimal comma
+    return _safe(" ".join(str(answer.get("text") or "").split()))
+
+
+async def export_results_csv(db: AsyncSession, user: CurrentUser, class_id: UUID, assignment_id: UUID) -> tuple[str, str]:
+    """(file name, CSV) like a Google Form response sheet: one row per student of the class (by code, never a name,
+    never ranked), one answer and one Đúng/Sai column per item. Starts with a BOM so Excel reads Vietnamese."""
+    a, pv = await _teacher_assignment(db, user, class_id, assignment_id)
+    items = _items(pv.snapshot)
+    students = await _class_students(db, class_id)
+    attempts: dict[UUID, dict[UUID, m.StudentAttempt]] = {}
+    for row in (await db.execute(select(m.StudentAttempt).where(m.StudentAttempt.assignment_id == a.id))).scalars():
+        attempts.setdefault(row.student_id, {})[row.item_block_id] = row
+    out = io.StringIO()
+    out.write("\ufeff")
+    w = csv.writer(out, lineterminator="\r\n")
+    head = ["Mã học sinh", "Trạng thái", "Số câu đã làm", "Số câu đúng", "Số câu chấm tự động", "Lần trả lời cuối"]
+    for n in range(1, len(items) + 1):
+        head += [f"Câu {n} - Trả lời", f"Câu {n} - Kết quả"]
+    w.writerow(head)
+    for sid, code in students:
+        done = attempts.get(sid, {})
+        row_items: list[str] = []
+        answered = right = graded = 0
+        last: datetime | None = None
+        for it in items:
+            att = done.get(UUID(it["id"]))
+            if att is None:
+                row_items += ["", ""]
+                continue
+            answered += 1
+            last = att.created_at if last is None or att.created_at > last else last
+            if att.is_correct is not None:
+                graded += 1
+                right += int(att.is_correct)
+            result = "Không chấm tự động" if att.is_correct is None else "Đúng" if att.is_correct else "Sai"
+            row_items += [_answer_text(att.answer), result]
+        status = "Đã xong" if items and answered >= len(items) else "Đang làm" if answered else "Chưa làm"
+        w.writerow([_safe(code), status, answered, right, graded,
+                    last.astimezone(VN_TZ).strftime("%d/%m/%Y %H:%M") if last else "", *row_items])
+    return f"ket-qua-{a.id.hex[:8]}.csv", out.getvalue()
