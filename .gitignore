@@ -45,3 +45,8 @@ infra/backup-recipients.txt
 
 # Real teacher lesson plans and any private data: never commit
 private/
+
+.neon
+.agents/ci-api.log
+.agents/screens-*/
+report.md
