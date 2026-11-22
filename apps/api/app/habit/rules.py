@@ -122,6 +122,7 @@ class ItemView:
     answer_value: Decimal | None = None
     explanation: str | None = None
     allowed: set[Decimal] = field(default_factory=set)
+    hints: list[str] = field(default_factory=list)  # fixed hints 1..3 of an AI-drafted question
 
 
 def build_view(snap: dict[str, Any], item: dict[str, Any]) -> ItemView:
@@ -139,6 +140,7 @@ def build_view(snap: dict[str, Any], item: dict[str, Any]) -> ItemView:
     v = ItemView(item["id"], item["payload"]["stem"], item["payload"]["itemType"], item["payload"]["skill"], opts, blocks,
                  fact.get("unit"), fact.get("period"), key.get("correct") if key else None,
                  Decimal(str(val)) if val is not None else None, exp["text"] if exp else None)
+    v.hints = [str(h) for h in item["payload"].get("hints") or []][:3]
     for text in [v.stem, *(t for _, t in opts), *(t for _, _, t in blocks), str(v.period or "")]:
         v.allowed.update(parse_numbers(text))
     if v.answer_value is not None:

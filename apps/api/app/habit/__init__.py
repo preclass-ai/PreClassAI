@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Habit (ADR-0012): step-by-step hints, a scoped chat and study habits for students.
 
 Grounding: only the published snapshot of an assignment the student belongs to (`student._load`). The answer key and the
@@ -5,6 +6,7 @@ explanation are used for exactly two things: the leak guard, and `explain` after
 Threats and tests: docs/security/THREAT-MODEL-habit.md.
 """
 
+import logging
 from collections import OrderedDict
 from typing import Any
 from uuid import UUID
@@ -23,8 +25,11 @@ from app.errors import ApiError
 from app.habit import llm, rules
 from app.habit.activity import bump, day_start_utc, today
 from app.schemas import ChatReply, ChatRequest, HabitBadge, HabitItem, HabitOut, QuickAction, SourceRef
+from app.student import review
 
-HINTS_MAX = 3
+log = logging.getLogger(__name__)
+GUIDE = " Em đọc lại đoạn nguồn trong bài rồi thử làm nhé."
+REVIEW_ASK = ("chua hoc", "chua on", "bat dau tu dau", "nen on gi", "on gi truoc", "chua biet gi")  # "I have not studied this"
 _CACHE: OrderedDict[tuple[Any, ...], str] = OrderedDict()  # (day, item, level, normalised message) → reply; ≤200 entries
 BADGES = {"TU_LUC": "Tự lực", "KIEN_TRI": "Kiên trì", "THAM_HIEM": "Thám hiểm"}
 
@@ -37,13 +42,16 @@ def _enabled() -> None:
 EXTRA_SEP = "\n\n[EXTRA]\n\n"  # the stored text holds both parts; the API returns them separately
 
 
-def _reply(text: str, level: int, refs: list[tuple[str, str, str]], reason: str | None) -> ChatReply:
+def _reply(text: str, level: int, refs: list[tuple[str, str, str]], reason: str | None, mode: str = "rule", hints_used: int | None = None,
+           open_review: str | None = None) -> ChatReply:
     main, _, extra = text.partition(EXTRA_SEP)
     offer = (reason in rules.REFUSAL and reason != "UNSAFE") or text in rules.SMALL_REPLY["INTRO"]  # intro: show the buttons
     sugg = [QuickAction(id=k, label=lab) for k, lab in rules.SUGGESTIONS] if offer else []
     return ChatReply(
         reply=main, hint_level=level, blocked_reason=reason if reason in rules.REFUSAL else None, extra=extra or None,
-        suggestions=sugg, source_refs=[SourceRef(block_id=UUID(i), label=lab, excerpt=t[:400]) for i, lab, t in refs])
+        suggestions=sugg, source_refs=[SourceRef(block_id=UUID(i), label=lab, excerpt=t[:400]) for i, lab, t in refs],
+        source="llm" if mode == "llm" else "guard" if reason in rules.REFUSAL else "rule", hints_used=hints_used,
+        open_review=UUID(open_review) if open_review else None)
 
 
 async def _session(db: AsyncSession, assignment_id: UUID, student_id: UUID, item_id: UUID) -> UUID:
@@ -128,7 +136,7 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
         m.ChatMessage.session_id == sess, m.ChatMessage.request_id == body.request_id,
         m.ChatMessage.role == "assistant"))).scalar_one_or_none()
     if prev is not None:  # retry of the same request: stored reply, no new quota
-        return _reply(prev.text, prev.hint_level or 0, [], prev.blocked_reason)
+        return _reply(prev.text, prev.hint_level or 0, [], prev.blocked_reason, prev.mode, prev.hint_level if prev.action == "hint" else None)
 
     if body.action == "explain" and not answered:
         raise ApiError(409, "NOT_ANSWERED", "Em hãy trả lời câu này trước, rồi Habit sẽ giải thích nhé")
@@ -137,12 +145,12 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
     if body.action == "ask" and not (body.message or "").strip() and not body.quick:
         raise ApiError(422, "MESSAGE_REQUIRED", "Em hãy nhập câu hỏi")
     per_item = await db.scalar(select(func.count()).where(
-        m.ChatMessage.session_id == sess, m.ChatMessage.role == "assistant")) or 0
+        m.ChatMessage.session_id == sess, m.ChatMessage.role == "assistant", m.ChatMessage.action != "hint")) or 0  # hints have their own limit
     per_day = await db.scalar(select(func.count()).select_from(m.ChatMessage).join(
         m.ChatSession, m.ChatSession.id == m.ChatMessage.session_id).where(
-        m.ChatSession.student_id == user.id, m.ChatMessage.role == "assistant",
+        m.ChatSession.student_id == user.id, m.ChatMessage.role == "assistant", m.ChatMessage.action != "hint",
         m.ChatMessage.created_at >= day_start_utc())) or 0
-    if per_item >= cfg.chat_max_per_item or per_day >= cfg.chat_max_per_day_per_student:
+    if body.action != "hint" and (per_item >= cfg.chat_max_msgs_per_item or per_day >= cfg.chat_max_msgs_per_day):
         raise ApiError(429, "CHAT_LIMIT", "Hôm nay em hỏi nhiều rồi, thử tự làm nhé!")
 
     quick = body.quick if body.action == "ask" else None
@@ -150,16 +158,50 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
     msg = label if quick else rules.redact((body.message or "").strip()) if body.action == "ask" else ""
     used = await db.scalar(select(func.count()).where(
         m.ChatMessage.session_id == sess, m.ChatMessage.action == "hint", m.ChatMessage.role == "assistant")) or 0
+    if body.action == "hint" and used >= cfg.hint_max_per_item:
+        raise ApiError(429, "HINT_LIMIT", f"Em đã dùng hết {cfg.hint_max_per_item} gợi ý cho câu này. Em thử làm và nộp bài nhé!")
+    n = used + 1 if body.action == "hint" else 0  # which hint this press is (1..HINT_MAX_PER_ITEM)
     seen = {int(lv or 0): n for lv, n in (await db.execute(select(m.ChatMessage.hint_level, func.count()).where(
         m.ChatMessage.session_id == sess, m.ChatMessage.role == "assistant", m.ChatMessage.hint_level.is_not(None))
         .group_by(m.ChatMessage.hint_level))).all()}  # how often each level was already shown: rotate, never repeat
     prefs = await personalization.get_prefs(db, user.id) if personalization.on() else {}
     text, level, refs, reason = rules.decide(v, body.action, msg, used, small="chia_nho_tung_buoc" in prefs,
                                              table_first="uu_tien_bang_so_lieu" in prefs, quick=quick, seen=seen, turn=per_item)
-    mode, tin, tout, used_model = "rule", 0, 0, None
+    mode, tin, tout, used_model, open_review = "rule", 0, 0, None, None
+    cards = review.raw_cards(pv.snapshot)
+    progress = await review.state(db, a.id, user.id) if cards else None
+    unseen = {c["id"] for c in cards} - {str(i) for i in (progress.seen_ids if progress else [])}
+    pointed = False
+    fixed = body.action == "hint" and bool(v.hints) and n <= 3  # AI-drafted question: hints 1..3 are fixed, never reworded
+    if body.action == "ask" and cards and (quick == "start" or any(k in f" {rules.norm(msg)} " for k in REVIEW_ASK)):
+        # "I have not studied this" / "where do I start": point at the matching review card instead of a generic hint
+        open_review = review.best_card(pv.snapshot, f"{v.stem} {msg}", unseen) or cards[0]["id"]
+        title = next(c["payload"]["title"] for c in cards if c["id"] == open_review)
+        text, level, refs, reason = (f"Em xem thẻ ôn “{title}” trước nhé, ngắn thôi. Em đã xem {len(cards) - len(unseen)}/{len(cards)} thẻ ôn."
+                                     if unseen else f"Em đã xem hết thẻ ôn rồi. Em mở lại thẻ “{title}” nếu cần nhắc kiến thức."), 0, [], None
+        pointed = True
+    elif body.action == "hint" and cards:
+        open_review = review.best_card(pv.snapshot, v.stem, unseen)  # a hint during the quiz can lead back to the matching review card
+    if fixed:
+        text, level, refs = v.hints[n - 1], n, []
+        if rules.leak(text, v):  # defence in depth: drafts were checked when written, the answer key may have been edited since
+            text, level, refs, _ = rules.decide(v, "hint", "", used, seen=seen)
     offtopic = reason == "OFFTOPIC"  # no keyword hit is not a verdict: in llm mode the model decides, with the approved lesson
     chatty = body.action == "ask" and not quick and rules.smalltalk(msg) is not None  # greeting or thanks: no model, no tokens
-    if body.action != "explain" and not chatty:
+    if body.action == "hint" and n > 3:
+        # hints 4..10: more specific each time. The model writes them (same guards as any reply); on any problem the last fixed hint
+        # is repeated with a pointer back to the source.
+        last = v.hints[2] if v.hints else rules.hint(v, 3, small="chia_nho_tung_buoc" in prefs)[0]
+        text, level, refs, reason = last + GUIDE, n, [], None
+        if cfg.chat_mode == "llm":
+            ask = f"Cho em gợi ý số {n}, cụ thể hơn các gợi ý trước, không nói đáp án."
+            excerpt = " ".join(t for _, _, t in v.blocks)
+            out, fb, tin, tout, used_model = await _llm_reply(db, v, n, ask, text, excerpt, sess, (today(), pv.id, body.item_id, n, "hint"))
+            if out is not None:
+                text, mode = out, "llm"
+            else:
+                reason = fb
+    elif body.action != "explain" and not chatty and not fixed and not pointed:
         if cfg.chat_mode == "llm" and (reason is None or offtopic) and not quick:
             excerpt = " ".join(t for _, _, t in (refs or v.blocks))
             key = (today(), pv.id, body.item_id, level, rules.norm(msg))
@@ -175,6 +217,8 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
             if extra:
                 text, mode, used_model = text + EXTRA_SEP + extra, "llm", used_model or emodel
 
+    if cfg.chat_mode == "llm" and mode == "rule" and body.action != "explain":
+        log.info("habit: rule reply instead of llm, reason=%s action=%s", reason or ("smalltalk" if chatty else "fixed_or_quick"), body.action)
     try:
         async with db.begin_nested():
             db.add(m.ChatMessage(session_id=sess, role="user", action=body.action, text=msg or "(gợi ý)", mode="rule"))
@@ -185,11 +229,11 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
         again = (await db.execute(select(m.ChatMessage).where(
             m.ChatMessage.session_id == sess, m.ChatMessage.request_id == body.request_id,
             m.ChatMessage.role == "assistant"))).scalar_one()
-        return _reply(again.text, again.hint_level or 0, [], again.blocked_reason)
+        return _reply(again.text, again.hint_level or 0, [], again.blocked_reason, again.mode, again.hint_level if again.action == "hint" else None)
     if body.action == "hint":
         await bump(db, user.id, hints=1)
     await db.commit()
-    return _reply(text, level, refs, reason)
+    return _reply(text, level, refs, reason, mode, n or None, open_review)
 
 
 async def habit(db: AsyncSession, user: CurrentUser, assignment_id: UUID) -> HabitOut:
@@ -231,7 +275,7 @@ async def habit(db: AsyncSession, user: CurrentUser, assignment_id: UUID) -> Hab
         preview = None
         if got == "REVIEW":
             preview = rules.hint(rules.build_view(pv.snapshot, i), 1, small="chia_nho_tung_buoc" in prefs)[0]
-        return HabitItem(item_id=iid, hints_used=min((hints.get(iid) or (0, 0))[0], HINTS_MAX), hints_max=HINTS_MAX,
+        return HabitItem(item_id=iid, hints_used=min((hints.get(iid) or (0, 0))[0], cfg.hint_max_per_item), hints_max=cfg.hint_max_per_item,
                          advice=got, preview=preview)
 
     return HabitOut(

@@ -1,4 +1,4 @@
-"""Seed mock data (all fictional, marked DỮ LIỆU MINH HỌA). Run after migrations:
+"""Seed mock data (all fictional, labelled in the teacher-only source note). Run after migrations:
 
     DATABASE_URL=... uv run python -m seed.seed
 
@@ -170,7 +170,7 @@ async def seed(conn: AsyncConnection, pw_by_role: dict[str, str]) -> None:
                        "numbers": parse_numbers(ex)} for n, (k, ex, loc) in cells.items()}
         text = "\n".join(c[1] for c in cells.values())
         await ins(conn, m.SourceAsset, [{"id": asset, "owner_id": author, "title": f"{spec['title']} ({spec['key']})",
-                                         "license_note": f"{NOTE}: số liệu giả, không phải số liệu chính thức.",
+                                         "license_note": f"{NOTE}, không phải số liệu chính thức.",
                                          "visibility": spec["visibility"]}])
         src_sha = sha256_hex(text)
         await ins(conn, m.SourceRevision, [{"id": rev, "asset_id": asset, "version": 1, "sha256": src_sha,

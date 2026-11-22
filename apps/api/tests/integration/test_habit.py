@@ -51,12 +51,32 @@ async def test_disabled_404_and_config(client: httpx.AsyncClient) -> None:
     assert (await client.get("/v1/auth/config")).json()["chatEnabled"] is False
 
 
-async def test_hints_one_to_three_then_stay_at_three(client: httpx.AsyncClient, on: pytest.MonkeyPatch) -> None:
+async def test_hints_run_to_ten_then_stop(client: httpx.AsyncClient, on: pytest.MonkeyPatch) -> None:
     it = (await items(client))[0]
-    levels = [(await chat(client, it["id"], "hint")).json()["hintLevel"] for _ in range(4)]
-    assert levels == [1, 2, 3, 3]
+    rs = [(await chat(client, it["id"], "hint")).json() for _ in range(4)]
+    assert [r["hintLevel"] for r in rs] == [1, 2, 3, 4] and [r["hintsUsed"] for r in rs] == [1, 2, 3, 4]
+    assert all(r["source"] == "rule" for r in rs)  # no model in this test: hint 4 repeats hint 3 and points back to the source
+    assert "đọc lại đoạn nguồn" in rs[3]["reply"] and rs[3]["reply"].startswith(rs[2]["reply"])
     h = (await client.get(f"{URL}/habit")).json()
-    assert next(x for x in h["hintsAvailable"] if x["itemId"] == it["id"]) == {"itemId": it["id"], "hintsUsed": 3, "hintsMax": 3, "advice": None, "preview": None}
+    assert next(x for x in h["hintsAvailable"] if x["itemId"] == it["id"]) == {"itemId": it["id"], "hintsUsed": 4, "hintsMax": 10, "advice": None, "preview": None}
+    codes = [(await chat(client, it["id"], "hint")).status_code for _ in range(7)]
+    assert codes == [200] * 6 + [429]  # hints 5..10 fit, the 11th does not
+    assert (await chat(client, it["id"], "hint")).json()["code"] == "HINT_LIMIT"
+    assert (await chat(client, it["id"], "ask", "cảm ơn")).status_code == 200  # hint presses never use up the chat limit
+
+
+async def test_hint_four_comes_from_the_model_and_is_guarded(client: httpx.AsyncClient, on: pytest.MonkeyPatch) -> None:
+    on.setenv("CHAT_MODE", "llm")
+    get_settings.cache_clear()
+    it = (await items(client))[0]
+    on.setattr(llm, "get_chat_llm", lambda: llm.MockChatLLM("Em nhìn vào cột năm trong bảng rồi so từng vùng nhé."))
+    for _ in range(3):
+        await chat(client, it["id"], "hint")
+    r = (await chat(client, it["id"], "hint")).json()
+    assert r["source"] == "llm" and r["hintLevel"] == 4 and r["reply"].startswith("Em nhìn vào cột năm")
+    on.setattr(llm, "get_chat_llm", lambda: llm.MockChatLLM("Đáp án là A."))  # a model that gives the answer away is discarded
+    r = (await chat(client, it["id"], "hint")).json()
+    assert r["source"] == "rule" and "đọc lại đoạn nguồn" in r["reply"] and "Đáp án là A" not in r["reply"]
 
 
 async def test_direct_answer_confirm_and_injection_refused(client: httpx.AsyncClient, on: pytest.MonkeyPatch) -> None:
@@ -94,15 +114,19 @@ async def test_limits_validation_and_idempotency(client: httpx.AsyncClient, on: 
     rid = uuid.uuid4()
     first = (await chat(client, it["id"], "hint", rid=rid)).json()
     assert (await chat(client, it["id"], "hint", rid=rid)).json()["reply"] == first["reply"]
-    codes = [(await chat(client, it["id"], "hint")).status_code for _ in range(7)]
-    assert codes[:5] == [200] * 5 and codes[5] == 429  # 6 per item: 1 + 5 fit, the 7th does not
+    on.setenv("CHAT_MAX_MSGS_PER_ITEM", "3")
+    get_settings.cache_clear()
+    codes = [(await chat(client, it["id"], "ask", "dân cư là gì")).status_code for _ in range(4)]
+    assert codes == [200, 200, 200, 429]  # typed questions are limited per item; hint presses are not
+    assert (await chat(client, it["id"], "hint")).status_code == 200
 
 
 async def test_daily_limit(client: httpx.AsyncClient, on: pytest.MonkeyPatch) -> None:
-    on.setenv("CHAT_MAX_PER_DAY_PER_STUDENT", "2")
+    on.setenv("CHAT_MAX_MSGS_PER_DAY", "2")
     get_settings.cache_clear()
     its = await items(client)
-    assert [(await chat(client, its[k]["id"], "hint")).status_code for k in (0, 1, 0)] == [200, 200, 429]
+    assert [(await chat(client, its[k]["id"], "ask", "dân cư là gì")).status_code for k in (0, 1, 0)] == [200, 200, 429]
+    assert (await chat(client, its[0]["id"], "hint")).status_code == 200  # hint presses do not count
 
 
 async def test_pii_redacted_before_store(client: httpx.AsyncClient, db: AsyncSession, on: pytest.MonkeyPatch) -> None:
