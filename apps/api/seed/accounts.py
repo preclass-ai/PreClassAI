@@ -32,9 +32,9 @@ async def ensure_accounts(conn: AsyncConnection, get_hashes: Callable[[], dict[s
         return 0  # nothing to add: do not even require the seed passwords (a restart must not depend on them)
     pw_by_role = get_hashes()
     users = [{"id": uid(f"user:{t}"), "email": f"{t}@{DOMAIN}", "login_code": None,
-              "display_name": f"Giáo viên {t[2:]} (minh họa)", "role": "TEACHER", "password_hash": pw_by_role["TEACHER"]} for t in TEACHERS]
+              "display_name": f"Giáo viên {t[2:]}", "role": "TEACHER", "password_hash": pw_by_role["TEACHER"]} for t in TEACHERS]
     users += [{"id": uid(f"user:{s}"), "email": None, "login_code": s,
-               "display_name": f"Học sinh {s[2:]} (minh họa)", "role": "STUDENT", "password_hash": pw_by_role["STUDENT"]} for s in STUDENTS]
+               "display_name": f"Học sinh {s[2:]}", "role": "STUDENT", "password_hash": pw_by_role["STUDENT"]} for s in STUDENTS]
     members = [{"class_id": cid, "user_id": uid(f"user:{t}"), "role_in_class": "TEACHER"}
                for t in TEACHERS for cid in classes.values()]
     members += [{"class_id": classes["10A1"], "user_id": uid(f"user:{s}"), "role_in_class": "STUDENT"} for s in STUDENTS]

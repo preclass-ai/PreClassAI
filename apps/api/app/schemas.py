@@ -138,7 +138,7 @@ class UserOut(ApiModel):
     is_guest: bool = False
     survey_code: str | None = Field(default=None, description="Anonymous survey code (guests only), e.g. KS-7H4P.")
     model_config = ex({
-        "id": I["teacher"], "role": "TEACHER", "displayName": "Cô Địa Lí (minh họa)",
+        "id": I["teacher"], "role": "TEACHER", "displayName": "Cô Địa Lí",
         "email": "gv.dia@preclass.local", "loginCode": None, "classIds": [I["class"]]})
 
 
@@ -606,13 +606,13 @@ class ProvenanceOut(ApiModel):
             "anchorId": I["anchor"], "code": ANCHOR_CODE, "kind": "TABLE_CELL",
             "locator": {"table": 0, "row": 1, "col": 1}, "excerpt": "23,2", "sourceRevisionId": I["srcrev"],
             "sourceTitle": "Phân bố dân cư theo vùng (dan-so-vung)", "sourceVersion": 1},
-            "relation": "derived_from", "rationale": "Dữ liệu minh họa", "status": "VERIFIED"}],
+            "relation": "derived_from", "rationale": None, "status": "VERIFIED"}],
         "events": [{"id": I["event"], "actorType": "AI", "actorId": None, "operation": "GENERATE",
                     "beforeHash": None, "afterHash": H, "generatorVersion": "mock-v1", "createdAt": T0}],
         "validations": [{"id": I["event"], "rule": "VAL-04", "severity": "BLOCKER", "outcome": "PASS",
                          "evidence": {}, "method": "rule", "contentHash": H, "isCurrent": True, "createdAt": T0}],
         "reviews": [{"id": I["event"], "action": "APPROVE", "contentHash": H, "sourceHashes": [H2],
-                     "reviewerId": I["teacher"], "reviewerName": "Cô Địa Lí (minh họa)", "note": None,
+                     "reviewerId": I["teacher"], "reviewerName": "Cô Địa Lí", "note": None,
                      "isValid": True, "createdAt": T1}]})
 
 

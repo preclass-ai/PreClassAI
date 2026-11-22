@@ -3067,7 +3067,6 @@ export interface components {
          *             "sourceVersion": 1
          *           },
          *           "id": "e6c6a1fd-65a0-5f3b-9657-cce4b6cd583c",
-         *           "rationale": "Dữ liệu minh họa",
          *           "relation": "derived_from",
          *           "status": "VERIFIED"
          *         }
@@ -3080,7 +3079,7 @@ export interface components {
          *           "id": "e6c6a1fd-65a0-5f3b-9657-cce4b6cd583c",
          *           "isValid": true,
          *           "reviewerId": "eb9a9e82-7954-5e82-a597-16c6123031ff",
-         *           "reviewerName": "Cô Địa Lí (minh họa)",
+         *           "reviewerName": "Cô Địa Lí",
          *           "sourceHashes": [
          *             "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f809"
          *           ]
@@ -3999,7 +3998,7 @@ export interface components {
          *       "classIds": [
          *         "d97fbc44-edb6-5333-b65d-1427e836354c"
          *       ],
-         *       "displayName": "Cô Địa Lí (minh họa)",
+         *       "displayName": "Cô Địa Lí",
          *       "email": "gv.dia@preclass.local",
          *       "id": "eb9a9e82-7954-5e82-a597-16c6123031ff",
          *       "role": "TEACHER"

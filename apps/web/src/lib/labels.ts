@@ -80,6 +80,9 @@ export const OPERATION: Record<string, string> = {
 
 export const ACTOR: Record<string, string> = { AI: "AI", TEACHER: "Giáo viên", SYSTEM: "Hệ thống" };
 
+/** Who can use a source: one wording everywhere (list, detail, form). */
+export const VISIBILITY: Record<"PRIVATE" | "SCHOOL", string> = { PRIVATE: "Chỉ mình thầy cô", SCHOOL: "Cả trường" };
+
 export type Tone = "neutral" | "info" | "success" | "warning" | "danger";
 
 /** Hints go from light to detailed (server levels 1–3): students pick by how much help they want, not by a count. */

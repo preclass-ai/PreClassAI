@@ -15,6 +15,17 @@ Nhánh `feat/web-reviewer-ux`. Phần lớn là frontend. Có hai thay đổi AP
   - Lớp khảo sát được ghi "(khảo sát)" ở tab lớp và trong ô chọn lớp khi giao bài.
 - **Xưng hô:** giáo viên là "thầy cô", học sinh là "em". Thông báo lỗi dùng chung cho cả hai vai trò thì không dùng đại từ. Phía web không còn chỗ nào xưng "bạn".
 
+- **Bớt chữ thừa:**
+  - Thông báo "Môi trường thử nghiệm" nằm một lần ở layout giáo viên, không lặp ở từng trang.
+  - Khối có lý do không cần nguồn chỉ hiện lý do ở tooltip, inspector và màn duyệt. Câu cảnh báo chỉ còn khi chưa ghi lý do.
+  - Phụ đề các trang giáo viên nói việc cần làm, không mô tả cơ chế bên trong.
+  - Nhãn nguồn thống nhất: "Ai dùng được" (`VISIBILITY` trong `labels.ts`), "Bản #n", "Số đoạn".
+- **Dữ liệu seed:**
+  - Bỏ "(minh họa)" khỏi tên tài khoản.
+  - Bỏ mã slug khỏi tên nguồn.
+  - Bỏ lý giải "Dữ liệu minh họa" ở mọi liên kết nguồn; trước đây inspector hiện "Lý giải: Dữ liệu minh họa".
+  - Dấu "DỮ LIỆU MINH HỌA" giữ ở `licenseNote` của nguồn. Seed chỉ áp dụng cho DB mới.
+
 ## Kiểm tra
 - Web: lint, typecheck, vitest 70/70.
 - API: ruff, mypy, pytest 455 pass, 1 skip.

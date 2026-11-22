@@ -29,7 +29,7 @@ function ClassesView() {
     <>
       <PageHeader
         title="Lớp & bài giao"
-        sub={'Tiến độ chỉ gồm số liệu tổng hợp của lớp, không có câu trả lời từng học sinh. Để giao bài mới, chọn một bài đã xuất bản rồi mở tab "Xuất bản & giao bài".'}
+        sub="Xem lớp làm bài đến đâu. Số liệu là của cả lớp, không hiện bài làm của từng học sinh."
         actions={
           <Link className="btn btn-primary" href="/lessons">
             Chọn bài để giao

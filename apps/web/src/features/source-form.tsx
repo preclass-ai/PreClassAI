@@ -5,6 +5,7 @@ import { useState, type DragEvent, type FormEvent } from "react";
 import { Button, ErrorBox, Field, Loading, Notice } from "@/components/ui";
 import { api, postForm, unwrap, type Schemas } from "@/lib/api";
 import { AnchorPreview } from "./anchors";
+import { VISIBILITY } from "@/lib/labels";
 
 type Mode = "text" | "docx";
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -170,10 +171,10 @@ export function NewSourceForm({ onCreated, onSaved }: { onCreated: (s: Schemas["
       </Field>
       <ContentInput mode={mode} setMode={setMode} text={text} setText={setText} file={file} setFile={setFile} fileError={tooBig} accept="all" />
       <div className="row">
-        <Field label="Phạm vi">
+        <Field label="Ai dùng được">
           <select value={visibility} onChange={(e) => setVisibility(e.target.value as "PRIVATE" | "SCHOOL")}>
-            <option value="PRIVATE">Riêng tôi</option>
-            <option value="SCHOOL">Dùng chung trong trường</option>
+            <option value="PRIVATE">{VISIBILITY.PRIVATE}</option>
+            <option value="SCHOOL">{VISIBILITY.SCHOOL}</option>
           </select>
         </Field>
         <Field label={visibility === "SCHOOL" ? "Giấy phép / nguồn gốc (bắt buộc)" : "Giấy phép / nguồn gốc"}>
