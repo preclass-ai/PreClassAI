@@ -1,7 +1,7 @@
 # ruff: noqa: E501
 """One real run of the quiz drafting against a local lesson plan, for the numbers only. Writes nothing, prints NO plan content.
 
-    cd apps/api            # CHAT_LLM_BASE_URL / CHAT_LLM_API_KEY / CHAT_LLM_MODEL come from the environment or .env
+    cd apps/api            # CHAT_LLM_BASE_URL / CHAT_LLM_API_KEY / QUIZ_GEN_MODEL[_FALLBACK] come from the environment or .env
     uv run python ../../scripts/ops/quizgen_real_run.py "<path to a plan .pdf or .docx>" [--lesson 1]
 
 Per lesson: extracted MCQ, drafted / valid / rejected (with reasons), seconds and tokens for the quiz call and the review call.
@@ -35,9 +35,9 @@ async def main(path: str, only: int | None) -> None:
     cfg = get_settings()
     client = quizgen.get_client()
     if client is None:
-        sys.exit("no model: set CHAT_LLM_BASE_URL, CHAT_LLM_API_KEY, CHAT_LLM_MODEL")
+        sys.exit("no model: set CHAT_LLM_BASE_URL, CHAT_LLM_API_KEY and QUIZ_GEN_MODEL")
     plan = parse_plan_file(open(path, "rb").read(), Limits())
-    print(f"lessons read: {len(plan.lessons)}, model: {cfg.chat_llm_model}, fallback: {cfg.chat_llm_model_fallback or '-'}")
+    print(f"lessons read: {len(plan.lessons)}, quiz+review model: {cfg.quiz_gen_model}, fallback: {cfg.quiz_gen_model_fallback or '-'} (QUIZ_GEN_MODEL / QUIZ_GEN_MODEL_FALLBACK; chat keeps {cfg.chat_llm_model})")
     for n, doc in enumerate(plan.lessons, 1):
         if only and n != only:
             continue

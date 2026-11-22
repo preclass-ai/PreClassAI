@@ -217,10 +217,16 @@ def leak(text: str, v: ItemView) -> str | None:
     return None
 
 
+UNIT_CONSTANTS = (100, 1000, 1_000_000)
+
+
 def number_ok(text: str, v: ItemView) -> bool:
-    """VAL-03 style: every number must come from the approved content; small integers and years are tolerated."""
+    """VAL-03 style: every number must come from the approved content; small integers, years, unit constants
+    (100, 1000, 1.000.000) and, next to a percent sign, 0-100 are tolerated. The answer value never is."""
+    pct = "%" in text or "phần trăm" in text.lower()
     for x in parse_numbers(text):
-        if x in v.allowed or (x == x.to_integral_value() and (0 <= x <= 10 or 1900 <= x <= 2100) and x != v.answer_value):
+        whole = x == x.to_integral_value()
+        if x in v.allowed or (whole and x != v.answer_value and (0 <= x <= 10 or 1900 <= x <= 2100 or x in UNIT_CONSTANTS or (pct and 0 <= x <= 100))):
             continue
         return False
     return True

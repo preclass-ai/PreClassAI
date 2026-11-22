@@ -341,3 +341,19 @@ async def test_llm_mode_answers_what_keywords_cannot_place(client: httpx.AsyncCl
     on.setattr(llm, "get_chat_llm", lambda: llm.MockChatLLM("Đáp án là C, Đồng bằng sông Hồng"))
     r = (await chat(client, it["id"], "ask", "ai là tổng thống Mỹ")).json()
     assert "Đồng bằng sông Hồng" not in r["reply"]
+
+
+async def test_unit_question_is_answered_and_a_blocked_reply_never_says_off_topic(client: httpx.AsyncClient, db: AsyncSession, on: pytest.MonkeyPatch) -> None:
+    on.setenv("CHAT_MODE", "llm")
+    get_settings.cache_clear()
+    q = "Đơn vị triệu người nghĩa là gì?"
+    on.setattr(llm, "get_chat_llm", lambda: llm.MockChatLLM("Một triệu người là 1.000.000 người, tức là 1000 nghìn người, em dùng nó để đọc cột dân số."))
+    it = (await items(client))[0]
+    r = (await chat(client, it["id"], "ask", q)).json()
+    assert r["blockedReason"] is None and "1.000.000" in r["reply"]  # unit constants are not "odd numbers"
+    # a number that is not a unit constant still blocks it; the student gets a way to start, not "ngoài bài học"
+    on.setattr(llm, "get_chat_llm", lambda: llm.MockChatLLM("Một triệu người là 7654321 người."))
+    r = (await chat(client, it["id"], "ask", "Đơn vị nghìn người nghĩa là gì?")).json()
+    assert r["blockedReason"] is None and "ngoài bài học" not in r["reply"] and r["hintLevel"] >= 1 and "7654321" not in r["reply"]
+    row = (await db.execute(text("SELECT blocked_reason FROM chat_message WHERE role='assistant' ORDER BY created_at DESC LIMIT 1"))).one()
+    assert row[0] == "LLM_NUMBER"

@@ -39,7 +39,7 @@ Skill = Literal["READ_TABLE", "COMPARE", "CALCULATE", "EXPLAIN"]
 class _Grounded(BaseModel):
     """A draft is tied to the plan by sentence ids ([S1]..[Sn] in the prompt); the server turns them into the verbatim quote."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")  # an extra key from the model is not worth losing a draft over
     source_sentence_ids: list[int] = Field(default_factory=list, max_length=3)
     source_quote: str = Field(default="", max_length=1500)  # set from the ids; text sent by a model instead is matched fuzzily
 
@@ -55,21 +55,26 @@ class AiQuestion(_Grounded):
     options: list[str] = Field(min_length=4, max_length=4)
     correct_index: int = Field(ge=0, le=3)
     explanation: str = Field(min_length=8, max_length=600)
-    hints: list[str] = Field(min_length=3, max_length=3)
+    hints: list[str] = Field(min_length=3, max_length=5)  # only the first 3 are kept
     skill_tag: Skill
+
+    @model_validator(mode="after")
+    def _three_hints(self) -> "AiQuestion":
+        self.hints = self.hints[:3]
+        return self
 
 
 class AiCheck(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    statement: str = Field(min_length=8, max_length=300)
+    model_config = ConfigDict(extra="ignore")
+    statement: str = Field(min_length=4, max_length=300)
     answer_true: bool
-    explanation: str = Field(min_length=8, max_length=400)
+    explanation: str = Field(min_length=4, max_length=400)
 
 
 class AiCard(_Grounded):
     title: str = Field(min_length=3, max_length=100)
-    points: list[str] = Field(min_length=2, max_length=4)
-    example: str = Field(min_length=8, max_length=300)
+    points: list[str] = Field(min_length=2, max_length=5)  # the prompt asks for 2-4; one more is not a reason to drop the card
+    example: str = Field(min_length=4, max_length=300)
     check: AiCheck
 
 
@@ -219,8 +224,9 @@ SYSTEM_REVIEW = (
 )
 
 
-def parse_items(raw: str, key: str, model: type[BaseModel]) -> tuple[list[BaseModel], int]:
-    """(valid objects, how many failed the schema). Raises ValueError when the reply is not JSON with a `key` list."""
+def parse_items(raw: str, key: str, model: type[BaseModel], bad_fields: set[str] | None = None) -> tuple[list[BaseModel], int]:
+    """(valid objects, how many failed the schema). Each item is parsed alone: one bad card never costs the batch.
+    `bad_fields` collects the NAMES of the failing fields (never their content). Raises ValueError when the reply is not JSON with a `key` list."""
     t = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
     a, b = t.find("{"), t.rfind("}")
     data = json.loads(t[a:b + 1]) if a >= 0 <= b else None
@@ -230,8 +236,9 @@ def parse_items(raw: str, key: str, model: type[BaseModel]) -> tuple[list[BaseMo
     for it in data[key]:
         try:
             ok.append(model.model_validate(it))
-        except ValidationError:
-            pass
+        except ValidationError as e:
+            if bad_fields is not None:
+                bad_fields.update(str(er["loc"][0]) if er["loc"] else "(root)" for er in e.errors())
     return ok, len(data[key]) - len(ok)
 
 
@@ -252,24 +259,34 @@ async def _complete(client: llm.ChatLLM, system: str, user: str, max_tokens: int
 
 async def _ask(client: llm.ChatLLM, system: str, text: str, ask: str, key: str, model: type[BaseModel], max_tokens: int,
                left: float) -> tuple[list[BaseModel], int, int, int, str, list[str]]:
-    """(drafts, schema failures, tokens, calls, model, models that failed first). One retry when the reply is not usable JSON."""
-    user = f"<plan>\n{llm.defang(text)}\n</plan>\n{ask}"
+    """(drafts, schema failures, tokens, calls, model, models that failed first). One retry when the reply is not usable JSON or
+    nothing in it fits the schema; the retry names the failing fields so the model can fix them."""
+    base = f"<plan>\n{llm.defang(text)}\n</plan>\n{ask}"
+    user = base
     tokens = calls = 0
     last = ""
     failed: list[str] = []
-    for _ in range(2):
+    result: tuple[list[BaseModel], int] = ([], 0)
+    for attempt in range(2):
         calls += 1
         raw, tin, tout = await _complete(client, system, user, max_tokens, max(20.0, min(left, 90.0)))
         tokens += tin + tout
         last = getattr(raw, "model", "") or last
         failed = list(getattr(raw, "attempts", []) or failed)
-        text_out = llm.clip(raw, 20000)
+        fields: set[str] = set()
         try:
-            ok, bad = parse_items(str(text_out), key, model)
-            return ok, bad, tokens, calls, last, failed
+            ok, bad = parse_items(str(llm.clip(raw, 20000)), key, model, fields)
         except (ValueError, json.JSONDecodeError):
+            log.warning("quiz generation: %s reply is not the expected JSON (attempt %d)", key, attempt + 1)
+            user = base + "\nLần trước phản hồi không phải JSON đúng mẫu. Chỉ trả về một đối tượng JSON theo mẫu, không thêm chữ nào khác."
             continue
-    return [], 0, tokens, calls, last, failed
+        result = (ok, bad)
+        if bad:
+            log.warning("quiz generation: %s %d/%d items failed the schema, fields: %s", key, bad, bad + len(ok), sorted(fields))
+        if ok or not bad:
+            return ok, bad, tokens, calls, last, failed
+        user = base + f"\nLần trước các mục sai ở trường: {', '.join(sorted(fields))}. Sửa đúng mẫu JSON và các giới hạn độ dài."
+    return result[0], result[1], tokens, calls, last, failed
 
 
 def _bump(d: dict[str, int], k: str) -> None:
@@ -306,8 +323,13 @@ class MockQuizLLM:
 
 
 def get_client() -> llm.ChatLLM | None:
+    """Quiz drafting has its own model pair (QUIZ_GEN_MODEL, then QUIZ_GEN_MODEL_FALLBACK); base URL and key are the chat ones."""
     c = get_settings()
-    return MockQuizLLM() if c.quiz_gen_mock else llm.get_chat_llm()
+    if c.quiz_gen_mock:
+        return MockQuizLLM()
+    if c.chat_llm_base_url and c.chat_llm_api_key and c.quiz_gen_model:
+        return llm.OpenAIChat(c.chat_llm_base_url, c.chat_llm_api_key, c.quiz_gen_model, c.quiz_gen_model_fallback)
+    return None
 
 
 # ---------------------------------------------------------------- one plan

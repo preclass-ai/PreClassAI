@@ -63,6 +63,8 @@ class Settings(BaseSettings):
     quiz_gen_daily_tokens: int = 100_000
     quiz_gen_timeout_s: int = 240  # per plan, both calls and the gap between them
     quiz_gen_gap_s: float = 20.0  # QUIZ_GEN_GAP_S: pause between the quiz and review calls of a plan
+    quiz_gen_model: str = "openai/gpt-oss-120b"  # QUIZ_GEN_MODEL (chat keeps CHAT_LLM_MODEL; same base URL and key)
+    quiz_gen_model_fallback: str = "qwen/qwen3.8-27b"  # QUIZ_GEN_MODEL_FALLBACK
     quiz_gen_mock: bool = False  # QUIZ_GEN_MOCK: deterministic stand-in model built from the plan text (dev and e2e only)
     chat_ai_extra: bool = False  # CHAT_MODE=llm only: a second, clearly labelled part with general knowledge (unverified)
     personalization_enabled: bool = False  # student-chosen options, focus mode, behaviour-based hints; 404 when off

@@ -58,8 +58,7 @@ def test_schema_is_strict() -> None:
         q(correct_index=4)
     with pytest.raises(ValueError):
         q(hints=["một", "hai"])
-    with pytest.raises(ValueError):
-        q(extra_field="x")
+    assert not hasattr(q(extra_field="x"), "extra_field")  # an extra key is ignored, not a reason to drop the question
     with pytest.raises(ValueError):
         q(skill_tag="GUESS")
 
@@ -245,3 +244,37 @@ def test_jobs_run_one_at_a_time_in_arrival_order(monkeypatch: pytest.MonkeyPatch
 
     asyncio.run(go())
     assert log == ["start 1", "end 1", "start 2", "end 2", "start 3", "end 3"]  # never two at once
+
+
+# ---- E2: a bad card does not cost the batch; a wholly bad reply is retried once with the field names
+def test_one_bad_card_keeps_the_others_and_names_only_the_field() -> None:
+    good = card().model_dump()
+    no_check = {k: v for k, v in good.items() if k != "check"}
+    five_points = {**good, "points": ["một ý đủ dài"] * 5}
+    fields: set[str] = set()
+    ok, bad = parse_items(json.dumps({"cards": [good, no_check, five_points]}), "cards", AiCard, fields)
+    assert len(ok) == 2 and bad == 1 and fields == {"check"}
+
+
+def test_all_bad_reply_is_retried_once_with_field_names() -> None:
+    seen: list[str] = []
+    good = json.dumps({"questions": [q().model_dump()]})
+
+    class Bad:
+        async def complete(self, system: str, user: str, max_tokens: int, timeout: float | None = None) -> tuple[str, int, int]:
+            seen.append(user)
+            return (json.dumps({"questions": [{"stem": "thiếu trường nhiều"}]}) if len(seen) == 1 else good), 10, 10
+
+    ok, bad, *_ = asyncio.run(quizgen._ask(Bad(), quizgen.SYSTEM_QUIZ, PLAN, "Soạn cần 3", "questions", AiQuestion, 100, 60.0))  # noqa: SLF001
+    assert len(seen) == 2 and "sai ở trường" in seen[1] and "options" in seen[1] and len(ok) == 1
+
+
+def test_quiz_client_uses_the_quiz_model_pair(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.config import get_settings
+    for k, v in (("CHAT_LLM_BASE_URL", "https://api.groq.com/openai/v1"), ("CHAT_LLM_API_KEY", "k"), ("CHAT_LLM_MODEL", "chat-m")):
+        monkeypatch.setenv(k, v)
+    get_settings.cache_clear()
+    try:
+        assert quizgen.get_client().models == ["openai/gpt-oss-120b", "qwen/qwen3.8-27b"]  # type: ignore[union-attr]
+    finally:
+        get_settings.cache_clear()

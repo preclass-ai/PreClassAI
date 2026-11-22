@@ -26,7 +26,8 @@ Decision record: `docs/adr/ADR-0015-ai-quiz-from-plan.md`. `apps/api/app/sources
 | `CHAT_MAX_MSGS_PER_ITEM` | 20 | Typed questions per student per question. Hint presses do not count. |
 | `CHAT_MAX_MSGS_PER_DAY` | 100 | Typed questions per student per day. |
 | `HINT_MAX_PER_ITEM` | 10 | Hint presses per question (429 `HINT_LIMIT`). |
-| `QUIZ_GEN_ENABLED` | false | Draft questions and review cards after a plan is read. Needs `CHAT_LLM_*`. |
+| `QUIZ_GEN_ENABLED` | false | Draft questions and review cards after a plan is read. Needs `CHAT_LLM_BASE_URL` and `CHAT_LLM_API_KEY`. |
+| `QUIZ_GEN_MODEL` / `QUIZ_GEN_MODEL_FALLBACK` | `openai/gpt-oss-120b` / `qwen/qwen3.8-27b` | Model pair for quiz and review drafting. Chat keeps `CHAT_LLM_MODEL`. |
 | `QUIZ_GEN_PER_LESSON` | 8 | Questions per plan. |
 | `QUIZ_GEN_MIN_MCQ` | 5 | A plan with fewer extracted MCQ gets drafted questions (review cards are always drafted). |
 | `QUIZ_GEN_DAILY_TOKENS` | 100000 | Own daily token budget; over budget the step is skipped (`aiState=skipped`). |

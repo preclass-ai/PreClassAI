@@ -211,6 +211,9 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
                 text, mode, reason = out, "llm", None
             else:
                 reason = fb or reason
+                if offtopic:  # the model was blocked or down: do not claim the question is outside the lesson, give a way to start
+                    text, refs = rules.hint(v, min(used + 1, 3), small="chia_nho_tung_buoc" in prefs)
+                    level = min(used + 1, 3)
         extra_ok = cfg.chat_ai_extra and body.action == "ask" and reason is None and not offtopic and not quick
         if cfg.chat_mode == "llm" and extra_ok:
             extra, etin, etout, emodel = await _extra_reply(db, v, msg, pv.id, body.item_id)
