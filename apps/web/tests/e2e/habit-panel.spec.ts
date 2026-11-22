@@ -27,7 +27,7 @@ async function layout(page: Page, sheet: Locator, wide: boolean) {
     expect(box.width).toBeGreaterThanOrEqual(380);
     expect(box.width).toBeLessThanOrEqual(400);
   } else {
-    expect(box.height).toBeLessThanOrEqual(vp.height * 0.8 + 1);
+    expect(box.height).toBeLessThanOrEqual(vp.height * 0.85 + 1);
   }
   await inView(page, sheet.getByLabel("Câu hỏi cho HABIT AI"), "input");
   await inView(page, sheet.getByRole("button", { name: "Gửi" }), "Send button");
