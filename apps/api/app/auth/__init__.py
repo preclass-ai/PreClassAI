@@ -50,8 +50,8 @@ class LoginLimiter:
     """shortcut: in-process sliding window (single API process in P0), move to the DB/Redis if scaled out."""
 
     def __init__(self, max_failures: int = 5, window_s: int = 300,
-                 message: str = "Quá nhiều lần thử, vui lòng đợi ít phút") -> None:
-        self.max, self.window, self.message = max_failures, window_s, message
+                 message: str = "Quá nhiều lần thử, vui lòng đợi ít phút", code: str = "RATE_LIMITED") -> None:
+        self.max, self.window, self.message, self.code = max_failures, window_s, message, code
         self.hits: dict[str, deque[float]] = defaultdict(deque)
 
     def _prune(self, key: str) -> deque[float]:
@@ -62,7 +62,7 @@ class LoginLimiter:
 
     def check(self, key: str, limit: int | None = None) -> None:
         if len(self._prune(key)) >= (limit or self.max):
-            raise ApiError(429, "RATE_LIMITED", self.message)
+            raise ApiError(429, self.code, self.message)
 
     def fail(self, key: str) -> None:
         self._prune(key).append(time.monotonic())
@@ -76,7 +76,8 @@ class LoginLimiter:
 
 WRONG_TOO_OFTEN = "Em nhập sai nhiều lần, thử lại sau ít phút nhé."
 # Per account, never per IP: a classroom shares one Wi-Fi address (NAT).
-login_limiter = LoginLimiter(message=WRONG_TOO_OFTEN)
+# Teachers: the judges share one demo account, so 10 wrong tries per 5 minutes.
+login_limiter = LoginLimiter(max_failures=10, message=WRONG_TOO_OFTEN)
 # ADMIN accounts: 3 wrong passwords / 15 min
 admin_login_limiter = LoginLimiter(max_failures=3, window_s=900, message=WRONG_TOO_OFTEN)
 

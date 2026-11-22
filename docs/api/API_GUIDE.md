@@ -171,7 +171,7 @@ Bật bằng env `GUEST_ACCESS_ENABLED=true` (mặc định tắt → mọi endp
 | Endpoint | Ghi chú |
 |---|---|
 | `GET /v1/auth/config` → `{guestEnabled}` | Công khai; FE dùng để hiện nút "Vào làm thử" |
-| `POST /v1/auth/guest` `{lessonKey?}` → 201 `{user, surveyCode, assignmentId?}` | Tạo tài khoản STUDENT ẩn danh (không tên/email/mật khẩu/IP), set cookie phiên **14 ngày**. `lessonKey` là slug bài (vd `dan-so-vung`): trả `assignmentId` để mở thẳng bài. 429 `RATE_LIMITED` theo IP thật (`GUEST_CREATE_PER_HOUR`, mặc định 60: một lớp dùng chung Wi-Fi chỉ có một IP), 503 `GUEST_CAPACITY` (`GUEST_MAX_ACTIVE`, mặc định 500) / `GUEST_NOT_CONFIGURED` |
+| `POST /v1/auth/guest` `{lessonKey?}` → 201 `{user, surveyCode, assignmentId?}` | Tạo tài khoản STUDENT ẩn danh (không tên/email/mật khẩu/IP), set cookie phiên **14 ngày**. `lessonKey` là slug bài (vd `dan-so-vung`): trả `assignmentId` để mở thẳng bài. 429 `GUEST_BUSY` ("Hệ thống đang đông, em thử lại sau 1 phút nhé.") theo IP thật (`GUEST_CREATE_PER_IP`, mặc định 200 mỗi 10 phút: một lớp dùng chung Wi-Fi chỉ có một IP), 503 `GUEST_CAPACITY` (`GUEST_MAX_ACTIVE`, mặc định 500) / `GUEST_NOT_CONFIGURED` |
 | `POST /v1/auth/guest/resume` `{surveyCode}` | Mất cookie / đổi máy; 5 mã sai / 15 phút / IP → 429 |
 | `GET /v1/admin/survey/export.csv` (ADMIN, TEACHER) | `survey_code, lesson, item, first_attempt_is_correct, answered_at_utc`; không cột định danh nào khác |
 
@@ -182,7 +182,7 @@ Bật bằng env `GUEST_ACCESS_ENABLED=true` (mặc định tắt → mọi endp
 
 - **Mật khẩu seed:** `APP_ENV=demo` yêu cầu `SEED_TEACHER_PASSWORD`, `SEED_REVIEWER_PASSWORD`, `SEED_ADMIN_PASSWORD` (≥ 12 ký tự). Thiếu thì **không tạo tài khoản** và log cảnh báo (API vẫn khởi động). Học sinh seed: `SEED_STUDENT_PASSWORD` nếu đặt, nếu không thì mật khẩu ngẫu nhiên bị bỏ đi (không đăng nhập bằng mật khẩu được, chỉ dùng khách). Dev/CI vẫn dùng `SEED_PASSWORD` (mặc định `preclass-demo`). Đổi mật khẩu tài khoản đã có: `scripts/ops/rotate_passwords.py`.
 - **Đăng nhập ADMIN:** 3 lần sai / 15 phút (GV/HS: 5 lần / 5 phút). Mọi thao tác admin (`GET /admin/audit-logs`, `GET /admin/survey/stats`, `GET /admin/survey/export.csv`) ghi audit (`ADMIN_VIEW_AUDIT_LOGS`, `ADMIN_VIEW_SURVEY_STATS`, `EXPORT_SURVEY`).
-- **`GET /admin/survey/stats`** (ADMIN): `{activeGuests, createdLastHour, maxActive, createPerHourPerIp}`. Log cảnh báo (chỉ số đếm, không IP/mã) khi dùng ≥ 80% `GUEST_CREATE_PER_HOUR` của một client hoặc `GUEST_MAX_ACTIVE`.
+- **`GET /admin/survey/stats`** (ADMIN): `{activeGuests, createdLastHour, maxActive, createPerIp}`. Log cảnh báo (chỉ số đếm, không IP/mã) khi dùng ≥ 80% `GUEST_CREATE_PER_IP` của một client hoặc `GUEST_MAX_ACTIVE`.
 - **`/docs` và `/v1/openapi.json`:** `DOCS_ACCESS=open|staff|off`. Mặc định `open`, riêng `APP_ENV=production` mặc định `off`. `staff` = chỉ GV/người duyệt/admin đã đăng nhập (người khác: 404, chưa đăng nhập: 401).
 - **Header API:** mọi phản hồi `X-Content-Type-Options: nosniff`; mọi `/v1/*` trừ health `Cache-Control: no-store`.
 - **DOCX:** ≤ 10 MB tải lên, ≤ 20 MB giải nén, ≤ 1000 thành phần, tỉ lệ nén ≤ 100:1; từ chối macro (`.docm`, `vbaProject`), đối tượng nhúng/ActiveX và liên kết tới nội dung ngoài (chỉ cho phép hyperlink): `422 EXTERNAL_CONTENT_REJECTED`.

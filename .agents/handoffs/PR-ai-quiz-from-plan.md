@@ -33,12 +33,14 @@ Decision record: `docs/adr/ADR-0015-ai-quiz-from-plan.md`. `apps/api/app/sources
 | `QUIZ_GEN_TIMEOUT_S` | 240 | Time limit per plan. |
 | `QUIZ_GEN_GAP_S` | 20 | Pause between the quiz call and the review call of one plan (the provider limits tokens per minute). Skipped in mock mode. |
 | `QUIZ_GEN_MOCK` | false | Stand-in model built from the plan text. Dev and e2e only, never on a real server. |
+| `GUEST_CREATE_PER_IP` | 200 | Guests one IP may create per 10 minutes (a classroom shares one Wi-Fi). Replaces `GUEST_CREATE_PER_HOUR` (was 60 per hour), which is no longer read. Over the limit: 429 `GUEST_BUSY`. |
 
-Removed: `CHAT_MAX_PER_DAY_PER_STUDENT`, `CHAT_MAX_PER_ITEM`. Existing unchanged: `CHAT_ENABLED`, `CHAT_MODE`, `CHAT_LLM_*`, `CHAT_DAILY_TOKEN_BUDGET`.
+Removed: `CHAT_MAX_PER_DAY_PER_STUDENT`, `CHAT_MAX_PER_ITEM`, `GUEST_CREATE_PER_HOUR`. Set `GUEST_CREATE_PER_IP` wherever `GUEST_CREATE_PER_HOUR` was set (cloud docs updated). Existing unchanged: `CHAT_ENABLED`, `CHAT_MODE`, `CHAT_LLM_*`, `CHAT_DAILY_TOKEN_BUDGET`.
 
 ## Migration and ops
 
 - `0012_ai_quiz`: additive. Columns `lesson_plan.ai_state/ai_stats/ai_tokens/ai_at`, tables `plan_ai_item` and `review_progress`; `chat_message.hint_level` check widened from 0..3 to 0..30. Downgrade drops the tables and columns and restores the old check as NOT VALID.
+- `0013_assign_practice`: additive. `assignment.cancelled_at` (soft cancel) and table `practice_attempt` (append-only trigger). Downgrade drops both. Run `alembic upgrade head` before deploying the API.
 - Old label in an existing database: `cd apps/api; uv run python ../../scripts/ops/fix_seed_label.py` (dry run, default) then `... --apply`. It rewrites only `source_asset.title/license_note` and `lesson.title`; immutable rows (anchors, snapshots, approved blocks) are only counted.
 - Real-model numbers: `uv run python ../../scripts/ops/quizgen_real_run.py "<plan>" --lesson 1` with `CHAT_LLM_*` set. Prints counts only. Not run yet (the key file could not be read in the agent session).
 
@@ -58,7 +60,7 @@ E2E_BASE_URL=... pnpm exec playwright test
 - "Reviewed" means the student opened at least one card, not that it happened before the first answer.
 - The real model's draft quality is unmeasured; the e2e uses the mock model.
 - Hints 4 to 10 depend on `CHAT_MODE=llm`; in rule mode they repeat hint 3 plus a pointer to the source.
-- The CSV "ôn trước" column says `khong_co_bai_on` for lessons without review cards.
+- The CSV "Ôn trước khi làm" column says `Bài không có thẻ ôn` for lessons without review cards.
 
 ## Real-model run findings (Groq), and the fix
 
@@ -77,3 +79,18 @@ The real run showed models rewrite quotes (best match scores 67 to 89). The prom
 - A 429 on a long job waits the time the provider asked for and retries the SAME model once before the fallback is tried.
 - Prompt budget 6000 tokens (estimate: characters / 3). Over it, appendix and rubric sentences are cut first, then the tail. `max_tokens`: quiz 3000, review 1300.
 - Default `QUIZ_GEN_TIMEOUT_S` is now 240 because of the gap.
+
+## After the merge with main (22/11/2026): new in this branch
+- **Dependency:** `tzdata` in `apps/api/pyproject.toml` and `uv.lock`. `ZoneInfo("Asia/Ho_Chi_Minh")` (class results CSV) no longer needs `/usr/share/zoneinfo`; the Docker image (`python:3.12-slim`, `uv sync --frozen`) gets the zone data from the package. Checked with `PYTHONTZPATH=/nonexistent`.
+- **Rate limits (in memory, one API process):** teacher and student logins 10 wrong tries per 5 minutes per account (the judges share one demo account); admin 3 per 15 minutes; guest resume 20 wrong tries per survey code per 10 minutes plus 300 wrong codes in total per 10 minutes; guest creation 200 per IP per 10 minutes (`GUEST_BUSY`). Login errors say "Em nhập sai nhiều lần, thử lại sau ít phút nhé."
+- **API changes:** `PATCH` and `DELETE /classes/{id}/assignments/{aid}`, `GET /lessons/{id}/assignments`, `POST /student/assignments/{id}/practice`. `GET /admin/survey/stats`: field `createPerHourPerIp` is now `createPerIp` (admin only; nothing in the web app reads it).
+- **Hints:** `GET`/`POST` unchanged. Names by number (1-3 nhẹ, 4-7 rõ hơn, 8-10 chi tiết); `rules.read_where` points at rows and column by name, never a value or an option.
+- **Results CSV:** one endpoint (`results.csv` of the class assignment). Columns: code, status, counts, total hints, total redo, reviewed before, last answer, then per item answer, result, hints, redo. No survey code, no chat text.
+
+## Risks to know
+- Account-based limits let someone lock an account for 5 minutes by typing wrong passwords on purpose.
+- The total ceiling on wrong guest codes (300 per 10 minutes) is global: a burst of wrong codes from many students could lock "resume" for everyone for a short time.
+- Limits live in memory: a restart resets them, and a second API process would double them.
+- `openapi.json` and `schema.d.ts` match the code at the last commit only; commits in between may differ.
+- The real-model run (`scripts/ops/llm_smoke.py`, `quizgen_real_run.py`) has not been done after the prompt changes.
+- E2E needs `PERSONALIZATION_ENABLED=true` on the API as well as `CHAT_ENABLED`, `QUIZ_GEN_ENABLED`, `QUIZ_GEN_MOCK`. Only student HS10-09 is free for new write specs.

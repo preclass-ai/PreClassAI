@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     guest_access_enabled: bool = False  # anonymous survey access (POST /v1/auth/guest); 404 when off
     guest_class_code: str = "KS"  # survey class guests join; its assignments are created by `python -m seed.survey`
     guest_max_active: int = 500  # guests seen in the last 14 days; beyond it new guests get 503
-    guest_create_per_hour: int = 60  # per real client IP; a classroom shares one Wi-Fi (NAT), so keep it generous
+    guest_create_per_ip: int = 200  # per real client IP per 10 minutes (GUEST_CREATE_PER_IP); a classroom shares one Wi-Fi (NAT)
     guest_session_days: int = 14
     demo_replay: bool = False  # DEMO_REPLAY: teacher analysis answers with a recorded sample (no network), labelled "replay"
     chat_enabled: bool = False  # Habit (hints + chat) for students; every Habit route is 404 when off

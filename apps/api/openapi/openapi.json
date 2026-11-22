@@ -6181,7 +6181,7 @@
             "chatTokensIn": 0,
             "chatTokensOut": 0,
             "chatTotal": 120,
-            "createPerHourPerIp": 60,
+            "createPerIp": 200,
             "createdLastHour": 12,
             "maxActive": 500
           }
@@ -6230,9 +6230,9 @@
             "title": "Chattotal",
             "type": "integer"
           },
-          "createPerHourPerIp": {
-            "description": "GUEST_CREATE_PER_HOUR.",
-            "title": "Createperhourperip",
+          "createPerIp": {
+            "description": "GUEST_CREATE_PER_IP: guests one IP may create per 10 minutes.",
+            "title": "Createperip",
             "type": "integer"
           },
           "createdLastHour": {
@@ -6249,7 +6249,7 @@
           "activeGuests",
           "createdLastHour",
           "maxActive",
-          "createPerHourPerIp"
+          "createPerIp"
         ],
         "title": "SurveyStats",
         "type": "object"

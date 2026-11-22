@@ -28,7 +28,9 @@ NOT_ENABLED = ApiError(404, "NOT_FOUND", "Không tìm thấy")
 log = logging.getLogger("preclass.guest")
 WARN_AT = 0.8  # log a warning when a guest limit is 80% used
 
-create_limiter = LoginLimiter(window_s=3600)  # counts every guest created from an IP in the last hour
+GUEST_BUSY = "Hệ thống đang đông, em thử lại sau 1 phút nhé."
+# every guest created from an IP in the last 10 minutes
+create_limiter = LoginLimiter(window_s=600, message=GUEST_BUSY, code="GUEST_BUSY")
 resume_limiter = LoginLimiter(max_failures=20, window_s=600, message=WRONG_TOO_OFTEN)  # wrong tries per survey code / 10 minutes
 # all wrong codes together: stops enumeration, no IP
 guess_limiter = LoginLimiter(max_failures=300, window_s=600, message=WRONG_TOO_OFTEN)
@@ -66,12 +68,12 @@ async def stats(db: AsyncSession) -> dict[str, int]:
     last_hour = await db.scalar(select(func.count()).select_from(m.AppUser).where(
         m.AppUser.is_guest.is_(True), m.AppUser.created_at > datetime.now(UTC) - timedelta(hours=1)))
     return {"active_guests": await active_guests(db), "created_last_hour": int(last_hour or 0),
-            "max_active": cfg.guest_max_active, "create_per_hour_per_ip": cfg.guest_create_per_hour}
+            "max_active": cfg.guest_max_active, "create_per_ip": cfg.guest_create_per_ip}
 
 
 async def create_guest(db: AsyncSession, ip: str) -> m.AppUser:
     cfg = get_settings()
-    create_limiter.check(ip, cfg.guest_create_per_hour)
+    create_limiter.check(ip, cfg.guest_create_per_ip)
     cls = await survey_class(db)
     active = await active_guests(db)
     if active >= cfg.guest_max_active:
@@ -89,8 +91,8 @@ async def create_guest(db: AsyncSession, ip: str) -> m.AppUser:
     db.add(m.ClassMember(class_id=cls.id, user_id=user.id, role_in_class="STUDENT"))
     create_limiter.fail(ip)
     # Counts only: never the IP or the code in a log line.
-    if len(create_limiter.hits[ip]) >= WARN_AT * cfg.guest_create_per_hour:
-        log.warning("guest creation from one client at %d/%d per hour", len(create_limiter.hits[ip]), cfg.guest_create_per_hour)
+    if len(create_limiter.hits[ip]) >= WARN_AT * cfg.guest_create_per_ip:
+        log.warning("guest creation from one client at %d/%d per 10 min", len(create_limiter.hits[ip]), cfg.guest_create_per_ip)
     if active + 1 >= WARN_AT * cfg.guest_max_active:
         log.warning("active guests %d/%d (>= 80%% of GUEST_MAX_ACTIVE)", active + 1, cfg.guest_max_active)
     return user

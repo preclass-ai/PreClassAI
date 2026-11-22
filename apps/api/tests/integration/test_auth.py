@@ -68,7 +68,7 @@ async def test_csrf_header_and_origin_are_required_on_writes(client: httpx.Async
 
 
 async def test_login_rate_limit(client: httpx.AsyncClient) -> None:
-    for _ in range(5):
+    for _ in range(10):
         assert (await login(client, "gv.khac@preclass.local", "bad")).status_code == 401
     r = await login(client, "gv.khac@preclass.local", "bad")
     assert r.status_code == 429 and r.json()["code"] == "RATE_LIMITED"

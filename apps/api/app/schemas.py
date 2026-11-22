@@ -146,14 +146,14 @@ class SurveyStats(ApiModel):
     active_guests: int = Field(description="Guests seen or created in the last 14 days.")
     created_last_hour: int
     max_active: int = Field(description="GUEST_MAX_ACTIVE.")
-    create_per_hour_per_ip: int = Field(description="GUEST_CREATE_PER_HOUR.")
+    create_per_ip: int = Field(description="GUEST_CREATE_PER_IP: guests one IP may create per 10 minutes.")
     chat_total: int = Field(0, description="Habit replies stored so far.")
     chat_fallback_rate: float = Field(0, description="Share of LLM attempts that fell back to the rule reply.")
     chat_blocked: dict[str, int] = Field(default_factory=dict, description="Replies per blocked_reason.")
     chat_tokens_in: int = 0
     chat_tokens_out: int = 0
     chat_by_model: dict[str, int] = Field(default_factory=dict, description="Replies per model name (main, fallback, cache).")
-    model_config = ex({"activeGuests": 42, "createdLastHour": 12, "maxActive": 500, "createPerHourPerIp": 60,
+    model_config = ex({"activeGuests": 42, "createdLastHour": 12, "maxActive": 500, "createPerIp": 200,
                        "chatTotal": 120, "chatFallbackRate": 0.0, "chatBlocked": {"ANSWER_REQUEST": 7},
                        "chatTokensIn": 0, "chatTokensOut": 0})
 

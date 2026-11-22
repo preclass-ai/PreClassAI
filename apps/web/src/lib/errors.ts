@@ -5,6 +5,7 @@ const MESSAGES: Record<string, string> = {
   NETWORK: "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
   UNAUTHENTICATED: "Phiên đăng nhập đã hết. Vui lòng đăng nhập lại.",
   INVALID_CREDENTIALS: "Sai tài khoản hoặc mật khẩu.",
+  GUEST_BUSY: "Hệ thống đang đông, em thử lại sau 1 phút nhé.",
   RATE_LIMITED: "Em nhập sai nhiều lần, thử lại sau ít phút nhé.",
   CSRF: "Yêu cầu bị từ chối. Tải lại trang rồi thử lại.",
   FORBIDDEN_ROLE: "Tài khoản này không có quyền thực hiện thao tác này.",

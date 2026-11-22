@@ -105,13 +105,14 @@ async def test_guest_code_is_not_a_password_login(client: httpx.AsyncClient, gue
 
 
 async def test_create_is_rate_limited_per_ip(client: httpx.AsyncClient, guests_on: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GUEST_CREATE_PER_HOUR", "2")
+    monkeypatch.setenv("GUEST_CREATE_PER_IP", "2")
     get_settings.cache_clear()
     await new_guest(client)
     await new_guest(client)
     client.cookies.clear()
     r = await client.post("/v1/auth/guest", json={})
-    assert r.status_code == 429 and r.json()["code"] == "RATE_LIMITED"
+    assert r.status_code == 429 and r.json()["code"] == "GUEST_BUSY" and "Hệ thống đang đông" in r.text
+    assert "nhập sai" not in r.text
 
 
 async def test_capacity_limit(client: httpx.AsyncClient, guests_on: None, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -20,6 +20,7 @@ dependencies = [
   "python-pptx>=1.0.2",
   "defusedxml>=0.7.1",
   "pdfplumber>=0.11.11",
+  "tzdata>=2024.1",  # ZoneInfo("Asia/Ho_Chi_Minh") must not depend on the OS zoneinfo (slim images, Windows)
 ]
 
 [dependency-groups]

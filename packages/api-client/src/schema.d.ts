@@ -4361,7 +4361,7 @@ export interface components {
          *       "chatTokensIn": 0,
          *       "chatTokensOut": 0,
          *       "chatTotal": 120,
-         *       "createPerHourPerIp": 60,
+         *       "createPerIp": 200,
          *       "createdLastHour": 12,
          *       "maxActive": 500
          *     }
@@ -4409,10 +4409,10 @@ export interface components {
              */
             chatTotal: number;
             /**
-             * Createperhourperip
-             * @description GUEST_CREATE_PER_HOUR.
+             * Createperip
+             * @description GUEST_CREATE_PER_IP: guests one IP may create per 10 minutes.
              */
-            createPerHourPerIp: number;
+            createPerIp: number;
             /** Createdlasthour */
             createdLastHour: number;
             /**
