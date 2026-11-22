@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import habit
 from app.config import get_settings
+from app.generation.providers import ProviderHTTPError
 from app.habit import llm
 from app.ids import uid
 from app.lessonplan import quizgen
@@ -183,3 +184,57 @@ async def test_whole_flow_review_cards_gate_and_habit_points_to_a_card(client: h
     assert hint["hintLevel"] == 1 and hint["reply"] == next(b for b in ai_items if b["id"] == item["id"])["payload"]["hints"][0]  # AI hints are fixed
     done = (await client.post(f"{url_s}/attempts", json={"itemId": item["id"], "answer": {"choice": "A"}, "requestId": "33333333-3333-4333-8333-333333333333"})).json()
     assert done["sourceQuote"] and done["correctAnswer"].startswith(("A.", "B.", "C.", "D.")) and done["explanation"]  # "Theo giáo án: <quote>"
+
+
+class ReviewBroken:
+    """Quiz answers, the review call fails with the given error."""
+
+    def __init__(self, err: BaseException) -> None:
+        self.err = err
+
+    async def complete(self, system: str, user: str, max_tokens: int, timeout: float | None = None) -> tuple[str, int, int]:
+        if system == quizgen.SYSTEM_REVIEW:
+            raise self.err
+        return await quizgen.MockQuizLLM().complete(system, user, max_tokens)
+
+
+@pytest.mark.parametrize("err,status", [(ProviderHTTPError(400, "json_validate_failed"), "400"), (TimeoutError(), "TimeoutError")])
+async def test_a_failed_review_does_not_cost_the_quiz(client: httpx.AsyncClient, db: AsyncSession, gen: pytest.MonkeyPatch,
+                                                      err: BaseException, status: str) -> None:
+    gen.setenv("QUIZ_GEN_MOCK", "false")
+    get_settings.cache_clear()
+    gen.setattr(llm, "get_chat_llm", lambda: ReviewBroken(err))
+    await login(client, "gv.dia@preclass.local")
+    p = await upload(client)
+    assert p["aiState"] == "done" and p["aiQuizCount"] >= 5 and p["aiReviewCount"] == 0  # the quiz is saved
+    assert p["aiStats"]["review"] == {"failed": True, "reason": "model_error", "status": status, "failed_models": []}
+    assert p["aiStats"]["quiz"]["valid"] == p["aiQuizCount"]
+    quiz_ids = {i["id"] for i in (await client.get(f"/v1/lesson-plans/{p['id']}/ai-items")).json()["items"] if i["kind"] == "quiz"}
+
+    # "Tạo lại" with a working model redoes only the review: the quiz drafts keep their ids
+    gen.setattr(llm, "get_chat_llm", lambda: quizgen.MockQuizLLM())
+    await quizgen.run_plan(db, UUID(p["id"]))
+    after = (await client.get(f"/v1/lesson-plans/{p['id']}")).json()
+    items = (await client.get(f"/v1/lesson-plans/{p['id']}/ai-items")).json()["items"]
+    assert after["aiReviewCount"] >= 4 and "failed" not in after["aiStats"]["review"]
+    assert {i["id"] for i in items if i["kind"] == "quiz"} == quiz_ids
+
+
+async def test_review_cards_all_rejected_are_marked_not_drafted(client: httpx.AsyncClient, gen: pytest.MonkeyPatch) -> None:
+    class FakeQuotes:
+        async def complete(self, system: str, user: str, max_tokens: int, timeout: float | None = None) -> tuple[str, int, int]:
+            raw, a, b = await quizgen.MockQuizLLM().complete(system, user, max_tokens)
+            data = json.loads(raw)
+            for c in data["cards"]:
+                c["source_quote"] = "Một câu hoàn toàn khác không hề có trong giáo án của tiết học này đâu."
+            return json.dumps(data, ensure_ascii=False), a, b
+
+    gen.setenv("QUIZ_GEN_MOCK", "false")
+    get_settings.cache_clear()
+    gen.setattr(llm, "get_chat_llm", lambda: FakeQuotes())
+    await login(client, "gv.dia@preclass.local")
+    p = await upload(client)
+    r = p["aiStats"]["review"]
+    assert p["aiReviewCount"] == 0 and r["failed"] is True and r["reason"] == "all_rejected" and r["rejected"] == {"quote_not_in_plan": 5}
+    assert len(r["quote_scores"]) == 5 and all(isinstance(x, int) and x < 90 for x in r["quote_scores"])  # numbers only
+    assert p["aiQuizCount"] >= 5

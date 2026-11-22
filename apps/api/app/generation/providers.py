@@ -223,11 +223,25 @@ FORMAT = (
 
 
 class ProviderHTTPError(RuntimeError):
-    """The provider answered with an HTTP error. `status` and a body of at most 300 characters; no secrets."""
+    """The provider answered with an HTTP error. `status` and a short detail (at most 200 characters; no secrets)."""
 
     def __init__(self, status: int, detail: str) -> None:
         super().__init__(f"HTTP {status}: {detail}")
         self.status = status
+        self.detail = detail
+
+
+def clean_error_body(raw: bytes, key: str) -> str:
+    """At most 200 characters for the operator. A JSON error keeps only code, type and message (never `failed_generation`, which
+    can echo the model output and so the lesson text); the key is masked."""
+    text = raw.decode("utf-8", "replace")
+    try:
+        err = json.loads(text).get("error")
+        if isinstance(err, dict):
+            text = " ".join(str(err[k]) for k in ("code", "type", "message") if err.get(k))
+    except (ValueError, AttributeError):
+        pass
+    return text.replace(key, "***")[:200] if key else text[:200]
 
 
 class OpenAICompatibleProvider:
@@ -244,8 +258,7 @@ class OpenAICompatibleProvider:
             with urllib.request.urlopen(req, timeout=self.timeout) as r:  # noqa: S310
                 out: dict[str, Any] = json.loads(r.read())
         except urllib.error.HTTPError as e:  # status + a short body for the operator; never the key or the request headers
-            detail = e.read(2000).decode("utf-8", "replace").replace(self.key, "***")[:300]
-            raise ProviderHTTPError(e.code, detail) from None
+            raise ProviderHTTPError(e.code, clean_error_body(e.read(4000), self.key)) from None
         return out
 
     async def generate(self, req: GenRequest) -> ProviderResult:

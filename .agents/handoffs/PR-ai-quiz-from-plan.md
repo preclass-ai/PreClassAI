@@ -58,3 +58,12 @@ E2E_BASE_URL=... pnpm exec playwright test
 - The real model's draft quality is unmeasured; the e2e uses the mock model.
 - Hints 4 to 10 depend on `CHAT_MODE=llm`; in rule mode they repeat hint 3 plus a pointer to the source.
 - The CSV "ôn trước" column says `khong_co_bai_on` for lessons without review cards.
+
+## Real-model run findings (Groq), and the fix
+
+- Lesson 2: quiz 7/10 valid. Review: qwen failed with `ProviderHTTPError`, the gpt-oss-120b fallback wrote 5 cards, all rejected as `quote_not_in_plan`.
+- Provider errors now carry `status` and `detail` (at most 200 characters: JSON `code`, `type`, `message` only, never `failed_generation`, key masked). `OpenAIChat` records which model failed first (`attempts`, "model:status"); the script prints it.
+- Rate limit or 5xx (429, 500, 502, 503) is retried once after the wait the provider asked for (capped at 30 s, 12 s if unsaid). 400, 401 and timeouts are not retried.
+- `max_tokens` of the review call went from 3000 to 1800 and quiz from 4000 to 3500: the provider counts it toward the per-minute token limit, together with the plan text sent twice (quiz, then review).
+- Quotes: both sides are folded (NFC, soft hyphens, hyphen and newline as a word break, spaces, case, accents) and a quote of 30 characters or more passes at a 90% partial match (difflib, no new dependency). The review prompt now requires one sentence copied word for word; `points` is the rewritten part.
+- A failed review no longer costs the quiz: each kind is saved on its own, the failed kind is marked in `aiStats` (`failed`, `reason`, `status`), the screen says "Chưa soạn được thẻ ôn", and "Tạo lại câu hỏi" redoes only the failed kind.

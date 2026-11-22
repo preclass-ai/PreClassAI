@@ -93,3 +93,89 @@ def test_mock_model_output_passes_the_validators() -> None:
     raw, _, _ = asyncio.run(MockQuizLLM().complete(quizgen.SYSTEM_QUIZ, f"<plan>\n{PLAN}\n</plan>\nSoạn cần 3 câu hỏi", 100))
     ok, bad = parse_items(raw, "questions", AiQuestion)
     assert ok and bad == 0 and all(check_question(x, src) is None for x in ok)  # type: ignore[arg-type]
+
+
+# ---- quote matching: both sides are folded the same way
+import unicodedata  # noqa: E402
+
+from app.generation.providers import ProviderHTTPError, clean_error_body  # noqa: E402
+from app.lessonplan.quizgen import FUZZY_MIN, fold, quote_score  # noqa: E402
+
+LONG = "Dân cư tập trung đông ở đồng bằng và đô thị, thưa thớt ở miền núi do điều kiện tự nhiên và lịch sử khai thác lãnh thổ."
+
+
+def test_nfc_and_nfd_spellings_match() -> None:
+    nfd = unicodedata.normalize("NFD", LONG)
+    assert nfd != LONG and quote_score(nfd, SRC) == 100
+    assert fold(nfd) == fold(LONG)
+
+
+def test_line_breaks_and_pdf_hyphens_do_not_matter() -> None:
+    broken = "Dân cư tập trung đông ở đồng bằng và đô\nthị, thưa thớt ở miền núi do điều kiện tự\n  nhiên và lịch sử khai thác lãnh thổ."
+    hyphen = "Dân cư tập trung đông ở đồng bằng và đô thị, thưa thớt ở miền núi do điều kiện tự nhiên và lịch sử khai thác lãnh-\nthổ."
+    soft = "Dân cư tập trung đông ở đồng bằng và đô thị, thưa thớt ở miền núi do điều kiện tự nhiên và lịch sử khai thác lãn­h thổ."
+    spaced = "Dân cư tập trung đông ở đồng bằng và đô thị, thưa thớt ở miền núi do điều kiện tự nhiên và lịch sử khai thác lãnh- thổ."
+    for q in (broken, soft, spaced, LONG.upper()):
+        assert quote_score(q, SRC) == 100, q
+    assert quote_score(hyphen, SRC) == 100
+    wrapped = Source("Dân cư tập trung đông ở đồng bằng và đô-\nthị, thưa thớt ở miền núi do điều kiện tự nhiên.")  # the PLAN is hyphen-wrapped
+    assert quote_score("Dân cư tập trung đông ở đồng bằng và đô thị, thưa thớt ở miền núi do điều kiện tự nhiên.", wrapped) == 100
+
+
+def test_fuzzy_match_accepts_small_slips_and_rejects_a_rewrite() -> None:
+    slip = LONG.replace("thưa thớt", "thưa thớt hơn").replace("lãnh thổ", "lãnh thổ nước ta")
+    assert FUZZY_MIN <= quote_score(slip, SRC) < 100 and quizgen.quote_ok(slip, SRC)
+    rewrite = "Người dân sống chủ yếu ở vùng đồng bằng vì có nhiều thuận lợi hơn miền núi về giao thông và việc làm."
+    assert quote_score(rewrite, SRC) < FUZZY_MIN and not quizgen.quote_ok(rewrite, SRC)
+    short = "dân số nước ta 98,5 tr"  # under 30 characters: must be exact
+    assert len(fold(short)) < 30 and not quizgen.quote_ok(short, SRC)
+
+
+# ---- provider errors and the retry
+def test_error_body_keeps_status_text_short_and_hides_the_model_output() -> None:
+    body = '{"error":{"message":"Rate limit reached. Please try again in 7.5s","type":"tokens","code":"rate_limit_exceeded","failed_generation":"NỘI DUNG GIÁO ÁN"}}'.encode()
+    out = clean_error_body(body, "KEY123")
+    assert "rate_limit_exceeded" in out and "7.5s" in out and "NỘI DUNG GIÁO ÁN" not in out and len(out) <= 200
+    assert len(clean_error_body(b"x" * 5000 + b"KEY123", "KEY123")) == 200
+    assert "KEY123" not in clean_error_body(b"oops KEY123", "KEY123")
+
+
+class Flaky:
+    def __init__(self, *errors: BaseException) -> None:
+        self.errors, self.calls = list(errors), 0
+
+    async def complete(self, system: str, user: str, max_tokens: int, timeout: float | None = None) -> tuple[str, int, int]:
+        self.calls += 1
+        if self.errors:
+            raise self.errors.pop(0)
+        return await MockQuizLLM().complete(system, user, max_tokens)
+
+
+def _ask_with(client: Flaky) -> object:
+    return asyncio.run(quizgen._ask(client, quizgen.SYSTEM_QUIZ, PLAN, "Soạn cần 3 câu hỏi", "questions", AiQuestion, 100, 60.0))  # noqa: SLF001
+
+
+def test_429_is_retried_once_after_the_wait_the_provider_asked_for(monkeypatch: pytest.MonkeyPatch) -> None:
+    waits: list[float] = []
+
+    async def fake_sleep(s: float) -> None:
+        waits.append(s)
+
+    monkeypatch.setattr(quizgen.asyncio, "sleep", fake_sleep)
+    c = Flaky(ProviderHTTPError(429, "rate_limit_exceeded Please try again in 1m2.5s"))
+    _ask_with(c)
+    assert c.calls == 2 and waits == [30.0]  # 62.5 s asked, capped
+    c = Flaky(ProviderHTTPError(503, "down"))
+    _ask_with(c)
+    assert c.calls == 2 and waits[-1] == 12.0
+    with pytest.raises(ProviderHTTPError) as e:  # a second 429 is not retried again
+        _ask_with(Flaky(ProviderHTTPError(429, "x"), ProviderHTTPError(429, "y")))
+    assert e.value.status == 429
+
+
+@pytest.mark.parametrize("err", [ProviderHTTPError(400, "json_validate_failed"), ProviderHTTPError(401, "bad key"), TimeoutError()])
+def test_400_and_timeout_are_not_retried(err: BaseException) -> None:
+    c = Flaky(err)
+    with pytest.raises(type(err)):
+        _ask_with(c)
+    assert c.calls == 1

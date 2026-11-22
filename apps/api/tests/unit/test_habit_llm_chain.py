@@ -141,12 +141,14 @@ def test_main_model_rate_limited_uses_the_fallback(monkeypatch: pytest.MonkeyPat
     out = asyncio.run(c.complete("s", "u", 220))[0]
     assert out.model == "openai/gpt-oss-120b" and [b["model"] for b in calls] == ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"]  # type: ignore[attr-defined]
     assert calls[1]["reasoning_effort"] == "low"  # the fallback gets ITS profile, not the main model's
+    assert out.attempts == ["qwen/qwen3.8-27b:429"]  # type: ignore[attr-defined]  # which model failed first, and with which status
 
 
 def test_both_models_down_raises_so_the_caller_uses_the_rule_reply(monkeypatch: pytest.MonkeyPatch) -> None:
     c = _fake_chat(monkeypatch, {"qwen/qwen3.8-27b": TimeoutError(), "openai/gpt-oss-120b": ProviderHTTPError(503, "down")}, [])
-    with pytest.raises(ProviderHTTPError):
+    with pytest.raises(ProviderHTTPError) as e:
         asyncio.run(c.complete("s", "u", 220))
+    assert e.value.attempts == ["qwen/qwen3.8-27b:TimeoutError", "openai/gpt-oss-120b:503"]  # type: ignore[attr-defined]
 
 
 def test_empty_content_after_cutting_think_is_an_error_reply() -> None:

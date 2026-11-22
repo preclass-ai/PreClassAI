@@ -46,6 +46,7 @@ export function AiDrafts({ plan }: { plan: Plan }) {
   const items = (list.data?.items ?? []).filter((i) => i.kind === tab);
   const counts = { quiz: plan.aiQuizCount, review: plan.aiReviewCount };
   const hint = reasonText(plan);
+  const tabFailed = (plan.aiStats as Record<string, { failed?: boolean } | null> | null)?.[tab]?.failed === true;
   const locked = !!plan.lessonId; // after "Tạo bài chuẩn bị" the drafts are frozen: edit the lesson itself
 
   return (
@@ -72,7 +73,13 @@ export function AiDrafts({ plan }: { plan: Plan }) {
       </div>
       <ErrorBox error={list.error ?? regen.error} />
       {list.isPending ? <Loading /> : null}
-      {!list.isPending && items.length === 0 && !busy ? <p className="muted">Chưa có mục nào.</p> : null}
+      {!list.isPending && items.length === 0 && !busy ? (
+        <Notice tone={tabFailed ? "warning" : "info"}>
+          {tabFailed
+            ? `${tab === "quiz" ? "Chưa soạn được câu hỏi" : "Chưa soạn được thẻ ôn"} cho giáo án này. Các phần khác vẫn được giữ. Thầy cô bấm Tạo lại câu hỏi để thử lần nữa.`
+            : "Chưa có mục nào."}
+        </Notice>
+      ) : null}
       {items.map((it) => (
         <AiItemCard key={`${it.id}-${it.status}-${JSON.stringify(it.payload).length}`} planId={planId} item={it} locked={locked} onChange={refresh} />
       ))}
