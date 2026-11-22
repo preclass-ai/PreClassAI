@@ -118,7 +118,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
       ) : null}
       {stage === "quiz" && hasReview && !inFocus ? (
         <p>
-          <button type="button" className="link-btn" onClick={() => setView("review")}>
+          <button type="button" className="review-link" onClick={() => setView("review")}>
             Xem lại phần ôn
           </button>
         </p>

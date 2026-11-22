@@ -619,7 +619,7 @@ fieldset { border: 0; padding: 0; margin: 0; }
 .steps li { flex: 1 1 140px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 999px; text-align: center; font-weight: 600; color: var(--text-muted, var(--text)); }
 .steps li.on { background: var(--info-bg); border-color: var(--primary, var(--border)); color: var(--text); }
 .steps li.done { background: var(--success-bg); }
-.link-btn { background: none; border: 0; padding: 4px 0; color: var(--primary, inherit); text-decoration: underline; font: inherit; cursor: pointer; min-height: 44px; }
+.review-link { background: none; border: 0; padding: 4px 0; color: var(--primary, inherit); text-decoration: underline; font: inherit; cursor: pointer; min-height: 44px; }
 .review-example { margin: 0; padding: 8px 12px; background: var(--surface-2); border-radius: var(--radius); }
 
 /* Mobile sheet details: grab handle, chips that scroll sideways and snap, inputs that never trigger iOS zoom */
