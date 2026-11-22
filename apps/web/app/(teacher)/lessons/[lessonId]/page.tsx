@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, use } from "react";
 import { StateBadge } from "@/components/badges";
-import { DataNotice, ErrorBox, Loading, PageHeader } from "@/components/ui";
+import { ErrorBox, Loading, PageHeader } from "@/components/ui";
 import { Editor } from "@/features/editor";
 import { History } from "@/features/history";
 import { useLesson } from "@/features/lesson-data";
@@ -53,7 +53,6 @@ function LessonWorkspace({ lessonId }: { lessonId: string }) {
           </>
         }
       />
-      <DataNotice />
       <nav className="tabs" role="tablist" aria-label="Các bước của bài">
         {tabs.map((t) => (
           <button

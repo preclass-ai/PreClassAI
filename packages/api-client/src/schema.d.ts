@@ -1236,9 +1236,11 @@ export interface components {
          *           "classId": "d97fbc44-edb6-5333-b65d-1427e836354c",
          *           "dueAt": "2026-11-30T23:59:00+07:00",
          *           "id": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
+         *           "lessonId": "712030dc-698a-5be5-9781-5d7a907b3628",
          *           "lessonTitle": "Phân bố dân cư theo vùng",
          *           "openAt": "2026-11-15T09:00:00+07:00",
-         *           "publishedVersionId": "c3dc4c47-da3a-5734-89c4-261ab71ee0bf"
+         *           "publishedVersionId": "c3dc4c47-da3a-5734-89c4-261ab71ee0bf",
+         *           "revisionNo": 1
          *         }
          *       ]
          *     }
@@ -1256,9 +1258,11 @@ export interface components {
          *       "classId": "d97fbc44-edb6-5333-b65d-1427e836354c",
          *       "dueAt": "2026-11-30T23:59:00+07:00",
          *       "id": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
+         *       "lessonId": "712030dc-698a-5be5-9781-5d7a907b3628",
          *       "lessonTitle": "Phân bố dân cư theo vùng",
          *       "openAt": "2026-11-15T09:00:00+07:00",
-         *       "publishedVersionId": "c3dc4c47-da3a-5734-89c4-261ab71ee0bf"
+         *       "publishedVersionId": "c3dc4c47-da3a-5734-89c4-261ab71ee0bf",
+         *       "revisionNo": 1
          *     }
          */
         AssignmentOut: {
@@ -1279,6 +1283,12 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Lessonid
+             * Format: uuid
+             * @description Lesson the published version comes from (link back to it).
+             */
+            lessonId: string;
             /** Lessontitle */
             lessonTitle: string;
             /**
@@ -1291,6 +1301,11 @@ export interface components {
              * Format: uuid
              */
             publishedVersionId: string;
+            /**
+             * Revisionno
+             * @description Revision number of the lesson that was published ("Bản #n").
+             */
+            revisionNo: number;
         };
         /**
          * AttemptRequest
@@ -1820,6 +1835,7 @@ export interface components {
          *           "code": "10A1",
          *           "grade": 10,
          *           "id": "d97fbc44-edb6-5333-b65d-1427e836354c",
+         *           "isSurvey": false,
          *           "studentCount": 15
          *         }
          *       ]
@@ -1837,6 +1853,7 @@ export interface components {
          *       "code": "10A1",
          *       "grade": 10,
          *       "id": "d97fbc44-edb6-5333-b65d-1427e836354c",
+         *       "isSurvey": false,
          *       "studentCount": 15
          *     }
          */
@@ -1853,6 +1870,12 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Issurvey
+             * @description The anonymous survey class (GUEST_CLASS_CODE): its students are guests.
+             * @default false
+             */
+            isSurvey: boolean;
             /** Studentcount */
             studentCount: number;
         };
@@ -3044,7 +3067,6 @@ export interface components {
          *             "sourceVersion": 1
          *           },
          *           "id": "e6c6a1fd-65a0-5f3b-9657-cce4b6cd583c",
-         *           "rationale": "Dữ liệu minh họa",
          *           "relation": "derived_from",
          *           "status": "VERIFIED"
          *         }
@@ -3057,7 +3079,7 @@ export interface components {
          *           "id": "e6c6a1fd-65a0-5f3b-9657-cce4b6cd583c",
          *           "isValid": true,
          *           "reviewerId": "eb9a9e82-7954-5e82-a597-16c6123031ff",
-         *           "reviewerName": "Cô Địa Lí (minh họa)",
+         *           "reviewerName": "Cô Địa Lí",
          *           "sourceHashes": [
          *             "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f809"
          *           ]
@@ -3976,7 +3998,7 @@ export interface components {
          *       "classIds": [
          *         "d97fbc44-edb6-5333-b65d-1427e836354c"
          *       ],
-         *       "displayName": "Cô Địa Lí (minh họa)",
+         *       "displayName": "Cô Địa Lí",
          *       "email": "gv.dia@preclass.local",
          *       "id": "eb9a9e82-7954-5e82-a597-16c6123031ff",
          *       "role": "TEACHER"

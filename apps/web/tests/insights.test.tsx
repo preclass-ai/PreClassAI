@@ -72,7 +72,7 @@ describe("Insights", () => {
     post.mockResolvedValue({ jobId: "j" });
     wrap();
     expect(await screen.findByText("B (50%)")).toBeInTheDocument();
-    expect(screen.getByText("Bậc 2")).toBeInTheDocument();
+    expect(screen.getByText("Gợi ý vừa")).toBeInTheDocument();
     expect(screen.getByText("Cần dạy lại")).toBeInTheDocument();
     expect(screen.getByText(/Xin đáp án \(3\)/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Đề xuất dạy lại" }));

@@ -7,7 +7,7 @@ import { Button, ErrorBox, Loading, Notice } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api";
 import { errorCode } from "@/lib/errors";
 import { fmtPercent } from "@/lib/format";
-import { SKILL } from "@/lib/labels";
+import { HINT_LEVEL, SKILL } from "@/lib/labels";
 
 const REFUSAL: Record<string, string> = {
   ANSWER_REQUEST: "Xin đáp án",
@@ -73,7 +73,7 @@ export function Insights({ classId, assignmentId }: { classId: string; assignmen
                 </td>
                 <td>{fmtPercent(i.firstAttemptCorrectRate)}</td>
                 <td>{i.topWrongOption ? `${i.topWrongOption} (${fmtPercent(i.topWrongShare ?? null)})` : "Chưa có"}</td>
-                <td>{i.maxHintLevel ? `Bậc ${i.maxHintLevel}` : "Chưa dùng"}</td>
+                <td>{i.maxHintLevel ? (HINT_LEVEL[i.maxHintLevel]?.name ?? "Có dùng gợi ý") : "Chưa dùng"}</td>
                 <td>
                   {i.asks}
                   {i.needsReteach ? <> <span className="badge badge-warning">Cần dạy lại</span></> : null}

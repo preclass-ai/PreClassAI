@@ -138,7 +138,7 @@ class UserOut(ApiModel):
     is_guest: bool = False
     survey_code: str | None = Field(default=None, description="Anonymous survey code (guests only), e.g. KS-7H4P.")
     model_config = ex({
-        "id": I["teacher"], "role": "TEACHER", "displayName": "Cô Địa Lí (minh họa)",
+        "id": I["teacher"], "role": "TEACHER", "displayName": "Cô Địa Lí",
         "email": "gv.dia@preclass.local", "loginCode": None, "classIds": [I["class"]]})
 
 
@@ -172,12 +172,13 @@ class ClassOut(ApiModel):
     code: str
     grade: Literal[10, 11]
     student_count: int
-    model_config = ex({"id": I["class"], "code": "10A1", "grade": 10, "studentCount": 15})
+    is_survey: bool = Field(False, description="The anonymous survey class (GUEST_CLASS_CODE): its students are guests.")
+    model_config = ex({"id": I["class"], "code": "10A1", "grade": 10, "studentCount": 15, "isSurvey": False})
 
 
 class ClassList(Page):
     items: list[ClassOut]
-    model_config = ex({"items": [{"id": I["class"], "code": "10A1", "grade": 10, "studentCount": 15}],
+    model_config = ex({"items": [{"id": I["class"], "code": "10A1", "grade": 10, "studentCount": 15, "isSurvey": False}],
                        "nextCursor": None})
 
 
@@ -605,13 +606,13 @@ class ProvenanceOut(ApiModel):
             "anchorId": I["anchor"], "code": ANCHOR_CODE, "kind": "TABLE_CELL",
             "locator": {"table": 0, "row": 1, "col": 1}, "excerpt": "23,2", "sourceRevisionId": I["srcrev"],
             "sourceTitle": "Phân bố dân cư theo vùng (dan-so-vung)", "sourceVersion": 1},
-            "relation": "derived_from", "rationale": "Dữ liệu minh họa", "status": "VERIFIED"}],
+            "relation": "derived_from", "rationale": None, "status": "VERIFIED"}],
         "events": [{"id": I["event"], "actorType": "AI", "actorId": None, "operation": "GENERATE",
                     "beforeHash": None, "afterHash": H, "generatorVersion": "mock-v1", "createdAt": T0}],
         "validations": [{"id": I["event"], "rule": "VAL-04", "severity": "BLOCKER", "outcome": "PASS",
                          "evidence": {}, "method": "rule", "contentHash": H, "isCurrent": True, "createdAt": T0}],
         "reviews": [{"id": I["event"], "action": "APPROVE", "contentHash": H, "sourceHashes": [H2],
-                     "reviewerId": I["teacher"], "reviewerName": "Cô Địa Lí (minh họa)", "note": None,
+                     "reviewerId": I["teacher"], "reviewerName": "Cô Địa Lí", "note": None,
                      "isValid": True, "createdAt": T1}]})
 
 
@@ -721,11 +722,14 @@ class AssignmentOut(ApiModel):
     published_version_id: UUID
     class_id: UUID
     class_code: str
+    lesson_id: UUID = Field(description="Lesson the published version comes from (link back to it).")
     lesson_title: str
+    revision_no: int = Field(description="Revision number of the lesson that was published (\"Bản #n\").")
     open_at: datetime
     due_at: datetime
     model_config = ex({"id": I["assign"], "publishedVersionId": I["pub"], "classId": I["class"],
-                       "classCode": "10A1", "lessonTitle": "Phân bố dân cư theo vùng", "openAt": T1,
+                       "classCode": "10A1", "lessonId": I["lesson"], "lessonTitle": "Phân bố dân cư theo vùng",
+                       "revisionNo": 1, "openAt": T1,
                        "dueAt": "2026-11-30T23:59:00+07:00"})
 
 

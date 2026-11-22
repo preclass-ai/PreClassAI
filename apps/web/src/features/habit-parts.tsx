@@ -16,7 +16,7 @@ export function SourceRef({ excerpt }: { label?: string; excerpt: string }) {
   const long = excerpt.length > 150; // about four lines in the panel
   return (
     <blockquote className="habit-source">
-      <span className="habit-source-label">Tài liệu giáo viên đã duyệt</span>
+      <span className="habit-source-label">Trích từ bài học</span>
       <span className={`habit-source-text${open ? " open" : ""}`}>{excerpt}</span>
       {long ? (
         <button type="button" className="habit-more" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
