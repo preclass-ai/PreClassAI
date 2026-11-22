@@ -229,6 +229,8 @@ Progress = Callable[[int, int], None]
 
 
 def _run(kind: str, data: bytes, lim: Limits, progress: Progress | None = None) -> Any:
+    if lim.timeout_s <= 0:  # no time at all: time out now, never race a child that could finish inside the first poll
+        raise ApiError(422, "PARSE_TIMEOUT", f"Đọc tệp quá {lim.timeout_s} giây nên bị hủy")
     ctx = multiprocessing.get_context("spawn")
     recv, send = ctx.Pipe(duplex=False)
     prog = ctx.Array("i", 2, lock=False)  # (page, pages) written by the child for kind "plan"
@@ -237,10 +239,10 @@ def _run(kind: str, data: bytes, lim: Limits, progress: Progress | None = None) 
     send.close()
     try:
         deadline = time.monotonic() + lim.timeout_s
-        while not recv.poll(0.5):
+        while not recv.poll(max(0.0, min(0.5, deadline - time.monotonic()))):
             if progress is not None:
                 progress(prog[0], prog[1])
-            if time.monotonic() > deadline:
+            if time.monotonic() >= deadline:
                 raise ApiError(422, "PARSE_TIMEOUT", f"Đọc tệp quá {lim.timeout_s} giây nên bị hủy")
         try:
             msg = recv.recv()
