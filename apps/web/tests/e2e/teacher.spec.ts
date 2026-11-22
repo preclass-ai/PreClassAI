@@ -41,7 +41,7 @@ test("source library lists anchors of a source", async ({ page }) => {
   await login(page, "gv.dia@preclass.local");
   await page.getByRole("link", { name: "Nguồn", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Thư viện nguồn" })).toBeVisible();
-  await page.locator("tbody tr a").first().click();
+  await page.locator("tbody tr a").filter({ hasNotText: /^(Scan|Nguồn thử)/ }).first().click();
   await expect(page.getByRole("heading", { name: /Đoạn nguồn \(bản v\d+\)/ })).toBeVisible();
   await expect(page.locator("td.mono").first()).toBeVisible();
   await expectNoHorizontalScroll(page);
