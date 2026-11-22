@@ -19,7 +19,7 @@ SRC = Source(PLAN)
 
 def q(**kw: object) -> AiQuestion:
     base: dict[str, object] = {
-        "stem": "Dân số nước ta năm 2021 là bao nhiêu triệu người?", "options": ["98,5 triệu người", "90 triệu người", "80 triệu người", "70 triệu người"],
+        "stem": "Dân số nước ta năm 2021 là bao nhiêu triệu người?", "options": ["98,5 triệu người", "Đứng thứ nhất Đông Nam Á", "Đứng thứ hai Đông Nam Á", "Không được nêu trong giáo án"],
         "correct_index": 0, "explanation": "Theo giáo án, dân số năm 2021 là 98,5 triệu người.",
         "hints": ["Em đọc lại phần dân số trong bài.", "Em tìm con số gắn với năm đề hỏi.", "Em chú ý đơn vị là triệu người."],
         "skill_tag": "READ_TABLE", "source_quote": "Dân số nước ta năm 2021 là 98,5 triệu người, đứng thứ ba Đông Nam Á."}
@@ -37,7 +37,103 @@ def test_fake_quote_is_rejected() -> None:
 
 def test_number_that_is_not_in_the_plan_is_rejected() -> None:
     assert check_question(q(stem="Dân số nước ta năm 2021 là bao nhiêu triệu người, so với 120 triệu?"), SRC) == "number_not_in_plan"
-    assert check_question(q(options=["99 triệu người", "90 triệu người", "80 triệu người", "70 triệu người"]), SRC) == "number_not_in_plan"
+    assert check_question(q(options=["99 triệu người", "Đứng thứ hai", "Đứng thứ nhất", "Không nêu"]), SRC) == "number_not_in_plan"
+
+
+def test_every_number_must_be_in_the_quoted_sentences_not_just_somewhere_in_the_plan() -> None:
+    right = q(options=["1 091 người", "Đứng thứ hai Đông Nam Á", "Đứng thứ nhất Đông Nam Á", "Không nêu"])  # 1 091 is in S2, the quote is S1
+    assert check_question(right, SRC) == "number_not_in_quote"  # the right answer's figure
+    distractor = q(options=["98,5 triệu người", "1 091 người", "Đứng thứ nhất Đông Nam Á", "Không nêu"])
+    assert check_question(distractor, SRC) == "number_not_in_quote"  # a distractor's figure
+    stem = q(stem="Năm 2021 đồng bằng sông Hồng có mật độ 1 091 người trên km2, dân số nước ta là bao nhiêu?")
+    assert check_question(stem, SRC) == "number_not_in_quote"
+    both = q(source_sentence_ids=[1, 2], source_quote="", options=["98,5 triệu người", "1 091 người", "Đứng thứ nhất", "Không nêu"])
+    assert check_question(both, SRC) is None  # the figure is fine once its sentence is cited
+
+
+@pytest.mark.parametrize("stem", [
+    "Trong hoạt động nhóm, học sinh cần sử dụng thiết bị nào để hoàn thành nhiệm vụ?",
+    "Giáo viên yêu cầu các em nộp bài qua phần mềm nào sau đây?",
+    "Mỗi nhóm học sinh cần chia sẻ sản phẩm lên ứng dụng nào?",
+    "Theo phân công của giáo viên, nhóm trưởng ghi kết quả vào đâu?",
+])
+def test_questions_about_running_the_class_are_rejected(stem: str) -> None:
+    assert check_question(q(stem=stem), SRC) == "procedural"
+
+
+def test_a_geography_question_with_the_word_nhom_is_kept() -> None:
+    assert check_question(q(stem="Nhóm tuổi nào chiếm tỉ trọng cao nhất trong cơ cấu dân số nước ta năm 2021?"), SRC) is None
+
+
+def test_sentence_references_become_theo_giao_an() -> None:
+    from app.lessonplan.quizgen import clean_refs
+
+    assert clean_refs("Số liệu nằm ở mục [3] của bài.") == "Số liệu nằm theo giáo án của bài."
+    assert clean_refs("Theo [S2], dân số tăng.") == "Theo giáo án, dân số tăng."
+    assert clean_refs("[S4] nêu mật độ dân số.") == "Theo giáo án nêu mật độ dân số."
+    assert clean_refs("Đáp án đúng, xem [1, 2].") == "Đáp án đúng, theo giáo án."
+    assert clean_refs("Không có tham chiếu nào.") == "Không có tham chiếu nào."
+    d = q(explanation="Theo [S1] và mục [2], dân số là 98,5 triệu người.", hints=["Đọc [S1].", "Em xem mục [2] nhé.", "Chú ý đơn vị em nhé."])
+    assert "[" not in d.explanation and all("[" not in h for h in d.hints)  # cleaned before the draft is stored
+    c = card(points=["Năm 2021 có 98,5 triệu người [S1].", "Đứng thứ ba [S1]."], check={
+        "statement": "Dân số nước ta năm 2021 là 98,5 triệu người.", "answer_true": True, "explanation": "Đúng, xem [S1]."})
+    assert "[" not in " ".join(c.points) and "[" not in c.check.explanation
+
+
+def _plan_sections() -> tuple[list[object], dict[object, object], list[tuple[str, str]]]:
+    """A 5512 plan in miniature: (sections, anchors by id, what the model may see)."""
+    from types import SimpleNamespace as NS
+    from uuid import uuid4
+
+    by: dict[object, object] = {}
+
+    def sec(kind: str, sub: str | None, *items: tuple[str, str]) -> NS:
+        ids = []
+        for k, text in items:
+            a = NS(id=uuid4(), kind=k, excerpt=text)
+            by[a.id] = a
+            ids.append(a.id)
+        return NS(kind=kind, sub=sub, anchor_ids=ids)
+
+    secs = [
+        sec("objectives", None, ("HEADING", "1. Kiến thức"), ("PARAGRAPH", "Trình bày được đặc điểm phân bố dân cư của nước ta hiện nay."),
+            ("PARAGRAPH", "2. Năng lực"), ("PARAGRAPH", "a) Năng lực chung: tự chủ và tự học thông qua nhiệm vụ cá nhân của lớp."),
+            ("PARAGRAPH", "b) Năng lực số: sử dụng Padlet để chia sẻ sản phẩm học tập."), ("PARAGRAPH", "3. Phẩm chất: chăm chỉ, trách nhiệm với tập thể.")),
+        sec("equipment", None, ("PARAGRAPH", "Thiết bị dạy học: máy chiếu, điện thoại, bảng phụ cho các nhóm.")),
+        sec("activity", None, ("HEADING", "Hoạt động 2: Hình thành kiến thức"), ("PARAGRAPH", "Dân số nước ta năm 2021 là 98,5 triệu người, đứng thứ ba Đông Nam Á.")),
+        sec("sub", "noi_dung", ("PARAGRAPH", "Em hãy nhận xét sự phân bố dân cư theo bảng số liệu dưới đây?"), ("TABLE_CELL", "Đồng bằng sông Hồng 1 091 người trên km2")),
+        sec("sub", "san_pham", ("PARAGRAPH", "Sản phẩm: bài trình bày của các nhóm về phân bố dân cư nước ta.")),
+        sec("sub", "to_chuc", ("PARAGRAPH", "Giáo viên chuyển giao nhiệm vụ và chia lớp thành 4 nhóm làm việc trên Zalo.")),
+        sec("step", "to_chuc", ("PARAGRAPH", "Bước 1: Chuyển giao nhiệm vụ"), ("PARAGRAPH", "Giáo viên phân công các nhóm trưởng thu bài trên Padlet.")),
+        sec("step", "to_chuc", ("PARAGRAPH", "Bước 4: Kết luận, nhận định"), ("PARAGRAPH", "Dân cư nước ta tập trung đông ở đồng bằng và đô thị, thưa thớt ở miền núi.")),
+    ]
+    want = [
+        ("muc_tieu", "Trình bày được đặc điểm phân bố dân cư của nước ta hiện nay."),
+        ("noi_dung", "Dân số nước ta năm 2021 là 98,5 triệu người, đứng thứ ba Đông Nam Á."),
+        ("cau_hoi", "Em hãy nhận xét sự phân bố dân cư theo bảng số liệu dưới đây?"),
+        ("bang", "Đồng bằng sông Hồng 1 091 người trên km2"),
+        ("ket_luan", "Dân cư nước ta tập trung đông ở đồng bằng và đô thị, thưa thớt ở miền núi."),
+    ]
+    return secs, by, want
+
+
+def test_only_knowledge_content_reaches_the_model() -> None:
+    secs, by, want = _plan_sections()
+    assert quizgen.passages(secs, by, set()) == want  # no equipment, competencies, qualities, products, hand-over, group work, Padlet or Zalo
+
+
+def test_a_tagged_sentence_keeps_its_kind() -> None:
+    src = Source("Dân số nước ta năm 2021 là 98,5 triệu người, đứng thứ ba Đông Nam Á.\nEm hãy nhận xét sự phân bố dân cư theo bảng dưới đây?",
+                 {"Dân số nước ta năm 2021 là 98,5 triệu người, đứng thứ ba Đông Nam Á.": "noi_dung",
+                  "Em hãy nhận xét sự phân bố dân cư theo bảng dưới đây?": "cau_hoi"})
+    assert src.kinds == ["noi_dung", "cau_hoi"]
+
+
+def test_old_drafts_are_cleaned_for_display() -> None:
+    from app.lessonplan.quizgen import clean_payload
+
+    out = clean_payload("quiz", {"explanation": "Xem mục [4].", "hints": ["Đọc [S2].", "a", "b"]})
+    assert out["explanation"] == "Theo giáo án." and out["hints"][0] == "Đọc theo giáo án."
 
 
 def test_duplicate_options_are_rejected() -> None:

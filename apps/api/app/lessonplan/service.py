@@ -328,7 +328,7 @@ async def set_mcq_competency(db: AsyncSession, user: CurrentUser, plan_id: UUID,
 # ---------------------------------------------------------------- AI drafts: review, edit, regenerate
 def _ai_out(i: m.PlanAiItem) -> PlanAiItemOut:
     return PlanAiItemOut(id=i.id, kind=i.kind, position=i.position, status=i.status, origin=i.origin,
-                         payload=i.payload, source_quote=i.source_quote, needs_confirmation=i.needs_confirmation)
+                         payload=quizgen.clean_payload(i.kind, i.payload), source_quote=i.source_quote, needs_confirmation=i.needs_confirmation)
 
 
 async def list_ai_items(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> PlanAiList:
@@ -474,7 +474,7 @@ async def build_lesson(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> Pl
         src = _anchor_for(it.source_quote, by)
         if src is None:
             continue
-        d = it.payload
+        d = quizgen.clean_payload(it.kind, it.payload)  # sentence ids from older drafts never reach students
         if it.kind == "review":
             card = {"title": d["title"], "points": d["points"], "example": d["example"],
                     "check": {"statement": d["check"]["statement"], "answerTrue": d["check"]["answer_true"], "explanation": d["check"]["explanation"]}}
