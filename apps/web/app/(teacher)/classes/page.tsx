@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 import { Empty, ErrorBox, Loading, PageHeader } from "@/components/ui";
 import { api, unwrap } from "@/lib/api";
 import { AssignmentActions } from "@/features/assignments";
@@ -24,7 +24,9 @@ function ClassesView() {
     queryFn: () =>
       unwrap(api.GET("/v1/classes/{class_id}/assignments", { params: { path: { class_id: classId! } } })),
   });
-  const [open, setOpen] = useState<string | null>(null);
+  // The open assignment lives in the URL so a link (and Back) lands on that assignment's progress.
+  const open = params.get("assignment");
+  const href = (assignmentId: string | null) => `?class=${classId}${assignmentId ? `&assignment=${assignmentId}` : ""}`;
 
   return (
     <>
@@ -62,18 +64,19 @@ function ClassesView() {
       ) : (
         <ul className="stack plain">
           {assignments.data?.items.map((a) => (
-            <li key={a.id} className="card">
+            <li key={a.id} className="card" id={`a-${a.id}`}>
               <div className="section-head">
                 <div>
                   <h2>
-                    <Link href={`/lessons/${a.lessonId}`}>{a.lessonTitle}</Link>
+                    <Link href={href(a.id)} scroll={false}>{a.lessonTitle}</Link>
                   </h2>
                   <p className="muted small">
                     Giao từ Bản #{a.revisionNo} · Mở {fmtDateTime(a.openAt)} · hạn {fmtDateTime(a.dueAt)} ·{" "}
+                    <Link href={`/lessons/${a.lessonId}`}>Mở bài học</Link> ·{" "}
                     <Link href={`/lessons/${a.lessonId}?tab=publish`}>Mở phần giao bài</Link>
                   </p>
                 </div>
-                <button type="button" className="link-btn" onClick={() => setOpen(open === a.id ? null : a.id)}>
+                <button type="button" className="link-btn" onClick={() => router.replace(href(open === a.id ? null : a.id), { scroll: false })}>
                   {open === a.id ? "Ẩn tiến độ" : "Xem tiến độ và câu hỏi"}
                 </button>
               </div>

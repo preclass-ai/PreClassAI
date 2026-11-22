@@ -41,7 +41,7 @@ test("teacher changes a due time and the lesson page says where it is assigned",
   await card.getByLabel("Hạn nộp mới").fill(`${due.getFullYear()}-${pad(due.getMonth() + 1)}-${pad(due.getDate())}T23:59`);
   await card.getByRole("button", { name: "Lưu hạn" }).click();
   await expect(card.getByText(new RegExp(`hạn .*${due.getFullYear()}`))).toBeVisible();
-  await card.getByRole("link").first().click(); // title links to the lesson
+  await card.getByRole("link", { name: "Mở bài học" }).click();
   await expect(page.getByText(/Đã giao cho:/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Hủy giao" })).toHaveCount(0); // cancelling lives on the class page
   await expectNoHorizontalScroll(page);
