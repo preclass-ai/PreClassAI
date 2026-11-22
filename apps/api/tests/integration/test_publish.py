@@ -123,11 +123,11 @@ async def _blocks_as(c: httpx.AsyncClient, who: str) -> list[dict]:  # type: ign
     return await blocks(c, str(SEED_REV))
 
 
-def test_there_is_no_bulk_approve_endpoint() -> None:
+def test_the_only_bulk_approve_is_approve_all_for_clean_blocks() -> None:
     from app.main import app
 
     paths = [p for p in app.openapi()["paths"] if "approve" in p.lower() or "all" in p.rsplit("/", 1)[-1].lower()]
-    assert paths == []  # PR-02: one block per review call
+    assert paths == ["/v1/revisions/{revision_id}/approve-all"]  # PR-02 relaxed (K3): bulk only for blocks without warnings, nothing else
 
 
 # ----------------------------------------------------------------------------- AT-10: the gate
