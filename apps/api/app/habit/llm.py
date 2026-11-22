@@ -3,6 +3,7 @@ builds the prompt and talks to the provider. The model never receives the answer
 student has not answered, so a successful injection still has nothing to leak."""
 
 import asyncio
+import copy
 import re
 from typing import Any, Protocol
 
@@ -37,7 +38,7 @@ class ModelText(str):
 
 
 class ChatLLM(Protocol):
-    async def complete(self, system: str, user: str, max_tokens: int) -> tuple[str, int, int]: ...
+    async def complete(self, system: str, user: str, max_tokens: int, timeout: float | None = None) -> tuple[str, int, int]: ...
 
 
 def profile(model: str, host: str) -> dict[str, Any]:
@@ -86,16 +87,21 @@ class OpenAIChat:
         self.host = base_url.split("/")[2] if "//" in base_url else base_url
         self.providers = [OpenAICompatibleProvider(base_url, key, m, timeout=TIMEOUT) for m in self.models]
 
-    async def complete(self, system: str, user: str, max_tokens: int) -> tuple[str, int, int]:
+    async def complete(self, system: str, user: str, max_tokens: int, timeout: float | None = None) -> tuple[str, int, int]:
+        """`timeout` (seconds, per model) is for long jobs such as drafting questions; chat keeps the short default."""
         last: Exception | None = None
+        t = timeout or TIMEOUT
         for p in self.providers:
+            if timeout:
+                p = copy.copy(p)  # noqa: PLW2901 a per-call timeout must not leak into concurrent chat calls
+                p.timeout = t
             prof = profile(p.model, self.host)
             tok = prof.pop("_limit_param")
             body = {"model": p.model, "stream": False, tok: max_tokens, **prof,
                     "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
             try:
                 async with _SLOTS:
-                    data = await asyncio.wait_for(asyncio.to_thread(p._post, body), TIMEOUT + 1)  # noqa: SLF001
+                    data = await asyncio.wait_for(asyncio.to_thread(p._post, body), t + 1)  # noqa: SLF001
                 text, reasoning = split_reasoning(data["choices"][0]["message"])
             except Exception as e:  # noqa: BLE001 429, 5xx, timeout, bad payload: next model, finally the rule reply
                 last = e
@@ -113,7 +119,7 @@ class MockChatLLM:
     def __init__(self, reply: str | None = None) -> None:
         self.reply = reply
 
-    async def complete(self, system: str, user: str, max_tokens: int) -> tuple[str, int, int]:
+    async def complete(self, system: str, user: str, max_tokens: int, timeout: float | None = None) -> tuple[str, int, int]:
         text = self.reply or "Em đọc kỹ đề, tìm dữ liệu liên quan trong bài rồi thử làm từng bước nhé."
         return text, len(system + user) // 4, 30
 

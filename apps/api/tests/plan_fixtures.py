@@ -184,7 +184,7 @@ def plan_pdf(font: str, *, underline: str = "line", watermark: bool = True) -> b
     return p.done()
 
 
-def plan_docx(build: Callable[[object], None] | None = None, *, subject: str = "ĐỊA LÍ", grade: int = 10) -> bytes:
+def plan_docx(build: Callable[[object], None] | None = None, *, subject: str = "ĐỊA LÍ", grade: int = 10, knowledge: tuple[str, ...] = ()) -> bytes:
     """A one-lesson plan with an underlined answer run. Another subject (for example LỊCH SỬ) must parse the same way."""
     from docx import Document
 
@@ -195,7 +195,7 @@ def plan_docx(build: Callable[[object], None] | None = None, *, subject: str = "
     d.add_paragraph("Ngày soạn: 03/09/2026")
     d.add_paragraph("Ngày dạy: 22/09/2026")
     for t in ("I. MỤC TIÊU", "- Nhận thức khoa học địa lí: nêu được khái niệm.", "II. THIẾT BỊ", "- Tranh ảnh.", "III. TIẾN TRÌNH",
-              "HOẠT ĐỘNG 1: MỞ ĐẦU", "Em nghĩ gì về chủ đề này?", "HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI", "Khái niệm mẫu là một ví dụ.",
+              "HOẠT ĐỘNG 1: MỞ ĐẦU", "Em nghĩ gì về chủ đề này?", "HOẠT ĐỘNG 2: HÌNH THÀNH KIẾN THỨC MỚI", "Khái niệm mẫu là một ví dụ.", *knowledge,
               "HOẠT ĐỘNG 3: LUYỆN TẬP"):
         d.add_paragraph(t)
     for n, ans in ((1, "B"), (2, "")):

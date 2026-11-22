@@ -36,6 +36,7 @@ from app.schemas import (
     ProvenanceLinkOut,
     ProvenanceOut,
     ProvenanceUpdate,
+    ReviewCardPayload,
     ReviewEventOut,
     TransformationEventOut,
     ValidationResultOut,
@@ -47,7 +48,7 @@ PAYLOAD: dict[str, type[ApiModel]] = {
     "heading": HeadingPayload, "paragraph": ParagraphPayload, "instruction": InstructionPayload,
     "data_fact": DataFactPayload, "worksheet_item": WorksheetItemPayload, "option": OptionPayload,
     "answer_key": AnswerKeyPayload, "explanation": ExplanationPayload, "card_front": CardPayload,
-    "card_back": CardPayload,
+    "card_back": CardPayload, "review_card": ReviewCardPayload,
 }
 _KEEP: Any = object()  # sentinel: leave noSourceReason unchanged
 _DEP_KIND = {"option": "LABEL_OF", "answer_key": "ANSWER_OF", "card_back": "ANSWER_OF", "explanation": "EXPLANATION_OF"}

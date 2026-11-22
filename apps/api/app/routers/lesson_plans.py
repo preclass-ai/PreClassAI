@@ -13,12 +13,16 @@ from app.routers.sources import _read_upload
 from app.schemas import (
     CompetencyList,
     McqCompetency,
+    PlanAiItemOut,
+    PlanAiItemUpdate,
+    PlanAiList,
     PlanDetail,
     PlanJobLatest,
     PlanJobOut,
     PlanLessonOut,
     PlanList,
     PlanMcqAnswer,
+    PlanOut,
 )
 
 router = APIRouter(prefix="/lesson-plans", tags=["lesson-plans"])
@@ -92,3 +96,27 @@ async def set_competency(plan_id: UUID, mcq_id: UUID, body: McqCompetency, cu: T
              responses=errs(401, 403, (409, "LESSON_EXISTS"), 404))
 async def create_lesson(plan_id: UUID, cu: Teacher, db: Db) -> PlanLessonOut:
     return await service.build_lesson(db, cu, plan_id)
+
+
+@router.get("/{plan_id}/ai-items", operation_id="listPlanAiItems", response_model=PlanAiList,
+            summary="Questions and review cards the model drafted from this plan (owner only)",
+            description="Every item is `origin: ai_generated` with the plan passage it quotes (`sourceQuote`). Nothing here reaches students "
+            "until the teacher approves it and builds the lesson.", responses=errs(401, 403, 404))
+async def ai_items(plan_id: UUID, cu: Teacher, db: Db) -> PlanAiList:
+    return await service.list_ai_items(db, cu, plan_id)
+
+
+@router.post("/{plan_id}/ai-items/regenerate", status_code=202, operation_id="regeneratePlanAiItems", response_model=PlanOut,
+             summary="Redraft questions and review cards in the background; approved items stay",
+             description="Poll `GET /lesson-plans/{id}` for `aiState`. 409: `QUIZ_GEN_OFF`, `AI_BUSY`, `LESSON_EXISTS`.",
+             responses=errs(401, 403, 404, 409))
+async def regenerate(plan_id: UUID, cu: Teacher, db: Db) -> PlanOut:
+    return await service.regenerate_ai(db, cu, plan_id)
+
+
+@router.patch("/{plan_id}/ai-items/{item_id}", operation_id="updatePlanAiItem", response_model=PlanAiItemOut,
+              summary="Approve, reject or edit one drafted item (editing sends it back to draft)",
+              description="Approving confirms the model's answer. 409 `LESSON_EXISTS` once the lesson was built from the plan.",
+              responses=errs(401, 403, 404, 409, 422))
+async def update_ai_item(plan_id: UUID, item_id: UUID, body: PlanAiItemUpdate, cu: Teacher, db: Db) -> PlanAiItemOut:
+    return await service.update_ai_item(db, cu, plan_id, item_id, body)

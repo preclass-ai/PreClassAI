@@ -21,6 +21,8 @@ from app.schemas import (
     AttemptResult,
     ProgressItem,
     ProgressOut,
+    ReviewProgressIn,
+    ReviewState,
     StudentAssignmentList,
     StudentAssignmentOut,
     StudentAssignmentSummary,
@@ -28,6 +30,7 @@ from app.schemas import (
     StudentItem,
     StudentOption,
 )
+from app.student import review
 
 _CONTENT = {"heading", "paragraph", "data_fact", "instruction", "card_front"}  # card_back is the answer: never listed
 
@@ -96,7 +99,8 @@ async def get_assignment(db: AsyncSession, user: CurrentUser, assignment_id: UUI
             id=UUID(it["id"]), position=it["position"], item_type=p["itemType"], skill=p["skill"], stem=p["stem"],
             options=[StudentOption(label=o["payload"]["label"], text=o["payload"]["text"]) for o in opts],
             result=_result(snap, it["id"], att.is_correct) if att else None))
-    return StudentAssignmentOut(id=a.id, title=snap["title"], open_at=a.open_at, due_at=a.due_at, blocks=blocks, items=items)
+    return StudentAssignmentOut(id=a.id, title=snap["title"], open_at=a.open_at, due_at=a.due_at, blocks=blocks, items=items,
+                                review=review.cards(snap), review_state=await review.state(db, a.id, user.id))
 
 
 async def list_assignments(db: AsyncSession, user: CurrentUser) -> StudentAssignmentList:
@@ -172,3 +176,8 @@ async def progress(db: AsyncSession, user: CurrentUser, class_id: UUID, assignme
         items.append(ProgressItem(item_block_id=UUID(it["id"]), stem=it["payload"]["stem"], answered_count=n,
                                   first_attempt_correct_rate=right / graded if graded else None))
     return ProgressOut(assignment_id=a.id, student_count=students, items=items)
+
+
+async def save_review(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: ReviewProgressIn) -> ReviewState:
+    a, pv, _ = await _load(db, user, assignment_id)
+    return await review.save(db, pv.snapshot, a.id, user.id, body)

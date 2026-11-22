@@ -55,7 +55,7 @@ Transformation = Literal["ORIGINAL", "PARAPHRASED", "SYNTHESISED", "AI_PROPOSED"
 ReviewStatus = Literal["UNREVIEWED", "AUTO_CHECKED", "FLAGGED", "APPROVED", "REVIEW_AGAIN", "REJECTED"]
 BlockKind = Literal[
     "heading", "paragraph", "data_fact", "instruction", "worksheet_item", "option", "answer_key", "explanation",
-    "card_front", "card_back",
+    "card_front", "card_back", "review_card",
 ]
 Relation = Literal["derived_from", "quotes", "supports"]
 LinkStatus = Literal["VERIFIED", "UNRESOLVED"]
@@ -449,6 +449,22 @@ class WorksheetItemPayload(ApiModel):
     stem: str
     item_type: ItemType
     skill: Skill
+    hints: list[str] | None = Field(None, description="Fixed hints 1..3 (AI-drafted questions); never shown outside Habit.")
+
+
+class ReviewCheckPayload(ApiModel):
+    statement: str
+    answer_true: bool
+    explanation: str
+
+
+class ReviewCardPayload(ApiModel):
+    """A quick-review card (not scored): short points, one example from the plan and a true/false self-check."""
+
+    title: str
+    points: list[str]
+    example: str
+    check: ReviewCheckPayload
 
 
 class OptionPayload(ApiModel):
@@ -781,6 +797,29 @@ class StudentItem(ApiModel):
     result: AttemptResult | None = Field(None, description="Present only after this student answered.")
 
 
+class StudentReviewCard(ApiModel):
+    id: UUID
+    position: int
+    title: str
+    points: list[str]
+    example: str
+    check: ReviewCheckPayload = Field(description="True/false self-check, not scored; the explanation is shown at once.")
+
+
+class ReviewState(ApiModel):
+    choice: Literal["not_yet", "done"] | None = Field(None, description="'Em đã học bài này chưa?': not_yet = review first.")
+    seen_ids: list[UUID] = []
+    checks: dict[str, bool] = Field(default_factory=dict, description="Card id to self-check result (true = right).")
+    reviewed: bool = Field(False, description="The student finished the cards or pressed 'Đủ rồi, làm bài'.")
+
+
+class ReviewProgressIn(ApiModel):
+    choice: Literal["not_yet", "done"] | None = None
+    seen_ids: list[UUID] | None = Field(None, max_length=30)
+    checks: dict[str, bool] | None = None
+    reviewed: bool | None = None
+
+
 class StudentAssignmentOut(ApiModel):
     id: UUID
     title: str
@@ -788,6 +827,8 @@ class StudentAssignmentOut(ApiModel):
     due_at: datetime
     blocks: list[StudentContentBlock]
     items: list[StudentItem]
+    review: list[StudentReviewCard] = Field(default_factory=list, description="Approved review cards; empty = no review step.")
+    review_state: ReviewState = Field(default_factory=ReviewState)
     model_config = ex({
         "id": I["assign"], "title": "Phân bố dân cư theo vùng", "openAt": T1, "dueAt": "2026-11-30T23:59:00+07:00",
         "blocks": [{"id": I["p1"], "kind": "paragraph", "position": 2,
@@ -857,11 +898,15 @@ class QuickAction(ApiModel):
 
 class ChatReply(ApiModel):
     reply: str = Field(description="Plain text. Never contains the answer before the student has answered the item.")
-    hint_level: int = Field(description="1..3 for `hint`, 0 otherwise.")
+    hint_level: int = Field(description="1..HINT_MAX_PER_ITEM for `hint`, 0 otherwise.")
     source_refs: list[SourceRef]
     extra: str | None = Field(None, description="Second part (CHAT_AI_EXTRA): general knowledge, NOT verified by the teacher.")
     suggestions: list[QuickAction] = Field(default_factory=list, description="Buttons offered after a refusal or off-topic.")
     blocked_reason: str | None = Field(None, description="Refusal code (e.g. ANSWER_REQUEST) when the reply is a refusal.")
+    source: Literal["llm", "rule", "guard"] = Field("rule", description="llm: model; rule: template or lesson; "
+                                                    "guard: a refusal from the safety rules.")
+    hints_used: int | None = Field(None, description="For `hint`: hints used on this item so far (including this one).")
+    open_review: UUID | None = Field(None, description="Review card to open (button 'Mở thẻ ôn'), when the reply points to one.")
     model_config = ex({"reply": "Em đọc kỹ đề và xác định đề đang hỏi về vùng nào, năm nào nhé.", "hintLevel": 1,
                        "sourceRefs": [], "blockedReason": None})
 
@@ -1026,6 +1071,34 @@ class PlanOut(ApiModel):
     mcq_count: int
     needs_confirmation_count: int
     lesson_id: UUID | None = Field(description="Set once 'Tạo bài chuẩn bị' has been used.")
+    ai_state: Literal["none", "queued", "running", "done", "failed", "skipped"] = Field(
+        "none", description="Drafting of AI questions and review cards: queued/running while the model works.")
+    ai_quiz_count: int = 0
+    ai_quiz_needs_confirmation_count: int = 0
+    ai_review_count: int = 0
+    ai_needs_confirmation_count: int = Field(0, description="AI items not approved yet.")
+    ai_stats: dict[str, Any] | None = Field(None, description="Drafting report per kind, seconds, tokens.")
+
+
+class PlanAiItemOut(ApiModel):
+    id: UUID
+    kind: Literal["quiz", "review"]
+    position: int
+    status: Literal["draft", "approved", "rejected"]
+    origin: str = Field(description="`ai_generated`: written by the model, never published before the teacher approves it.")
+    payload: dict[str, Any] = Field(description="quiz: stem, options[4], correct_index, explanation, hints[3], skill_tag. "
+                                    "review: title, points, example, check{statement, answer_true, explanation}.")
+    source_quote: str = Field(description="The passage of the lesson plan the item is based on.")
+    needs_confirmation: bool = Field(description="True until the teacher approves.")
+
+
+class PlanAiList(ApiModel):
+    items: list[PlanAiItemOut]
+
+
+class PlanAiItemUpdate(ApiModel):
+    status: Literal["draft", "approved", "rejected"] | None = None
+    payload: dict[str, Any] | None = Field(None, description="Edited content, same shape as the item's payload (validated).")
 
 
 class Competency(ApiModel):
