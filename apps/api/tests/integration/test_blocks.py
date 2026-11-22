@@ -125,6 +125,10 @@ async def test_at09_editing_an_approved_block_drops_the_approval(client: httpx.A
     assert (ev[0], ev[1], ev[2]) == (old, b["contentHash"], "TEACHER")
     prov = (await client.get(f"/v1/blocks/{B('p1')}/provenance")).json()
     assert [x["isValid"] for x in prov["reviews"]] == [False]  # the old approval no longer counts
+    # K2: the edit log says who, when, and what it said before and after
+    hist = (await client.get(f"/v1/lessons/{uid(f'{L}:lesson')}/history")).json()["events"]
+    e = next(x for x in hist if x["operation"] == "EDIT" and x["blockId"] == str(B("p1")))
+    assert e["actorName"] and e["at"] and e["after"] == {"text": "Một câu mới hoàn toàn."} and e["before"] and e["before"] != e["after"]
 
 
 async def test_edit_in_review_state_also_loses_approval(client: httpx.AsyncClient, db: AsyncSession) -> None:

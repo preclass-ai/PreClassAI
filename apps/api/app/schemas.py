@@ -375,6 +375,10 @@ class HistoryEvent(ApiModel):
     operation: Operation | Literal["REVIEW", "PUBLISH", "WITHDRAW"]
     block_id: UUID | None = None
     summary: str | None = None
+    actor_name: str | None = Field(None, description="Display name of the teacher (teacher events only).")
+    block_kind: str | None = Field(None, description="Kind of the edited block; with `before`/`after` it lets a client show the change.")
+    before: dict[str, Any] | None = Field(None, description="EDIT of a block's content: the payload before the edit (null for edits made before this was recorded).")
+    after: dict[str, Any] | None = None
 
 
 class LessonHistory(ApiModel):

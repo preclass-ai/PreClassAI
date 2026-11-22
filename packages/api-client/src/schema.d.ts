@@ -2344,17 +2344,38 @@ export interface components {
             /** Actorid */
             actorId?: string | null;
             /**
+             * Actorname
+             * @description Display name of the teacher (teacher events only).
+             */
+            actorName?: string | null;
+            /**
              * Actortype
              * @enum {string}
              */
             actorType: "AI" | "TEACHER" | "SYSTEM";
+            /** After */
+            after?: {
+                [key: string]: unknown;
+            } | null;
             /**
              * At
              * Format: date-time
              */
             at: string;
+            /**
+             * Before
+             * @description EDIT of a block's content: the payload before the edit (null for edits made before this was recorded).
+             */
+            before?: {
+                [key: string]: unknown;
+            } | null;
             /** Blockid */
             blockId?: string | null;
+            /**
+             * Blockkind
+             * @description Kind of the edited block; with `before`/`after` it lets a client show the change.
+             */
+            blockKind?: string | null;
             /** Operation */
             operation: ("GENERATE" | "EDIT" | "REGENERATE" | "SOURCE_REPLACED") | ("REVIEW" | "PUBLISH" | "WITHDRAW");
             /** Summary */

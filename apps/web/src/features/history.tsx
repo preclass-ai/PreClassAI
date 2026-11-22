@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { StateBadge } from "@/components/badges";
 import { Button, Empty, ErrorBox, Loading } from "@/components/ui";
-import { buildTree, type BlockNode } from "@/lib/blocks";
+import { buildTree, summarize, type Block, type BlockNode } from "@/lib/blocks";
 import { BlockCard } from "./block-view";
 import { api, unwrap, type Schemas } from "@/lib/api";
 import { fmtDateTime } from "@/lib/format";
@@ -126,8 +126,14 @@ export function History({ lesson, canEdit }: { lesson: Schemas["LessonOut"]; can
             {sortedEvents.map((e, i) => (
               <li key={`${e.at}-${i}`}>
                 <span className="muted small">{fmtDateTime(e.at)}</span> <strong>{OPERATION[e.operation] ?? e.operation}</strong>{" "}
-                <span className="muted">· {ACTOR[e.actorType] ?? e.actorType}</span>
+                <span className="muted">· {e.actorName ?? ACTOR[e.actorType] ?? e.actorType}</span>
                 {e.summary ? <div className="small">{e.summary}</div> : null}
+                {e.before && e.after && e.blockKind ? (
+                  <div className="small edit-diff">
+                    <div><span className="muted">Trước:</span> {summarize({ kind: e.blockKind as Block["kind"], payload: e.before })}</div>
+                    <div><span className="muted">Sau:</span> {summarize({ kind: e.blockKind as Block["kind"], payload: e.after })}</div>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ol>

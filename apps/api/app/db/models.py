@@ -252,6 +252,8 @@ class TransformationEvent(Base):
     before_hash: Mapped[str | None] = mapped_column(Text)
     after_hash: Mapped[str] = mapped_column(Text)
     generator_version: Mapped[str | None] = mapped_column(Text)
+    before_payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB)  # teacher edits only: what the block said before and after
+    after_payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = ts()
 
 
