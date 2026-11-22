@@ -124,6 +124,7 @@ class ItemView:
     allowed: set[Decimal] = field(default_factory=set)
     hints: list[str] = field(default_factory=list)  # fixed hints 1..3 of an AI-drafted question
     facts: list[str] = field(default_factory=list)  # data_fact lines as the student sees them ("label: value unit (region, period)")
+    rows: list[str] = field(default_factory=list)  # the name of each data row (region, else label), never its value
 
 
 def build_view(snap: dict[str, Any], item: dict[str, Any]) -> ItemView:
@@ -144,12 +145,26 @@ def build_view(snap: dict[str, Any], item: dict[str, Any]) -> ItemView:
                  Decimal(str(val)) if val is not None else None, exp["text"] if exp else None)
     v.hints = [str(h) for h in item["payload"].get("hints") or []][:3]
     v.facts = [_fact_line(f) for f in facts]
+    v.rows = [str(f.get("region") or f.get("label") or "") for f in facts]
     # Data facts are on the student's screen: quoting them is not a leak (the answer itself is still discarded below).
     for text in [v.stem, *(t for _, t in opts), *(t for _, _, t in blocks), *v.facts, str(v.period or "")]:
         v.allowed.update(parse_numbers(text))
     if v.answer_value is not None:
         v.allowed.discard(v.answer_value)
     return v
+
+
+def read_where(v: ItemView) -> str:
+    """Which data rows and which column to read, by name only (never a value). Rows are the ones the question itself names; the
+    options are never listed (naming them is how an answer leaks). Empty when there are no data lines. Never depends on the key."""
+    if not v.rows:
+        return ""
+    stem = f" {norm(v.stem)} "
+    named = list(dict.fromkeys(r for r in v.rows if r and f" {norm(r)} " in stem and all(norm(r) != norm(t) for _, t in v.options)))
+    col = f"cột “{v.unit}”" if v.unit else "cột giá trị"
+    if named:
+        return f"Em nhìn đúng dòng số liệu của {', '.join(named)} và đọc {col}, in đậm phía trên câu hỏi."
+    return f"Em đọc {col} của các dòng số liệu in đậm phía trên câu hỏi, rồi so sánh các dòng với nhau."
 
 
 def _fact_line(p: dict[str, Any]) -> str:
@@ -268,7 +283,7 @@ def hint(v: ItemView, level: int, reps: int = 0, small: bool = False,
     elif v.facts:  # the data is in the fact lines: say so plainly instead of "read the text again"
         many = _COUNT.get(len(v.facts), "các")
         unit = f" ({', '.join(bits)})" if bits else ""
-        v2 = [f"Số liệu cần dùng nằm ngay trong bài: {many} dòng số liệu in đậm phía trên câu hỏi{unit}. Mỗi dòng là một đối tượng kèm giá trị của nó.",
+        v2 = [f"Số liệu cần dùng nằm ngay trong bài: {many} dòng số liệu in đậm phía trên câu hỏi{unit}. Mỗi dòng là một đối tượng kèm giá trị của nó. {read_where(v)}".strip(),
               "Em nhìn lại các dòng số liệu in đậm phía trên câu hỏi, chọn đúng những dòng mà đề nhắc tới rồi ghi giá trị và đơn vị ra nháp."]
     else:
         v2 = [f"Em xem lại phần nội dung của bài (tiêu đề và đoạn văn bên dưới).{where} Chỉ cần xác định đúng dữ liệu cần dùng, chưa cần tính vội.",

@@ -16,10 +16,10 @@ test("Habit: hints 1 to 3 of 10, refusals, answer, explanation, goal", async ({ 
 
   const item = page.locator("section.item").first();
   for (const n of [1, 2, 3]) {
-    await item.getByRole("button", { name: `Gợi ý ${n}/10` }).click();
+    await item.getByRole("button", { name: `Gợi ý nhẹ · còn ${11 - n} lượt` }).click();
     await expect(item.locator(".habit-hint")).toHaveCount(n);
   }
-  await expect(item.getByRole("button", { name: "Gợi ý 4/10" })).toBeEnabled(); // hints go on up to 10
+  await expect(item.getByRole("button", { name: "Gợi ý rõ hơn · còn 7 lượt" })).toBeEnabled(); // hints go on up to 10
   await page.screenshot({ path: shot("hints", info.project.name), fullPage: true });
 
   await item.getByRole("button", { name: "Hỏi HABIT AI" }).click();

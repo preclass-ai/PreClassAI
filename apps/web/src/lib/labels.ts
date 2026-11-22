@@ -86,9 +86,5 @@ export const VISIBILITY: Record<"PRIVATE" | "SCHOOL", string> = { PRIVATE: "Ch�
 
 export type Tone = "neutral" | "info" | "success" | "warning" | "danger";
 
-/** Hints go from light to detailed (server levels 1–3): students pick by how much help they want, not by a count. */
-export const HINT_LEVEL: Record<number, { name: string; topic: string }> = {
-  1: { name: "Gợi ý nhẹ", topic: "Bắt đầu từ đâu" },
-  2: { name: "Gợi ý vừa", topic: "Dữ liệu cần dùng ở đâu" },
-  3: { name: "Gợi ý chi tiết", topic: "Cách làm" },
-};
+/** Hint n of the item (1..10): the more a student asks, the more it shows. The name tells which kind of help the press gives. */
+export const hintTier = (n: number): string => (n <= 3 ? "Gợi ý nhẹ" : n <= 7 ? "Gợi ý rõ hơn" : "Hướng dẫn chi tiết");

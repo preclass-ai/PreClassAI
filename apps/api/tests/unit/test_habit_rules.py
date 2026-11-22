@@ -152,3 +152,15 @@ def test_where_is_the_data_points_at_the_fact_lines_not_at_the_text() -> None:
 def test_fact_values_are_allowed_numbers_for_the_model() -> None:
     v = next(v for v in VIEWS if v.facts and v.answer_value is None)  # MCQ: quoting a visible fact is not the answer
     assert all(rules.number_ok(f, v) for f in v.facts)
+
+
+def test_read_where_names_rows_and_column_but_never_a_value() -> None:
+    v = rules.ItemView(**{**next(x for x in VIEWS if x.facts and x.answer_value is None).__dict__,
+                          "stem": "Vùng Alpha có dân số lớn hơn vùng nào?", "options": [("A", "Beta"), ("B", "Gamma")],
+                          "rows": ["Alpha", "Beta", "Gamma"], "unit": "triệu người"})
+    text = rules.read_where(v)
+    assert "Alpha" in text and "triệu người" in text and not any(ch.isdigit() for ch in text)
+    assert rules.read_where(rules.ItemView(**{**v.__dict__, "rows": []})) == ""
+    other = rules.ItemView(**{**v.__dict__, "stem": "Vùng nào có dân số lớn nhất?"})
+    assert "Alpha" not in rules.read_where(other) and "triệu người" in rules.read_where(other)  # no row named: column only
+    assert "Alpha" in rules.hint(v, 2)[0]  # the level-2 hint points at the row too

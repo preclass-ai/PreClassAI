@@ -115,10 +115,11 @@ test("AI drafts, teacher approves, student reviews then takes the quiz with HABI
   // ---- hints go up to 10/10, never blocked by the chat limit
   const q1 = page.locator("section.item").filter({ hasText: stems[0]! });
   for (let k = 1; k <= 10; k++) {
-    await q1.getByRole("button", { name: `Gợi ý ${k}/10`, exact: true }).click();
+    const tier = k <= 3 ? "Gợi ý nhẹ" : k <= 7 ? "Gợi ý rõ hơn" : "Hướng dẫn chi tiết";
+    await q1.getByRole("button", { name: `${tier} · còn ${11 - k} lượt`, exact: true }).click();
     await expect(q1.locator(".habit-hint")).toHaveCount(k, { timeout: 20_000 });
   }
-  await expect(q1.getByRole("button", { name: "Gợi ý 10/10 (đã dùng hết)" })).toBeDisabled();
+  await expect(q1.getByRole("button", { name: "Đã dùng hết gợi ý" })).toBeDisabled();
   await expect(q1.locator(".habit-hint").first().locator("p")).not.toBeEmpty();
   await page.screenshot({ path: shot("hints-10", n), fullPage: n !== "webkit-390" });
 });

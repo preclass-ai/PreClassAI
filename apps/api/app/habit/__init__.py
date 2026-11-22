@@ -192,9 +192,10 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
         # hints 4..10: more specific each time. The model writes them (same guards as any reply); on any problem the last fixed hint
         # is repeated with a pointer back to the source.
         last = v.hints[2] if v.hints else rules.hint(v, 3, small="chia_nho_tung_buoc" in prefs)[0]
-        text, level, refs, reason = last + GUIDE, n, [], None
+        where = rules.read_where(v) if n >= 8 else ""  # the most detailed hints say which row and column to read
+        text, level, refs, reason = last + (f" {where}" if where else "") + GUIDE, n, [], None
         if cfg.chat_mode == "llm":
-            ask = f"Cho em gợi ý số {n}, cụ thể hơn các gợi ý trước, không nói đáp án."
+            ask = f"Cho em gợi ý số {n}, cụ thể hơn các gợi ý trước, không nói đáp án." + (f" Chỉ đúng dòng và cột cần đọc: {where}" if where else "")
             excerpt = " ".join(t for _, _, t in v.blocks)
             out, fb, tin, tout, used_model = await _llm_reply(db, v, n, ask, text, excerpt, sess, (today(), pv.id, body.item_id, n, "hint"))
             if out is not None:
