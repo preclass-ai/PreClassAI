@@ -61,7 +61,8 @@ class Settings(BaseSettings):
     quiz_gen_per_lesson: int = 8
     quiz_gen_min_mcq: int = 5  # a plan with fewer extracted MCQ gets drafted questions
     quiz_gen_daily_tokens: int = 100_000
-    quiz_gen_timeout_s: int = 150  # per plan, both calls
+    quiz_gen_timeout_s: int = 240  # per plan, both calls and the gap between them
+    quiz_gen_gap_s: float = 20.0  # QUIZ_GEN_GAP_S: pause between the quiz and review calls of a plan
     quiz_gen_mock: bool = False  # QUIZ_GEN_MOCK: deterministic stand-in model built from the plan text (dev and e2e only)
     chat_ai_extra: bool = False  # CHAT_MODE=llm only: a second, clearly labelled part with general knowledge (unverified)
     personalization_enabled: bool = False  # student-chosen options, focus mode, behaviour-based hints; 404 when off

@@ -28,7 +28,7 @@ def text_of(plan, doc) -> str:  # type: ignore[no-untyped-def]
             if i not in skip and i not in seen:
                 seen.add(i)
                 lines.append(plan.anchors[i].excerpt)
-    return rules.redact("\n".join(lines))[: quizgen.MAX_TEXT]
+    return rules.redact("\n".join(lines))
 
 
 async def main(path: str, only: int | None) -> None:
@@ -41,12 +41,16 @@ async def main(path: str, only: int | None) -> None:
     for n, doc in enumerate(plan.lessons, 1):
         if only and n != only:
             continue
-        text = text_of(plan, doc)
-        src = quizgen.Source(text)
-        print(f"\nlesson {n}: plan text {len(text)} chars, extracted MCQ {len(doc.mcqs)}")
+        sentences = quizgen.fit(quizgen.split_sentences(text_of(plan, doc)), max(quizgen.SYSTEM_QUIZ, quizgen.SYSTEM_REVIEW, key=len))
+        src = quizgen.Source("\n".join(sentences))
+        text = quizgen.numbered(src)  # what the model sees: [S1] ... [Sn]
+        print(f"\nlesson {n}: {len(src.sentences)} numbered sentences, about {quizgen.est_tokens(text)} prompt tokens, extracted MCQ {len(doc.mcqs)}")
         for kind, system, key, model, want, max_tokens in (
-                ("quiz", quizgen.SYSTEM_QUIZ, "questions", quizgen.AiQuestion, cfg.quiz_gen_per_lesson + 2, 3500),
-                ("review", quizgen.SYSTEM_REVIEW, "cards", quizgen.AiCard, 5, 1800)):  # same limits as the real job
+                ("quiz", quizgen.SYSTEM_QUIZ, "questions", quizgen.AiQuestion, cfg.quiz_gen_per_lesson + 2, 3000),
+                ("review", quizgen.SYSTEM_REVIEW, "cards", quizgen.AiCard, 5, 1300)):  # same limits as the real job
+            if kind == "review" and cfg.quiz_gen_gap_s > 0:
+                print(f"  waiting {cfg.quiz_gen_gap_s:g}s (QUIZ_GEN_GAP_S) before the review call")
+                await asyncio.sleep(cfg.quiz_gen_gap_s)
             t0 = time.monotonic()
             ask = f"Soạn cần {want} {'câu hỏi' if kind == 'quiz' else 'thẻ ôn tập'} từ <plan>."
             try:
@@ -70,6 +74,8 @@ async def main(path: str, only: int | None) -> None:
                   f"{time.monotonic() - t0:.1f}s, {tokens} tokens, {calls} call(s), model {used or '?'}, failed models first {failed or '-'}")
             if scores:
                 print(f"    best quote match per rejected item (0 to 100, pass at {quizgen.FUZZY_MIN}): {scores}")
+            ids = sum(1 for d in got if getattr(d, "source_sentence_ids", None))
+            print(f"    drafts that used sentence ids: {ids}/{len(got)}")
 
 
 if __name__ == "__main__":

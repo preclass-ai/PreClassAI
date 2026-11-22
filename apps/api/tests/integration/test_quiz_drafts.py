@@ -37,6 +37,7 @@ KNOW = (
 async def gen(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[pytest.MonkeyPatch]:
     monkeypatch.setenv("QUIZ_GEN_ENABLED", "true")
     monkeypatch.setenv("QUIZ_GEN_MOCK", "true")
+    monkeypatch.setenv("QUIZ_GEN_GAP_S", "0")
     monkeypatch.setenv("CHAT_ENABLED", "true")
     get_settings.cache_clear()
     habit._CACHE.clear()  # noqa: SLF001
@@ -226,6 +227,7 @@ async def test_review_cards_all_rejected_are_marked_not_drafted(client: httpx.As
             raw, a, b = await quizgen.MockQuizLLM().complete(system, user, max_tokens)
             data = json.loads(raw)
             for c in data["cards"]:
+                c["source_sentence_ids"] = []  # a model that ignores the ids and sends text that is not in the plan
                 c["source_quote"] = "Một câu hoàn toàn khác không hề có trong giáo án của tiết học này đâu."
             return json.dumps(data, ensure_ascii=False), a, b
 
@@ -238,3 +240,44 @@ async def test_review_cards_all_rejected_are_marked_not_drafted(client: httpx.As
     assert p["aiReviewCount"] == 0 and r["failed"] is True and r["reason"] == "all_rejected" and r["rejected"] == {"quote_not_in_plan": 5}
     assert len(r["quote_scores"]) == 5 and all(isinstance(x, int) and x < 90 for x in r["quote_scores"])  # numbers only
     assert p["aiQuizCount"] >= 5
+
+
+async def test_unknown_sentence_ids_are_rejected_and_the_server_writes_the_quote(client: httpx.AsyncClient, gen: pytest.MonkeyPatch) -> None:
+    class BadIds:
+        async def complete(self, system: str, user: str, max_tokens: int, timeout: float | None = None) -> tuple[str, int, int]:
+            raw, a, b = await quizgen.MockQuizLLM().complete(system, user, max_tokens)
+            data = json.loads(raw)
+            for c in data["cards"][:2]:
+                c["source_sentence_ids"] = [999]
+            return json.dumps(data, ensure_ascii=False), a, b
+
+    gen.setenv("QUIZ_GEN_MOCK", "false")
+    get_settings.cache_clear()
+    gen.setattr(llm, "get_chat_llm", lambda: BadIds())
+    await login(client, "gv.dia@preclass.local")
+    p = await upload(client)
+    assert p["aiStats"]["review"]["rejected"] == {"bad_sentence_id": 2} and p["aiReviewCount"] == 3
+    items = (await client.get(f"/v1/lesson-plans/{p['id']}/ai-items")).json()["items"]
+    assert all(len(i["sourceQuote"]) >= 15 and "[S" not in i["sourceQuote"] for i in items)  # a real plan sentence, written by the server
+    assert all(i["sourceQuote"] == i["payload"]["source_quote"] for i in items)
+
+
+async def test_the_gap_between_quiz_and_review_calls_is_respected(client: httpx.AsyncClient, gen: pytest.MonkeyPatch) -> None:
+    order: list[str] = []
+
+    class Recorder:
+        async def complete(self, system: str, user: str, max_tokens: int, timeout: float | None = None) -> tuple[str, int, int]:
+            order.append("review" if system == quizgen.SYSTEM_REVIEW else "quiz")
+            return await quizgen.MockQuizLLM().complete(system, user, max_tokens)
+
+    async def fake_sleep(s: float) -> None:
+        order.append(f"sleep {s:g}")
+
+    gen.setenv("QUIZ_GEN_MOCK", "false")
+    gen.setenv("QUIZ_GEN_GAP_S", "20")
+    get_settings.cache_clear()
+    gen.setattr(llm, "get_chat_llm", lambda: Recorder())
+    gen.setattr(quizgen.asyncio, "sleep", fake_sleep)
+    await login(client, "gv.dia@preclass.local")
+    await upload(client)
+    assert order == ["quiz", "sleep 20", "review"]

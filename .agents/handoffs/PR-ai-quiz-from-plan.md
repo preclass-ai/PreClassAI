@@ -30,7 +30,8 @@ Decision record: `docs/adr/ADR-0015-ai-quiz-from-plan.md`. `apps/api/app/sources
 | `QUIZ_GEN_PER_LESSON` | 8 | Questions per plan. |
 | `QUIZ_GEN_MIN_MCQ` | 5 | A plan with fewer extracted MCQ gets drafted questions (review cards are always drafted). |
 | `QUIZ_GEN_DAILY_TOKENS` | 100000 | Own daily token budget; over budget the step is skipped (`aiState=skipped`). |
-| `QUIZ_GEN_TIMEOUT_S` | 150 | Time limit per plan. |
+| `QUIZ_GEN_TIMEOUT_S` | 240 | Time limit per plan. |
+| `QUIZ_GEN_GAP_S` | 20 | Pause between the quiz call and the review call of one plan (the provider limits tokens per minute). Skipped in mock mode. |
 | `QUIZ_GEN_MOCK` | false | Stand-in model built from the plan text. Dev and e2e only, never on a real server. |
 
 Removed: `CHAT_MAX_PER_DAY_PER_STUDENT`, `CHAT_MAX_PER_ITEM`. Existing unchanged: `CHAT_ENABLED`, `CHAT_MODE`, `CHAT_LLM_*`, `CHAT_DAILY_TOKEN_BUDGET`.
@@ -67,3 +68,12 @@ E2E_BASE_URL=... pnpm exec playwright test
 - `max_tokens` of the review call went from 3000 to 1800 and quiz from 4000 to 3500: the provider counts it toward the per-minute token limit, together with the plan text sent twice (quiz, then review).
 - Quotes: both sides are folded (NFC, soft hyphens, hyphen and newline as a word break, spaces, case, accents) and a quote of 30 characters or more passes at a 90% partial match (difflib, no new dependency). The review prompt now requires one sentence copied word for word; `points` is the rewritten part.
 - A failed review no longer costs the quiz: each kind is saved on its own, the failed kind is marked in `aiStats` (`failed`, `reason`, `status`), the screen says "Chưa soạn được thẻ ôn", and "Tạo lại câu hỏi" redoes only the failed kind.
+
+## Sentence ids instead of quotes (after the second real run)
+
+The real run showed models rewrite quotes (best match scores 67 to 89). The prompt now numbers the plan sentences `[S1]..[Sn]` (cut at line breaks and . ! ?, pieces under 15 characters dropped) and asks for `source_sentence_ids` (1 to 3 numbers). The server joins those sentences into `source_quote`, so a quote is verbatim by construction; an unknown id is rejected (`bad_sentence_id`). A model that sends text anyway falls back to the fuzzy match, now at 85. Numbers must still appear in the plan.
+
+- `QUIZ_GEN_GAP_S` (20): wait between the quiz and review calls of one plan. Jobs run one at a time (an in-process lock, FIFO).
+- A 429 on a long job waits the time the provider asked for and retries the SAME model once before the fallback is tried.
+- Prompt budget 6000 tokens (estimate: characters / 3). Over it, appendix and rubric sentences are cut first, then the tail. `max_tokens`: quiz 3000, review 1300.
+- Default `QUIZ_GEN_TIMEOUT_S` is now 240 because of the gap.

@@ -216,3 +216,32 @@ def test_pressing_the_same_hint_never_repeats_then_points_forward(level: int) ->
         assert reps < 6
     assert len(seen) >= 2  # at least two different templates before it moves on
     assert rules.leak(rules.NEXT_STEP[level], V) is None
+
+
+def test_long_job_waits_after_a_429_and_gives_the_main_model_one_more_try_before_the_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    waits: list[float] = []
+
+    async def fake_sleep(s: float) -> None:
+        waits.append(s)
+
+    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+    calls: list[dict[str, Any]] = []
+    seq = [ProviderHTTPError(429, "rate_limit_exceeded Please try again in 7.5s"), {"content": "xong"}]
+
+    def post(self: OpenAICompatibleProvider, body: dict[str, Any]) -> dict[str, Any]:
+        calls.append(body)
+        r = seq.pop(0)
+        if isinstance(r, Exception):
+            raise r
+        return {"choices": [{"message": r}], "usage": {}}
+
+    monkeypatch.setattr(OpenAICompatibleProvider, "_post", post)
+    c = llm.OpenAIChat(GROQ, KEY, "qwen/qwen3.8-27b", "openai/gpt-oss-120b")
+    out = asyncio.run(c.complete("s", "u", 100, timeout=60))[0]
+    assert [b["model"] for b in calls] == ["qwen/qwen3.8-27b", "qwen/qwen3.8-27b"] and waits == [7.5]  # same model twice, no fallback
+    assert out.model == "qwen/qwen3.8-27b" and out.attempts == ["qwen/qwen3.8-27b:429"]  # type: ignore[attr-defined]
+    # a chat call (no timeout) never waits: it goes straight to the fallback
+    calls.clear()
+    seq[:] = [ProviderHTTPError(429, "x"), {"content": "xong"}]
+    out = asyncio.run(c.complete("s", "u", 100))[0]
+    assert [b["model"] for b in calls] == ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"] and waits == [7.5]

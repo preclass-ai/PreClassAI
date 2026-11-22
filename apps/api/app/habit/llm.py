@@ -9,7 +9,7 @@ import re
 from typing import Any, Protocol
 
 from app.config import get_settings
-from app.generation.providers import OpenAICompatibleProvider
+from app.generation.providers import OpenAICompatibleProvider, ProviderHTTPError, retry_after_s
 from app.habit import rules
 from app.habit.rules import ItemView
 
@@ -110,14 +110,23 @@ class OpenAIChat:
             tok = prof.pop("_limit_param")
             body = {"model": p.model, "stream": False, tok: max_tokens, **prof,
                     "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
-            try:
-                async with _SLOTS:
-                    data = await asyncio.wait_for(asyncio.to_thread(p._post, body), t + 1)  # noqa: SLF001
-                text, reasoning = split_reasoning(data["choices"][0]["message"])
-            except Exception as e:  # noqa: BLE001 429, 5xx, timeout, bad payload: next model, finally the rule reply
-                last = e
-                attempts.append(f"{p.model}:{why(e)}")
-                log.warning("chat model %s failed: %s", p.model, why(e))
+            data: dict[str, Any] | None = None
+            for second_chance in (bool(timeout), False):  # long jobs: a 429 waits, then this model gets one more try
+                try:
+                    async with _SLOTS:
+                        data = await asyncio.wait_for(asyncio.to_thread(p._post, body), t + 1)  # noqa: SLF001
+                    text, reasoning = split_reasoning(data["choices"][0]["message"])
+                    break
+                except Exception as e:  # noqa: BLE001 429, 5xx, timeout, bad payload: next model, finally the rule reply
+                    attempts.append(f"{p.model}:{why(e)}")
+                    log.warning("chat model %s failed: %s", p.model, why(e))
+                    data = None
+                    if second_chance and isinstance(e, ProviderHTTPError) and e.status == 429:
+                        await asyncio.sleep(retry_after_s(e.detail))
+                        continue
+                    last = e
+                    break
+            if data is None:
                 continue
             u = data.get("usage") or {}
             out = ModelText(text)

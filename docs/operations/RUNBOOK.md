@@ -69,7 +69,8 @@ Cứng trong code: 10 MB mỗi tệp, ≤ 1000 entry, ≤ 20 MB giải nén. M�
 | `CHAT_MAX_MSGS_PER_DAY` / `CHAT_MAX_MSGS_PER_ITEM` | 100 / 20 | Số câu hỏi gõ tay mỗi ngày và mỗi câu. Lượt bấm Gợi ý không tính. Quá hạn mức → 429 `CHAT_LIMIT`. |
 | `HINT_MAX_PER_ITEM` | 10 | Số lượt bấm Gợi ý mỗi câu. Ba gợi ý đầu cố định (câu do AI soạn) hoặc theo mẫu; gợi ý 4 đến 10 do model viết, qua cùng bộ chặn lộ đáp án, lỗi thì lặp gợi ý 3 kèm lời nhắc đọc lại nguồn. Quá hạn mức → 429 `HINT_LIMIT`. |
 | `QUIZ_GEN_ENABLED` | false | Bật AI soạn nháp câu hỏi và thẻ ôn từ giáo án (dùng model `CHAT_LLM_*`). Chỉ là bản nháp, giáo viên duyệt từng mục. |
-| `QUIZ_GEN_PER_LESSON` / `QUIZ_GEN_DAILY_TOKENS` / `QUIZ_GEN_TIMEOUT_S` | 8 / 100000 / 150 | Số câu mỗi bài (chỉ bài có dưới 5 câu trắc nghiệm trích được), ngân sách token mỗi ngày riêng, giới hạn thời gian mỗi giáo án. Hết ngân sách thì bỏ qua, giáo án vẫn dùng được. |
+| `QUIZ_GEN_PER_LESSON` / `QUIZ_GEN_DAILY_TOKENS` / `QUIZ_GEN_TIMEOUT_S` | 8 / 100000 / 240 | Số câu mỗi bài (chỉ bài có dưới 5 câu trắc nghiệm trích được), ngân sách token mỗi ngày riêng, giới hạn thời gian mỗi giáo án. Hết ngân sách thì bỏ qua, giáo án vẫn dùng được. |
+| `QUIZ_GEN_GAP_S` | 20 | Chờ giữa lần gọi quiz và lần gọi ôn tập của một bài (nhà cung cấp giới hạn token mỗi phút). Bỏ qua khi `QUIZ_GEN_MOCK`. |
 | `QUIZ_GEN_MOCK` | false | Chỉ để thử: model giả dựng câu từ chính văn bản giáo án (dev, e2e). Không bật trên máy chủ thật. |
 | `HABIT_DAILY_GOAL` | 3 | Mục tiêu câu/ngày. |
 

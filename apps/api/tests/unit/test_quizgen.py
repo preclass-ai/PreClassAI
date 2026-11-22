@@ -90,7 +90,7 @@ def test_parse_items_keeps_valid_and_counts_schema_failures() -> None:
 
 def test_mock_model_output_passes_the_validators() -> None:
     src = Source(PLAN)
-    raw, _, _ = asyncio.run(MockQuizLLM().complete(quizgen.SYSTEM_QUIZ, f"<plan>\n{PLAN}\n</plan>\nSoạn cần 3 câu hỏi", 100))
+    raw, _, _ = asyncio.run(MockQuizLLM().complete(quizgen.SYSTEM_QUIZ, f"<plan>\n{quizgen.numbered(src)}\n</plan>\nSoạn cần 3 câu hỏi", 100))
     ok, bad = parse_items(raw, "questions", AiQuestion)
     assert ok and bad == 0 and all(check_question(x, src) is None for x in ok)  # type: ignore[arg-type]
 
@@ -179,3 +179,69 @@ def test_400_and_timeout_are_not_retried(err: BaseException) -> None:
     with pytest.raises(type(err)):
         _ask_with(c)
     assert c.calls == 1
+
+
+# ---- sentence ids: the server writes the quote
+def test_sentences_are_numbered_and_short_pieces_dropped() -> None:
+    src = Source("Mục tiêu\nDân số nước ta năm 2021 là 98,5 triệu người. Ok.\nĐồng bằng sông Hồng có mật độ dân số cao nhất cả nước!")
+    assert src.sentences == ["Dân số nước ta năm 2021 là 98,5 triệu người.", "Đồng bằng sông Hồng có mật độ dân số cao nhất cả nước!"]
+    assert quizgen.numbered(src).splitlines()[1].startswith("[S2] Đồng bằng")
+
+
+def test_ids_become_the_verbatim_quote() -> None:
+    d = q(source_sentence_ids=[2, 1, 2], source_quote="")
+    assert check_question(d, SRC) is None
+    assert d.source_quote == f"{SRC.sentences[0]} {SRC.sentences[1]}"  # sorted, de-duplicated, written by the server
+    c = card(source_sentence_ids=[1], source_quote="")
+    assert check_card(c, SRC) is None and c.source_quote == SRC.sentences[0]
+
+
+def test_unknown_ids_are_rejected() -> None:
+    assert check_question(q(source_sentence_ids=[99], source_quote=""), SRC) == "bad_sentence_id"
+    assert check_question(q(source_sentence_ids=[0], source_quote=""), SRC) == "bad_sentence_id"
+    assert check_card(card(source_sentence_ids=[1, 5], source_quote=""), SRC) == "bad_sentence_id"
+    with pytest.raises(ValueError):
+        q(source_sentence_ids=[1, 2, 3, 4], source_quote="")  # at most three
+    with pytest.raises(ValueError):
+        q(source_sentence_ids=[], source_quote="")  # neither ids nor a quote
+
+
+def test_a_foreign_number_is_still_rejected_when_the_ids_are_fine() -> None:
+    d = q(source_sentence_ids=[1], source_quote="", stem="Dân số nước ta năm 2021 là bao nhiêu triệu người, so với 120 triệu?")
+    assert check_question(d, SRC) == "number_not_in_plan"
+
+
+def test_text_instead_of_ids_falls_back_to_the_fuzzy_match_at_85() -> None:
+    assert FUZZY_MIN == 85
+    assert check_question(q(), SRC) is None  # the old path: a verbatim quote
+    assert check_question(q(source_quote="Việt Nam có dân số đông nhất châu Á và đang giảm mạnh mỗi năm."), SRC) == "quote_not_in_plan"
+
+
+def test_prompt_is_cut_to_the_budget_appendix_first_then_the_tail() -> None:
+    body = [f"Câu kiến thức số {i} nói về dân cư và lao động của nước ta trong giai đoạn gần đây." for i in range(400)]
+    rubric = "Rubric chấm điểm và phụ lục phiếu học tập dành cho giáo viên khi tổ chức hoạt động nhóm."
+    sents = [*body[:200], rubric, *body[200:]]
+    out = quizgen.fit(sents, "x" * 1200)
+    assert out == sents[:0] + [s for s in out]  # a list of the same sentences
+    assert rubric not in out and out[0] == body[0] and len(out) < len(body)  # appendix gone, tail cut
+    assert quizgen.est_tokens("x" * 1200) + sum(quizgen.est_tokens(s) + 2 for s in out) <= quizgen.INPUT_BUDGET_TOKENS
+    assert quizgen.fit(body[:20], "x" * 1200) == body[:20]  # under the budget: untouched
+
+
+# ---- one drafting job at a time
+def test_jobs_run_one_at_a_time_in_arrival_order(monkeypatch: pytest.MonkeyPatch) -> None:
+    log: list[str] = []
+
+    async def fake_run_plan(db: object, plan_id: object, client: object = None) -> dict[str, object]:
+        log.append(f"start {plan_id}")
+        await asyncio.sleep(0.02)
+        log.append(f"end {plan_id}")
+        return {}
+
+    monkeypatch.setattr(quizgen, "run_plan", fake_run_plan)
+
+    async def go() -> None:
+        await asyncio.gather(*(quizgen.run_one(None, i) for i in (1, 2, 3)))  # type: ignore[arg-type]
+
+    asyncio.run(go())
+    assert log == ["start 1", "end 1", "start 2", "end 2", "start 3", "end 3"]  # never two at once

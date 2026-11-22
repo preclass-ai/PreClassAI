@@ -231,6 +231,12 @@ class ProviderHTTPError(RuntimeError):
         self.detail = detail
 
 
+def retry_after_s(detail: str) -> float:
+    """The wait a provider asked for ("try again in 1m2.5s") in seconds, capped at 30; 12 when it did not say."""
+    m_ = re.search(r"try again in (?:(\d+)m)?\s*([\d.]+)s", detail)
+    return min(30.0, (int(m_.group(1) or 0) * 60 + float(m_.group(2))) if m_ else 12.0)
+
+
 def clean_error_body(raw: bytes, key: str) -> str:
     """At most 200 characters for the operator. A JSON error keeps only code, type and message (never `failed_generation`, which
     can echo the model output and so the lesson text); the key is masked."""
