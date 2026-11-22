@@ -72,7 +72,9 @@ async def test_login_rate_limit(client: httpx.AsyncClient) -> None:
         assert (await login(client, "gv.khac@preclass.local", "bad")).status_code == 401
     r = await login(client, "gv.khac@preclass.local", "bad")
     assert r.status_code == 429 and r.json()["code"] == "RATE_LIMITED"
+    assert "Em nhập sai nhiều lần, thử lại sau ít phút nhé." in r.text
     assert (await login(client, "gv.khac@preclass.local")).status_code == 429  # even the right password waits
+    assert (await login(client, "gv.dia@preclass.local")).status_code == 200  # per account: same address, other account is free
 
 
 async def test_extra_body_fields_are_ignored(client: httpx.AsyncClient) -> None:

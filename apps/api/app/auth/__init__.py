@@ -49,8 +49,9 @@ async def create_session(db: AsyncSession, user_id: UUID, ttl_hours: int | None 
 class LoginLimiter:
     """shortcut: in-process sliding window (single API process in P0), move to the DB/Redis if scaled out."""
 
-    def __init__(self, max_failures: int = 5, window_s: int = 300) -> None:
-        self.max, self.window = max_failures, window_s
+    def __init__(self, max_failures: int = 5, window_s: int = 300,
+                 message: str = "Quá nhiều lần thử, vui lòng đợi ít phút") -> None:
+        self.max, self.window, self.message = max_failures, window_s, message
         self.hits: dict[str, deque[float]] = defaultdict(deque)
 
     def _prune(self, key: str) -> deque[float]:
@@ -61,7 +62,7 @@ class LoginLimiter:
 
     def check(self, key: str, limit: int | None = None) -> None:
         if len(self._prune(key)) >= (limit or self.max):
-            raise ApiError(429, "RATE_LIMITED", "Quá nhiều lần thử, vui lòng đợi ít phút")
+            raise ApiError(429, "RATE_LIMITED", self.message)
 
     def fail(self, key: str) -> None:
         self._prune(key).append(time.monotonic())
@@ -73,8 +74,11 @@ class LoginLimiter:
             self.hits.pop(key, None)
 
 
-login_limiter = LoginLimiter()
-admin_login_limiter = LoginLimiter(max_failures=3, window_s=900)  # ADMIN accounts: 3 wrong passwords / 15 min per (account, IP)
+WRONG_TOO_OFTEN = "Em nhập sai nhiều lần, thử lại sau ít phút nhé."
+# Per account, never per IP: a classroom shares one Wi-Fi address (NAT).
+login_limiter = LoginLimiter(message=WRONG_TOO_OFTEN)
+# ADMIN accounts: 3 wrong passwords / 15 min
+admin_login_limiter = LoginLimiter(max_failures=3, window_s=900, message=WRONG_TOO_OFTEN)
 
 
 class CurrentUser:

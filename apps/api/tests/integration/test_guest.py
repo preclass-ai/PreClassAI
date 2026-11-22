@@ -130,10 +130,13 @@ async def test_resume_same_guest_and_lockout_on_wrong_codes(client: httpx.AsyncC
     assert r.status_code == 200 and r.json()["user"]["id"] == g["user"]["id"]
     assert (await client.get("/v1/me")).json()["surveyCode"] == g["surveyCode"]
     client.cookies.clear()
-    for _ in range(5):
+    for _ in range(20):
         assert (await client.post("/v1/auth/guest/resume", json={"surveyCode": "KS-ZZZZ"})).status_code == 404
-    r = await client.post("/v1/auth/guest/resume", json={"surveyCode": g["surveyCode"]})
-    assert r.status_code == 429  # even the right code is refused while locked out
+    r = await client.post("/v1/auth/guest/resume", json={"surveyCode": "KS-ZZZZ"})
+    assert r.status_code == 429 and "Em nhập sai nhiều lần, thử lại sau ít phút nhé." in r.text
+    # the limit is per code, not per IP: one wrong code does not lock the rest of the classroom out
+    assert (await client.post("/v1/auth/guest/resume", json={"surveyCode": g["surveyCode"]})).status_code == 200
+    assert (await client.post("/v1/auth/guest/resume", json={"surveyCode": "KS-YYYY"})).status_code == 404
 
 
 async def test_export_has_only_survey_columns(client: httpx.AsyncClient, guests_on: None) -> None:

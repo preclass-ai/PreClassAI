@@ -15,7 +15,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import LoginLimiter
+from app.auth import WRONG_TOO_OFTEN, LoginLimiter
 from app.config import get_settings
 from app.db import models as m
 from app.errors import ApiError
@@ -29,7 +29,9 @@ log = logging.getLogger("preclass.guest")
 WARN_AT = 0.8  # log a warning when a guest limit is 80% used
 
 create_limiter = LoginLimiter(window_s=3600)  # counts every guest created from an IP in the last hour
-resume_limiter = LoginLimiter(max_failures=5, window_s=900)  # wrong codes per IP per 15 minutes
+resume_limiter = LoginLimiter(max_failures=20, window_s=600, message=WRONG_TOO_OFTEN)  # wrong tries per survey code / 10 minutes
+# all wrong codes together: stops enumeration, no IP
+guess_limiter = LoginLimiter(max_failures=300, window_s=600, message=WRONG_TOO_OFTEN)
 
 
 def require_enabled() -> None:
@@ -94,14 +96,17 @@ async def create_guest(db: AsyncSession, ip: str) -> m.AppUser:
     return user
 
 
-async def find_guest(db: AsyncSession, raw_code: str, ip: str) -> m.AppUser:
-    resume_limiter.check(ip)
+async def find_guest(db: AsyncSession, raw_code: str) -> m.AppUser:
+    code = normalize_code(raw_code)
+    resume_limiter.check(code)
+    guess_limiter.check("*")
     user = await db.scalar(select(m.AppUser).where(
-        m.AppUser.survey_code == normalize_code(raw_code), m.AppUser.is_guest.is_(True), m.AppUser.is_active.is_(True)))
+        m.AppUser.survey_code == code, m.AppUser.is_guest.is_(True), m.AppUser.is_active.is_(True)))
     if user is None:
-        resume_limiter.fail(ip)
+        resume_limiter.fail(code)
+        guess_limiter.fail("*")
         raise ApiError(404, "NOT_FOUND", "Không tìm thấy mã khảo sát này")
-    resume_limiter.reset(ip)
+    resume_limiter.reset(code)
     user.last_seen_at = datetime.now(UTC)
     return user
 

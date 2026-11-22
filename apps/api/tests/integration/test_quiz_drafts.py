@@ -1,6 +1,8 @@
 """AI drafts from a lesson plan, end to end: upload -> drafts -> teacher approves -> lesson -> publish -> student review + Habit."""
 
+import asyncio
 import json
+import time
 from collections.abc import AsyncIterator
 from typing import Any
 from uuid import UUID
@@ -304,3 +306,18 @@ async def test_val11_also_blocks_an_ai_question_whose_explanation_uses_data_the_
     res = (await client.post(f"/v1/revisions/{rev}/validate")).json()
     failed = [v for b in res["blocks"] for v in b.get("failedRules", []) if b["blockId"] in (item["id"], expl["id"])]
     assert "VAL-11" in failed, res
+
+
+async def test_the_wait_between_provider_calls_does_not_block_the_server(client: httpx.AsyncClient, gen: pytest.MonkeyPatch) -> None:
+    gen.setenv("QUIZ_GEN_GAP_S", "2")  # asyncio.sleep inside the job: the event loop stays free
+    get_settings.cache_clear()
+    await login(client, "gv.dia@preclass.local")
+    r = await client.post("/v1/lesson-plans", files={"file": ("plan.docx", plan_docx(knowledge=KNOW))}, headers=H)
+    assert r.status_code == 202
+    t0 = time.monotonic()
+    assert (await client.get("/v1/health")).status_code == 200
+    assert time.monotonic() - t0 < 1
+    for _ in range(60):  # let the job finish so it does not leak into the next test
+        if (await client.get(f"/v1/lesson-plans/jobs/{r.json()['id']}")).json()["state"] == "done":
+            break
+        await asyncio.sleep(0.5)

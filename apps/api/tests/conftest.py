@@ -88,6 +88,7 @@ async def client(db: AsyncSession) -> AsyncIterator[httpx.AsyncClient]:
     from app.auth import admin_login_limiter, login_limiter
     from app.db.session import get_db
     from app.generation import background_runner, run_job
+    from app.guest import guess_limiter
     from app.lessonplan.service import plan_runner
     from app.lessonplan.service import run_job as run_plan_job
     from app.main import app
@@ -107,6 +108,7 @@ async def client(db: AsyncSession) -> AsyncIterator[httpx.AsyncClient]:
 
     app.dependency_overrides[plan_runner] = lambda: _plan_inline
     login_limiter.reset()
+    guess_limiter.reset()
     admin_login_limiter.reset()
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://t", headers={"X-PreClass-CSRF": "1"}
