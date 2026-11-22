@@ -25,10 +25,15 @@ from app.db.session import get_engine
 from app.errors import ApiError
 from app.generation import _persist
 from app.generation.providers import AnchorView, Draft, DraftBlock
+from app.habit import rules
+from app.lessonplan import quizgen
 from app.lessonplan.model import PlanFile
 from app.schemas import (
     Competency,
     CompetencyList,
+    PlanAiItemOut,
+    PlanAiItemUpdate,
+    PlanAiList,
     PlanDetail,
     PlanItem,
     PlanJobLatest,
@@ -43,6 +48,7 @@ from app.schemas import (
     SubjectCompetencyOut,
 )
 from app.sources.formats import MIME, Limits, detect_kind, parse_isolated
+from app.sources.numbers import parse_numbers
 from app.sources.parse import MAX_UPLOAD_BYTES, ParsedAnchor
 from app.sources.service import _insert_revision, _store_docx, sha256_hex_bytes
 from app.validation import validate_revision
@@ -97,7 +103,7 @@ async def recover_after_restart() -> int:
         res = await s.execute(update(m.LessonPlanJob).where(m.LessonPlanJob.state.in_(_ACTIVE)).values(
             state="failed", error_code="RESTART", error_title="Máy chủ vừa khởi động lại. Em tải giáo án lên lần nữa nhé."))
         await s.commit()
-        return int(res.rowcount or 0)  # type: ignore[attr-defined]
+        return int(res.rowcount or 0) + await quizgen.recover_after_restart()  # type: ignore[attr-defined]
 
 
 def _job_out(j: m.LessonPlanJob) -> PlanJobOut:
@@ -166,7 +172,12 @@ async def run_job(db: AsyncSession, job_id: UUID, data: bytes) -> None:
         if not plan.anchors or not plan.lessons:
             raise ApiError(422, "EMPTY_SOURCE", "Không đọc được nội dung giáo án")
         ids = await _persist_plans(db, owner, plan, data)
+        ai = cfg.quiz_gen_enabled
+        if ai:
+            await quizgen.mark_queued(db, ids)
         await _set_state(db, job_id, state="done", plan_ids=ids)
+        if ai:
+            await quizgen.run_all(db, ids)  # drafts after the plan is readable; a failure here never fails the job
     except ApiError as e:
         await db.rollback()
         await _set_state(db, job_id, state="failed", error_code=e.code, error_title=e.title)
@@ -236,7 +247,11 @@ async def _lesson_of(db: AsyncSession, p: m.LessonPlan) -> UUID | None:
 async def _out(db: AsyncSession, p: m.LessonPlan) -> PlanOut:
     secs = (await db.scalars(select(m.LessonSection).where(m.LessonSection.lesson_plan_id == p.id))).all()
     mcqs = (await db.scalars(select(m.ExtractedMcq).where(m.ExtractedMcq.lesson_plan_id == p.id))).all()
+    ai = (await db.scalars(select(m.PlanAiItem).where(m.PlanAiItem.lesson_plan_id == p.id, m.PlanAiItem.status != "rejected"))).all()
     return PlanOut(
+        ai_state=p.ai_state, ai_stats=p.ai_stats, ai_quiz_count=sum(1 for i in ai if i.kind == "quiz"),
+        ai_quiz_needs_confirmation_count=sum(1 for i in ai if i.kind == "quiz" and i.needs_confirmation),
+        ai_review_count=sum(1 for i in ai if i.kind == "review"), ai_needs_confirmation_count=sum(1 for i in ai if i.needs_confirmation),
         id=p.id, title=p.title, subject=p.subject, grade=p.grade, ppct_period=p.ppct_period, week=p.week,
         taught_from=p.taught_from, taught_to=p.taught_to, suggested_due_at=due_before(p.taught_from),
         redacted_count=p.redacted_count,
@@ -310,6 +325,76 @@ async def set_mcq_competency(db: AsyncSession, user: CurrentUser, plan_id: UUID,
     return await get_plan(db, user, plan_id)
 
 
+# ---------------------------------------------------------------- AI drafts: review, edit, regenerate
+def _ai_out(i: m.PlanAiItem) -> PlanAiItemOut:
+    return PlanAiItemOut(id=i.id, kind=i.kind, position=i.position, status=i.status, origin=i.origin,
+                         payload=i.payload, source_quote=i.source_quote, needs_confirmation=i.needs_confirmation)
+
+
+async def list_ai_items(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> PlanAiList:
+    p = await _own(db, user, plan_id)
+    rows = (await db.scalars(select(m.PlanAiItem).where(m.PlanAiItem.lesson_plan_id == p.id).order_by(
+        m.PlanAiItem.kind.desc(), m.PlanAiItem.position))).all()
+    return PlanAiList(items=[_ai_out(i) for i in rows])
+
+
+async def update_ai_item(db: AsyncSession, user: CurrentUser, plan_id: UUID, item_id: UUID, body: PlanAiItemUpdate) -> PlanAiItemOut:
+    """Approve, reject or edit one draft. Editing sends it back to draft: the teacher approves what they last saw."""
+    p = await _own(db, user, plan_id)
+    it = await db.scalar(select(m.PlanAiItem).where(m.PlanAiItem.id == item_id, m.PlanAiItem.lesson_plan_id == p.id))
+    if it is None:
+        raise NOT_FOUND
+    if await _lesson_of(db, p) is not None:
+        raise ApiError(409, "LESSON_EXISTS", "Bài chuẩn bị đã được tạo, em sửa trong bài đó nhé")
+    status = body.status or it.status
+    if body.payload is not None:
+        try:
+            model: Any = quizgen.AiQuestion if it.kind == "quiz" else quizgen.AiCard
+            it.payload = model.model_validate(body.payload).model_dump(mode="json")
+        except ValueError as e:
+            raise ApiError(422, "PAYLOAD_INVALID", "Nội dung chưa hợp lệ: cần đủ 4 phương án, 3 gợi ý và đoạn trích nguồn") from e
+        status = body.status or "draft"
+    it.status = status
+    it.needs_confirmation = status != "approved"  # the model's answer counts as confirmed only when the teacher approves it
+    await db.commit()
+    return _ai_out(it)
+
+
+async def regenerate_ai(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> PlanOut:
+    """Approved items stay, the rest is redrafted in the background."""
+    p = await _own(db, user, plan_id)
+    if not get_settings().quiz_gen_enabled:
+        raise ApiError(409, "QUIZ_GEN_OFF", "Tính năng AI soạn câu hỏi đang tắt")
+    if p.ai_state in ("queued", "running"):
+        raise ApiError(409, "AI_BUSY", "AI đang soạn câu hỏi cho giáo án này")
+    if await _lesson_of(db, p) is not None:
+        raise ApiError(409, "LESSON_EXISTS", "Bài chuẩn bị đã được tạo, không soạn lại được")
+    p.ai_state = "queued"
+    await db.commit()
+    quizgen.start(p.id)
+    return await _out(db, p)
+
+
+def _anchor_for(quote: str, by: dict[UUID, m.SourceAnchor]) -> m.SourceAnchor | None:
+    """The plan paragraph a drafted item quotes (provenance): the one holding most of the quote's words."""
+    q = set(rules.norm(quote).split())
+    best = max(by.values(), key=lambda a: len(q & set(rules.norm(a.excerpt).split())), default=None)
+    return best if best is not None and q & set(rules.norm(best.excerpt).split()) else None
+
+
+def _number_sources(text: str, main: m.SourceAnchor, by: dict[UUID, m.SourceAnchor]) -> tuple[m.SourceAnchor, ...]:
+    """Other plan paragraphs that hold a number used in `text` (a distractor may take its figure from elsewhere in the plan): VAL-03
+    checks every number of a block against the paragraphs it cites."""
+    need = set(parse_numbers(text)) - set(parse_numbers(main.excerpt))
+    out: list[m.SourceAnchor] = []
+    for a in by.values():
+        have = need & set(parse_numbers(a.excerpt))
+        if have:
+            out.append(a)
+            need -= have
+    return tuple(out)
+
+
 # ---------------------------------------------------------------- "Tạo bài chuẩn bị trước giờ học"
 def _first(items: list[m.SourceAnchor], pred: Any) -> m.SourceAnchor | None:
     return next((a for a in items if pred(a)), None)
@@ -355,10 +440,10 @@ async def build_lesson(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> Pl
         meta[key] = {"competency_code": code, "objective_id": obj}
 
     def add(key: str, kind: str, payload: dict[str, Any], anchor: m.SourceAnchor, *, parent: str | None = None,
-            tr: str = "ORIGINAL", factual: bool = False, code: str | None = None) -> None:
+            tr: str = "ORIGINAL", factual: bool = False, code: str | None = None, more: tuple[m.SourceAnchor, ...] = ()) -> None:
         tag(key, code)
         blocks.append(DraftBlock(key=key, kind=kind, parentKey=parent, payload=payload, transformation=tr,
-                                 anchorAliases=[alias[anchor.id]], isFactual=factual))
+                                 anchorAliases=[alias[a.id] for a in (anchor, *more)], isFactual=factual))
 
     opening = anchors_of("mo_dau")
     trig = _first(opening, lambda a: a.excerpt.rstrip().endswith("?")) or _first(opening, lambda a: len(a.excerpt) > 20)
@@ -382,11 +467,34 @@ async def build_lesson(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> Pl
         right = opts[ord(q.correct_option or "A") - 65]
         add(f"q{n}k", "answer_key", {"correct": q.correct_option}, right, parent=f"q{n}", code=cc)  # the pipeline never lets a generator claim TEACHER_AUTHORED; the confirmed option is quoted
         add(f"q{n}e", "explanation", {"text": f"Đáp án đúng là {q.correct_option}. {right.excerpt}"}, right, parent=f"q{n}", tr="SYNTHESISED", code=cc)
+    ai = (await db.scalars(select(m.PlanAiItem).where(m.PlanAiItem.lesson_plan_id == p.id, m.PlanAiItem.status == "approved")
+                           .order_by(m.PlanAiItem.kind, m.PlanAiItem.position))).all()
+    ai_q = 0
+    for it in ai:  # only what the teacher approved; the blocks still go through the normal review and publish gate
+        src = _anchor_for(it.source_quote, by)
+        if src is None:
+            continue
+        d = it.payload
+        if it.kind == "review":
+            card = {"title": d["title"], "points": d["points"], "example": d["example"],
+                    "check": {"statement": d["check"]["statement"], "answerTrue": d["check"]["answer_true"], "explanation": d["check"]["explanation"]}}
+            add(f"rv{len(blocks)}", "review_card", card, src, tr="AI_PROPOSED",
+                more=_number_sources(" ".join([d["title"], *d["points"], d["example"], d["check"]["statement"]]), src, by))
+            continue
+        ai_q += 1
+        k = f"aq{ai_q}"
+        add(k, "worksheet_item", {"stem": d["stem"], "itemType": "MCQ", "skill": d["skill_tag"], "hints": d["hints"],
+                          "sourceQuote": it.source_quote[:500]}, src, tr="AI_PROPOSED",
+            more=_number_sources(d["stem"], src, by))
+        for i, o in enumerate(d["options"]):
+            add(f"{k}{chr(97 + i)}", "option", {"label": chr(65 + i), "text": o}, src, parent=k, tr="AI_PROPOSED", more=_number_sources(o, src, by))
+        add(f"{k}k", "answer_key", {"correct": chr(65 + d["correct_index"])}, src, parent=k, tr="AI_PROPOSED")
+        add(f"{k}e", "explanation", {"text": d["explanation"]}, src, parent=k, tr="AI_PROPOSED", more=_number_sources(d["explanation"], src, by))
     apply = _first(anchors_of("van_dung"), lambda a: len(a.excerpt) > 20)
     if apply:
         add("apply", "instruction", {"text": apply.excerpt}, apply, code=ACTIVITY_COMPETENCY["van_dung"])
     n = await _persist(db, rev, Draft(blocks=blocks), views, alias_id, "plan-5512/1", meta)
     await db.commit()
     await validate_revision(db, rev.id)
-    return PlanLessonOut(lesson_id=lesson.id, blocks=n, practice_items=len(chosen),
+    return PlanLessonOut(lesson_id=lesson.id, blocks=n, practice_items=len(chosen) + ai_q,
                          skipped_unconfirmed=len(mcqs) - len(ok), left_for_after_class=max(0, len(ok) - MAX_PRACTICE))

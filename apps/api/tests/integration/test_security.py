@@ -42,7 +42,7 @@ async def test_survey_stats_is_admin_only(client: httpx.AsyncClient) -> None:
     client.cookies.clear()
     await login(client, "admin@preclass.local")
     body = (await client.get("/v1/admin/survey/stats")).json()
-    assert set(body) == {"activeGuests", "createdLastHour", "maxActive", "createPerHourPerIp", "chatTotal", "chatFallbackRate",
+    assert set(body) == {"activeGuests", "createdLastHour", "maxActive", "createPerIp", "chatTotal", "chatFallbackRate",
                          "chatBlocked", "chatTokensIn", "chatTokensOut", "chatByModel"}
 
 
@@ -94,7 +94,7 @@ def test_docs_default_is_open_except_in_production(monkeypatch: pytest.MonkeyPat
 async def test_guest_creation_warns_at_80_percent_without_leaking_ip_or_code(
         client: httpx.AsyncClient, db: AsyncSession, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
     monkeypatch.setenv("GUEST_ACCESS_ENABLED", "true")
-    monkeypatch.setenv("GUEST_CREATE_PER_HOUR", "5")
+    monkeypatch.setenv("GUEST_CREATE_PER_IP", "5")
     monkeypatch.setenv("GUEST_MAX_ACTIVE", "5")
     get_settings.cache_clear()
     create_limiter.reset()

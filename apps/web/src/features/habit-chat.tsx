@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type TouchEvent } from "react";
 import { Button } from "@/components/ui";
 import { errorCode, errorMessage } from "@/lib/errors";
 import { newRequestId } from "@/lib/uuid";
@@ -24,16 +24,18 @@ type Msg = {
   refused?: boolean;
   extra?: string | null;
   suggestions?: ChatReply["suggestions"];
+  openReview?: string | null;
 };
 
 /** Bottom sheet (narrow) / side panel (wide). Plain text only: replies are rendered as React text, never as HTML. */
-export default function HabitChat({ assignmentId, itemId, answered, explanation, open, onClose }: {
+export default function HabitChat({ assignmentId, itemId, answered, explanation, open, onClose, onOpenReview }: {
   assignmentId: string;
   itemId: string;
   answered: boolean;
   explanation: string | null;
   open: boolean;
   onClose: () => void;
+  onOpenReview?: (cardId: string) => void;
 }) {
   const dlg = useRef<HTMLDialogElement>(null);
   const log = useRef<HTMLDivElement>(null);
@@ -51,7 +53,10 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
     if (open && !d.open) {
       // Wide screens: a side panel that does not block the page (Nộp stays clickable). Narrow: modal sheet (focus trap + Esc).
       if (window.matchMedia("(min-width: 1100px)").matches) d.show();
-      else d.showModal();
+      else {
+        d.showModal(); // native modal: focus is trapped inside and the rest of the page is inert
+        d.setAttribute("aria-modal", "true");
+      }
     }
     if (!open && d.open) d.close();
   }, [open]);
@@ -62,8 +67,9 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
     const d = dlg.current;
     if (!open || !vv || !d || window.matchMedia("(min-width: 1100px)").matches) return;
     const fit = () => {
-      d.style.setProperty("--vvh", `${Math.round(vv.height * 0.8)}px`);
+      d.style.setProperty("--vvh", `${Math.round(vv.height * 0.85)}px`);
       d.style.setProperty("--vvb", `${Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))}px`);
+      if (log.current) log.current.scrollTop = log.current.scrollHeight; // keyboard opened or closed: keep the newest message in view
     };
     fit();
     vv.addEventListener("resize", fit);
@@ -71,6 +77,18 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
     return () => {
       vv.removeEventListener("resize", fit);
       vv.removeEventListener("scroll", fit);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    // The page behind a bottom sheet must not scroll (iOS Safari scrolls it under a modal dialog).
+    if (!open || window.matchMedia("(min-width: 1100px)").matches) return;
+    const html = document.documentElement;
+    const prev = [html.style.overflow, document.body.style.overflow];
+    html.style.overflow = document.body.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = prev[0] ?? "";
+      document.body.style.overflow = prev[1] ?? "";
     };
   }, [open]);
 
@@ -100,7 +118,7 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
     try {
       const res = await askHabit(assignmentId, { itemId, action: "ask", ...(quick ? { quick } : { message: m }), requestId: r.rid });
       retry.current = null;
-      setMsgs((x) => [...x, { id: ++seq.current, from: "habit", text: res.reply, refs: res.sourceRefs, refused: !!res.blockedReason, extra: res.extra, suggestions: res.suggestions }]);
+      setMsgs((x) => [...x, { id: ++seq.current, from: "habit", text: res.reply, refs: res.sourceRefs, refused: !!res.blockedReason, extra: res.extra, suggestions: res.suggestions, openReview: res.openReview }]);
     } catch (e) {
       if (errorCode(e) !== "NETWORK") retry.current = null;
       setErr(e);
@@ -109,6 +127,19 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
     }
   }
 
+  // Swipe down on the header closes the sheet (the X button stays for everyone else).
+  const touch = useRef<number | null>(null);
+  const grab = {
+    onTouchStart: (e: TouchEvent<HTMLElement>) => {
+      touch.current = e.touches[0]?.clientY ?? null;
+    },
+    onTouchEnd: (e: TouchEvent<HTMLElement>) => {
+      const y = e.changedTouches[0]?.clientY;
+      if (touch.current !== null && y !== undefined && y - touch.current > 70) onClose();
+      touch.current = null;
+    },
+  };
+
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!busy && !limited) void send(text);
@@ -116,7 +147,8 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
 
   return (
     <dialog ref={dlg} className="habit-sheet" aria-label="Hỏi HABIT AI" onClose={onClose}>
-      <header className="habit-sheet-head">
+      <header className="habit-sheet-head" {...grab}>
+        <span className="habit-grab" aria-hidden="true" />
         <strong className="habit-title">
           <HabitMark /> HABIT AI
           <span className="habit-online">
@@ -137,6 +169,18 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
                 <SourceRef key={s.blockId} excerpt={s.excerpt} />
               ))}
             </div>
+            {m.openReview && onOpenReview ? (
+              <button
+                type="button"
+                className="habit-chip"
+                onClick={() => {
+                  onOpenReview(m.openReview as string);
+                  onClose();
+                }}
+              >
+                Mở thẻ ôn
+              </button>
+            ) : null}
             {m.extra ? (
               <div className="habit-msg habit habit-extra">
                 <span className="habit-extra-label">HABIT AI gợi ý thêm (chưa được thầy cô kiểm chứng)</span>

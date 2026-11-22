@@ -14,7 +14,7 @@ import { invalidateLesson, keys, useBlocks, useProvenance, useRefreshLesson } fr
 const FILTERS: ReviewStatus[] = ["FLAGGED", "REVIEW_AGAIN", "UNREVIEWED", "AUTO_CHECKED", "APPROVED", "REJECTED"];
 const DEFAULT: ReviewStatus[] = ["FLAGGED", "REVIEW_AGAIN", "UNREVIEWED", "AUTO_CHECKED"];
 
-/** S04 Review Queue: one block at a time, evidence first, hash-bound decisions, no "approve all". */
+/** S04 Review Queue: one block at a time, evidence first, hash-bound decisions. The only bulk action is ApproveClean (blocks with no warning). */
 export function ReviewQueue({ lesson }: { lesson: Schemas["LessonOut"] }) {
   const rev = lesson.currentRevision;
   const [statuses, setStatuses] = useState<Set<ReviewStatus>>(new Set(DEFAULT));
@@ -34,7 +34,7 @@ export function ReviewQueue({ lesson }: { lesson: Schemas["LessonOut"] }) {
 
   return (
     <div className="stack">
-      {locked ? <Notice>Bản này đã xuất bản: chỉ xem, không duyệt thêm.</Notice> : null}
+      {locked ? <Notice>Bản này đã xuất bản: chỉ xem, không duyệt thêm.</Notice> : <ApproveClean lessonId={lesson.id} revisionId={rev.id} />}
       <fieldset className="chips">
         <legend className="field-label">Hiện khối</legend>
         {FILTERS.map((s) => (
@@ -169,6 +169,64 @@ export function ReviewActions({ block, lessonId }: { block: Block; lessonId: str
           Từ chối
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** "Duyệt tất cả": only "Máy đã kiểm" blocks with no warning. The server counts first; nothing is written until the teacher confirms. */
+function ApproveClean({ lessonId, revisionId }: { lessonId: string; revisionId: string }) {
+  const qc = useQueryClient();
+  const [plan, setPlan] = useState<Schemas["ApproveAllOut"] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+
+  async function call(confirm: boolean) {
+    setBusy(true);
+    setError(null);
+    try {
+      const out = await unwrap(
+        api.POST("/v1/revisions/{revision_id}/approve-all", { params: { path: { revision_id: revisionId } }, body: { confirm } }),
+      );
+      if (confirm) {
+        setPlan(null);
+        await invalidateLesson(qc, lessonId);
+      } else setPlan(out);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="stack">
+      {plan ? (
+        <div className="alert alert-info" role="alertdialog" aria-label="Xác nhận duyệt tất cả">
+          <p>
+            {plan.approved === 0
+              ? `Không có khối nào duyệt được cùng lúc. ${plan.skipped} khối có cảnh báo hoặc chưa kiểm xong cần duyệt tay.`
+              : `Duyệt ${plan.approved} khối, bỏ qua ${plan.skipped} khối có cảnh báo. Khối có cảnh báo vẫn cần thầy cô duyệt tay.`}
+          </p>
+          <div className="actions">
+            {plan.approved > 0 ? (
+              <Button variant="primary" busy={busy} onClick={() => void call(true)}>
+                Duyệt {plan.approved} khối
+              </Button>
+            ) : null}
+            <Button variant="secondary" onClick={() => setPlan(null)}>
+              Hủy
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <Button variant="secondary" busy={busy} onClick={() => void call(false)}>
+            Duyệt tất cả khối không có cảnh báo
+          </Button>
+          <span className="muted small"> Chỉ các khối &quot;Máy đã kiểm&quot; không có cảnh báo.</span>
+        </div>
+      )}
+      <ErrorBox error={error} />
     </div>
   );
 }

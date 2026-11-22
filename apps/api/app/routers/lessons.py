@@ -150,7 +150,7 @@ async def get_provenance(block_id: UUID, cu: Annotated[CurrentUser, Depends(curr
     if cu.role == "STUDENT":  # PR-08: students must not learn that provenance exists
         raise blocks_service.NOT_FOUND
     if cu.role not in ("TEACHER", "REVIEWER"):
-        raise ApiError(403, "FORBIDDEN_ROLE", "Bạn không có quyền thực hiện thao tác này")
+        raise ApiError(403, "FORBIDDEN_ROLE", "Không có quyền thực hiện thao tác này")
     return await blocks_service.get_provenance(db, cu, block_id)
 
 

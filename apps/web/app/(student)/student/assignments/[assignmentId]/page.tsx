@@ -2,6 +2,7 @@
 
 import { GuestBanner, GuestSurveyCard } from "@/features/guest";
 import { HabitBar, HabitItem } from "@/features/habit";
+import { ReviewAsk, ReviewStepper, Steps, type Stage } from "@/features/review-step";
 import { habitKey } from "@/features/habit-api";
 import { FocusTimer, PersonalizationBar, usePersonalizationOn, usePrefs } from "@/features/personalization";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +25,8 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
   const [closed, setClosed] = useState(false);
   const [focus, setFocus] = useState(false);
   const [idx, setIdx] = useState(0);
+  const [view, setView] = useState<Stage | "auto">("auto"); // the student's own choice; "auto" follows what the server remembers
+  const [cardId, setCardId] = useState<string | null>(null);
   const persOn = usePersonalizationOn();
   const prefs = usePrefs(persOn);
   const a = useQuery({
@@ -52,6 +55,17 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
   }
 
   const data = a.data;
+  const review = data.review ?? [];
+  const hasReview = review.length > 0; // no approved review cards: the lesson is the quiz alone, as before
+  const rs = { seenIds: [], checks: {}, reviewed: false, choice: null, ...data.reviewState };
+  const auto: Stage = !hasReview ? "quiz" : rs.choice === null ? "ask" : rs.choice === "not_yet" && !rs.reviewed ? "review" : "quiz";
+  const stage: Stage = !hasReview ? "quiz" : view === "auto" ? auto : view;
+  const reload = () => void qc.invalidateQueries({ queryKey: key });
+  const openReview = (id: string) => {
+    setCardId(id);
+    setView("review");
+    window.scrollTo({ top: 0 });
+  };
   const isClosed = closed || new Date(data.dueAt).getTime() < Date.now();
   // Content and items share one position space in the snapshot: show them in authoring order.
   const entries = [
@@ -61,7 +75,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
   const answered = data.items.filter((i) => i.result).length;
   let n = 0;
   const items = data.items.slice().sort((x, y) => x.position - y.position);
-  const inFocus = focus && persOn && items.length > 0;
+  const inFocus = focus && persOn && items.length > 0 && stage === "quiz";
   const cur = items[Math.min(idx, items.length - 1)];
   const content = entries.filter((e): e is { pos: number; block: ContentBlock } => "block" in e);
   const itemProps = (item: Item, no: number) => ({
@@ -74,6 +88,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
       void qc.invalidateQueries({ queryKey: habitKey(assignmentId) }); // streak + daily goal
     },
     onClosed: () => setClosed(true),
+    onOpenReview: hasReview ? openReview : undefined,
   });
 
   return (
@@ -94,7 +109,21 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
       )}
       {inFocus ? null : <GuestBanner />}
       {inFocus ? null : <HabitBar assignmentId={assignmentId} />}
-      <PersonalizationBar focus={focus} onFocus={(on) => { setFocus(on); setIdx(0); }} />
+      {hasReview && !inFocus ? <Steps stage={stage} /> : null}
+      {stage === "ask" ? (
+        <ReviewAsk assignmentId={assignmentId} onChoose={(c) => setView(c === "done" ? "quiz" : "review")} onSaved={reload} />
+      ) : null}
+      {stage === "review" ? (
+        <ReviewStepper assignmentId={assignmentId} cards={review} state={rs} startId={cardId} onSaved={reload} onDone={() => setView("quiz")} />
+      ) : null}
+      {stage === "quiz" && hasReview && !inFocus ? (
+        <p>
+          <button type="button" className="review-link" onClick={() => setView("review")}>
+            Xem lại phần ôn
+          </button>
+        </p>
+      ) : null}
+      {stage === "quiz" ? <PersonalizationBar focus={focus} onFocus={(on) => { setFocus(on); setIdx(0); }} /> : null}
       {prefs.nhac_tien_do && !inFocus ? (
         <p className="pers-nudge" role="status">
           Em đã làm {answered}/{data.items.length} câu{answered < data.items.length ? `, còn ${data.items.length - answered} câu nữa là xong.` : ". Giỏi lắm!"}
@@ -127,7 +156,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
           </div>
         </section>
       ) : null}
-      {inFocus ? null : entries.map((e) =>
+      {inFocus || stage !== "quiz" ? null : entries.map((e) =>
         "block" in e && e.block ? (
           <ContentView key={e.block.id} block={e.block} />
         ) : "item" in e && e.item ? (
@@ -165,13 +194,14 @@ function ContentView({ block }: { block: ContentBlock }) {
   }
 }
 
-function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
+function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed, onOpenReview }: {
   no: number;
   item: Item;
   assignmentId: string;
   disabled: boolean;
   onAnswered: () => void;
   onClosed: () => void;
+  onOpenReview?: (cardId: string) => void;
 }) {
   const [choice, setChoice] = useState<string>("");
   const [value, setValue] = useState("");
@@ -182,6 +212,9 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
   // Same requestId for retries of one answer: a resend after a network error returns the stored result.
   const requestId = useRef<string | null>(null);
   const result = item.result ?? local;
+  // "Làm lại": practice after the first attempt. Graded and explained, but teachers keep seeing the first attempt only.
+  const [redo, setRedo] = useState(false);
+  const [practice, setPractice] = useState<Schemas["AttemptResult"] | null>(null);
   const numeric = item.itemType === "NUMERIC" && value.trim() !== "" ? parseAnswerNumber(value) : null;
 
   async function submit(e: FormEvent) {
@@ -193,9 +226,23 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
       answer = { value: numeric.value };
     }
     else answer = { text: text.trim() };
-    requestId.current ??= newRequestId();
     setBusy(true);
     setError(null);
+    if (redo) {
+      try {
+        setPractice(await unwrap(api.POST("/v1/student/assignments/{assignment_id}/practice", { params: { path: { assignment_id: assignmentId } }, body: { itemId: item.id, answer } })));
+        setRedo(false);
+        setChoice("");
+        setValue("");
+        setText("");
+      } catch (err) {
+        setError(err);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    requestId.current ??= newRequestId();
     try {
       const res = await unwrap(
         api.POST("/v1/student/assignments/{assignment_id}/attempts", {
@@ -226,11 +273,19 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
       <p id={`q-${item.id}`} className="stem">
         {item.stem}
       </p>
-      <HabitItem assignmentId={assignmentId} itemId={item.id} answered={!!result} explanation={result?.explanation ?? null} />
-      {result ? (
-        <Result result={result} />
+      <HabitItem assignmentId={assignmentId} itemId={item.id} answered={!!result} explanation={result?.explanation ?? null} onOpenReview={onOpenReview} />
+      {result && !redo ? (
+        <>
+          <Result result={result} />
+          {practice ? <Result result={practice} title="Lần làm lại" /> : null}
+          <div>
+            <Button onClick={() => { setPractice(null); setRedo(true); }}>Làm lại</Button>{" "}
+            <span className="muted small">Làm lại để luyện tập. Thầy cô vẫn xem lần làm đầu của em.</span>
+          </div>
+        </>
       ) : (
         <form className="stack" onSubmit={submit}>
+          {redo ? <p className="muted small">Lượt luyện tập: không thay đổi kết quả thầy cô thấy.</p> : null}
           {item.itemType === "MCQ" ? (
             <div className="options" role="radiogroup">
               {item.options?.map((o) => (
@@ -240,7 +295,7 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
                     name={`q-${item.id}`}
                     value={o.label}
                     checked={choice === o.label}
-                    disabled={disabled}
+                    disabled={disabled && !redo}
                     onChange={() => setChoice(o.label)}
                   />
                   <span>
@@ -257,7 +312,7 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
               aria-invalid={numericError ? true : undefined}
               aria-describedby={noteId}
               value={value}
-              disabled={disabled}
+              disabled={disabled && !redo}
               onChange={(e) => setValue(e.target.value)}
             />
           ) : (
@@ -265,18 +320,18 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
               rows={3}
               aria-label="Câu trả lời"
               value={text}
-              disabled={disabled}
+              disabled={disabled && !redo}
               onChange={(e) => setText(e.target.value)}
               maxLength={2000}
             />
           )}
           {error ? <div className="alert alert-danger" role="alert">{errorMessage(error)}</div> : null}
           <div className="submit-row">
-            <Button type="submit" variant="primary" className="submit-btn" busy={busy} disabled={disabled || !ready}>
-              Nộp câu trả lời
+            <Button type="submit" variant="primary" className="submit-btn" busy={busy} disabled={(disabled && !redo) || !ready}>
+              {redo ? "Nộp lần làm lại" : "Nộp câu trả lời"}
             </Button>
             <span className={numericError ? "submit-note field-error" : "submit-note"} id={noteId} aria-live="polite">
-              {numericError ?? (ready ? "Em chỉ nộp một lần. Lời giải hiện sau khi nộp." : item.itemType === "MCQ" ? "Chọn một đáp án để nộp." : item.itemType === "NUMERIC" ? "Nhập đáp số để nộp." : "Viết câu trả lời để nộp.")}
+              {numericError ?? (ready ? (redo ? "Lời giải hiện sau khi nộp." : "Em chỉ nộp một lần. Lời giải hiện sau khi nộp.") : item.itemType === "MCQ" ? "Chọn một đáp án để nộp." : item.itemType === "NUMERIC" ? "Nhập đáp số để nộp." : "Viết câu trả lời để nộp.")}
             </span>
           </div>
         </form>
@@ -285,13 +340,19 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
   );
 }
 
-function Result({ result }: { result: Schemas["AttemptResult"] }) {
+function Result({ result, title }: { result: Schemas["AttemptResult"]; title?: string }) {
   const tone = result.isCorrect === true ? "success" : result.isCorrect === false ? "danger" : "info";
   const label = result.isCorrect === true ? "Đúng" : result.isCorrect === false ? "Chưa đúng" : "Đã ghi nhận câu trả lời";
   return (
     <div className={`alert alert-${tone}`} role="status">
-      <strong>{label}</strong>
+      <strong>{title ? `${title}: ${label}` : label}</strong>
+      {result.correctAnswer ? (
+        <p className="answer-reveal">
+          <strong>Đáp án đúng:</strong> {result.correctAnswer}
+        </p>
+      ) : null}
       {result.explanation ? <p className="explanation">{result.explanation}</p> : null}
+      <p className="source-line muted small">{result.sourceQuote ? `Theo giáo án: ${result.sourceQuote}` : "Nguồn: tài liệu giáo viên đã duyệt"}</p>
     </div>
   );
 }

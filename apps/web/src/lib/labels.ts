@@ -32,6 +32,7 @@ export const KIND: Record<BlockKind, string> = {
   explanation: "Giải thích",
   card_front: "Thẻ, mặt trước",
   card_back: "Thẻ, mặt sau",
+  review_card: "Thẻ ôn tập",
 };
 
 export const TRANSFORMATION: Record<Transformation, string> = {
@@ -62,7 +63,7 @@ export const RELATION: Record<Schemas["LinkIn"]["relation"], string> = {
 };
 
 export const CHECK: Record<Schemas["PublishCheckItem"]["code"], string> = {
-  ALL_APPROVED: "Mọi khối đã được duyệt",
+  ALL_APPROVED: "Thầy/cô đã duyệt tất cả các nguồn cần duyệt",
   NO_BLOCKERS: "Không còn lỗi chặn",
   SOURCES_VALID: "Nguồn của các khối còn hợp lệ",
   HAS_ITEMS: "Có ít nhất một câu hỏi",
@@ -85,9 +86,21 @@ export const VISIBILITY: Record<"PRIVATE" | "SCHOOL", string> = { PRIVATE: "Ch�
 
 export type Tone = "neutral" | "info" | "success" | "warning" | "danger";
 
-/** Hints go from light to detailed (server levels 1–3): students pick by how much help they want, not by a count. */
-export const HINT_LEVEL: Record<number, { name: string; topic: string }> = {
-  1: { name: "Gợi ý nhẹ", topic: "Bắt đầu từ đâu" },
-  2: { name: "Gợi ý vừa", topic: "Dữ liệu cần dùng ở đâu" },
-  3: { name: "Gợi ý chi tiết", topic: "Cách làm" },
+/** Hint n of the item (1..10): the more a student asks, the more it shows. The name tells which kind of help the press gives. */
+export const hintTier = (n: number): string => (n <= 3 ? "Gợi ý nhẹ" : n <= 7 ? "Gợi ý rõ hơn" : "Hướng dẫn chi tiết");
+
+/** Plain names for the validation rules, so a teacher reads "Đề không lộ đáp án" and not just "VAL-10". */
+export const VAL_NAME: Record<string, string> = {
+  "VAL-01": "Đoạn nguồn có thật",
+  "VAL-02": "Trích đúng nguyên văn",
+  "VAL-03": "Số liệu có nguồn",
+  "VAL-04": "Đáp án rõ ràng",
+  "VAL-05": "Phương án A đến D đủ và không trùng",
+  "VAL-06": "Lần duyệt còn khớp nội dung",
+  "VAL-07": "Hình ảnh",
+  "VAL-08": "Thuật ngữ cần xem lại",
+  "VAL-09": "Giấy phép của nguồn",
+  "VAL-10": "Đề không lộ đáp án",
+  "VAL-11": "Số liệu hiện trong đề",
 };
+export const valName = (rule: string): string => (VAL_NAME[rule] ? `${VAL_NAME[rule]} (${rule})` : rule);

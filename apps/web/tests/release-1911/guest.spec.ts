@@ -10,7 +10,7 @@ test.beforeEach(async ({ request }) => {
 
 async function enter(page: Page) {
   await page.goto("/login");
-  await expect(page.getByText(/không hỏi tên hay email/)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/không yêu cầu họ tên hay email/)).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: "Vào làm thử (không cần tài khoản)" }).click();
   await expect(page.getByRole("heading", { name: "Bài được giao" })).toBeVisible({ timeout: 30_000 });
   const banner = page.locator(".guest-banner");

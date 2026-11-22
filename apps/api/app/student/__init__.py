@@ -22,8 +22,11 @@ from app.schemas import (
     AnswerIn,
     AttemptRequest,
     AttemptResult,
+    PracticeRequest,
     ProgressItem,
     ProgressOut,
+    ReviewProgressIn,
+    ReviewState,
     StudentAssignmentList,
     StudentAssignmentOut,
     StudentAssignmentSummary,
@@ -31,6 +34,7 @@ from app.schemas import (
     StudentItem,
     StudentOption,
 )
+from app.student import review
 
 _CONTENT = {"heading", "paragraph", "data_fact", "instruction", "card_front"}  # card_back is the answer: never listed
 
@@ -47,7 +51,7 @@ async def _load(db: AsyncSession, user: CurrentUser, assignment_id: UUID) -> tup
         .join(m.Class, m.Class.id == m.Assignment.class_id)
         .join(m.ClassMember, (m.ClassMember.class_id == m.Class.id) & (m.ClassMember.user_id == user.id)
               & (m.ClassMember.role_in_class == "STUDENT"))
-        .where(m.Assignment.id == assignment_id))).first()
+        .where(m.Assignment.id == assignment_id, m.Assignment.cancelled_at.is_(None)))).first()
     if row is None or row[0].open_at > _now():
         raise NOT_FOUND
     if row[1].state == "WITHDRAWN":
@@ -75,7 +79,17 @@ def _grade(item_type: str, key: dict[str, Any] | None, ans: AnswerIn) -> bool | 
 
 def _result(snap: dict[str, Any], item_id: str, is_correct: bool | None) -> AttemptResult:
     exp = next(iter(_children(snap, item_id, "explanation")), None)
-    return AttemptResult(item_id=UUID(item_id), is_correct=is_correct, explanation=exp["payload"]["text"] if exp else None)
+    item = next((i for i in _items(snap) if i["id"] == item_id), None)
+    key = next(iter(_children(snap, item_id, "answer_key")), None)
+    right: str | None = None
+    if key and item and item["payload"]["itemType"] == "MCQ" and key["payload"].get("correct"):
+        label = key["payload"]["correct"]
+        text = next((o["payload"]["text"] for o in _children(snap, item_id, "option") if o["payload"]["label"] == label), "")
+        right = f"{label}. {text}".strip()
+    elif key and key["payload"].get("value") is not None:
+        right = f"{key['payload']['value']} {key['payload'].get('unit') or ''}".strip()
+    return AttemptResult(item_id=UUID(item_id), is_correct=is_correct, explanation=exp["payload"]["text"] if exp else None,
+                         correct_answer=right, source_quote=(item["payload"].get("sourceQuote") if item else None))
 
 
 async def _attempts(db: AsyncSession, assignment_id: UUID, student_id: UUID) -> dict[UUID, m.StudentAttempt]:
@@ -99,7 +113,8 @@ async def get_assignment(db: AsyncSession, user: CurrentUser, assignment_id: UUI
             id=UUID(it["id"]), position=it["position"], item_type=p["itemType"], skill=p["skill"], stem=p["stem"],
             options=[StudentOption(label=o["payload"]["label"], text=o["payload"]["text"]) for o in opts],
             result=_result(snap, it["id"], att.is_correct) if att else None))
-    return StudentAssignmentOut(id=a.id, title=snap["title"], open_at=a.open_at, due_at=a.due_at, blocks=blocks, items=items)
+    return StudentAssignmentOut(id=a.id, title=snap["title"], open_at=a.open_at, due_at=a.due_at, blocks=blocks, items=items,
+                                review=review.cards(snap), review_state=await review.state(db, a.id, user.id))
 
 
 async def list_assignments(db: AsyncSession, user: CurrentUser) -> StudentAssignmentList:
@@ -109,7 +124,7 @@ async def list_assignments(db: AsyncSession, user: CurrentUser) -> StudentAssign
         .join(m.Class, m.Class.id == m.Assignment.class_id)
         .join(m.ClassMember, (m.ClassMember.class_id == m.Class.id) & (m.ClassMember.user_id == user.id)
               & (m.ClassMember.role_in_class == "STUDENT"))
-        .where(m.Assignment.open_at <= func.now(), m.PublishedVersion.state == "ACTIVE")
+        .where(m.Assignment.open_at <= func.now(), m.PublishedVersion.state == "ACTIVE", m.Assignment.cancelled_at.is_(None))
         .order_by(m.Assignment.due_at))).all()
     now = _now()
     out: list[StudentAssignmentSummary] = []
@@ -133,7 +148,7 @@ async def submit_attempt(db: AsyncSession, user: CurrentUser, assignment_id: UUI
     if existing is not None:
         if existing.request_id == body.request_id:  # retry of the same submit: idempotent
             return _result(snap, item["id"], existing.is_correct)
-        raise ApiError(409, "ALREADY_ANSWERED", "Bạn đã trả lời câu này rồi")
+        raise ApiError(409, "ALREADY_ANSWERED", "Em đã trả lời câu này rồi")
     if _now() > a.due_at:
         raise ApiError(409, "PAST_DUE", "Bài đã quá hạn nộp. Em vẫn xem lại được bài và lời giải")
     key = next(iter(_children(snap, item["id"], "answer_key")), None)
@@ -146,9 +161,27 @@ async def submit_attempt(db: AsyncSession, user: CurrentUser, assignment_id: UUI
         again = (await _attempts(db, a.id, user.id)).get(body.item_id)
         if again is not None and again.request_id == body.request_id:
             return _result(snap, item["id"], again.is_correct)
-        raise ApiError(409, "ALREADY_ANSWERED", "Bạn đã trả lời câu này rồi")
+        raise ApiError(409, "ALREADY_ANSWERED", "Em đã trả lời câu này rồi")
     if get_settings().chat_enabled:
         await bump(db, user.id, items=1)
+    await db.commit()
+    return _result(snap, item["id"], ok)
+
+
+async def submit_practice(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: PracticeRequest) -> AttemptResult:
+    """"Làm lại": another run of an item the student already answered. Graded and explained, never counted in the results:
+    teachers, insights and the CSV keep the first attempt. Allowed after the due date too (it is practice, not submission)."""
+    a, pv, _ = await _load(db, user, assignment_id)
+    snap = pv.snapshot
+    item = next((i for i in _items(snap) if i["id"] == str(body.item_id)), None)
+    if item is None:
+        raise NOT_FOUND
+    if body.item_id not in await _attempts(db, a.id, user.id):
+        raise ApiError(409, "NOT_ANSWERED", "Em hãy nộp câu này lần đầu rồi mới làm lại nhé")
+    key = next(iter(_children(snap, item["id"], "answer_key")), None)
+    ok = _grade(item["payload"]["itemType"], key["payload"] if key else None, body.answer)
+    db.add(m.PracticeAttempt(assignment_id=a.id, student_id=user.id, item_block_id=body.item_id,
+                             answer=body.answer.model_dump(exclude_none=True), is_correct=ok))
     await db.commit()
     return _result(snap, item["id"], ok)
 
@@ -214,6 +247,11 @@ async def progress(db: AsyncSession, user: CurrentUser, class_id: UUID, assignme
                        in_progress_count=len(per_student) - completed, items=items)
 
 
+async def save_review(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: ReviewProgressIn) -> ReviewState:
+    a, pv, _ = await _load(db, user, assignment_id)
+    return await review.save(db, pv.snapshot, a.id, user.id, body)
+
+
 VN_TZ = ZoneInfo("Asia/Ho_Chi_Minh")
 
 
@@ -240,22 +278,37 @@ async def export_results_csv(db: AsyncSession, user: CurrentUser, class_id: UUID
     attempts: dict[UUID, dict[UUID, m.StudentAttempt]] = {}
     for row in (await db.execute(select(m.StudentAttempt).where(m.StudentAttempt.assignment_id == a.id))).scalars():
         attempts.setdefault(row.student_id, {})[row.item_block_id] = row
+    S, M = m.ChatSession, m.ChatMessage  # noqa: N806
+    hints = {(r[0], r[1]): r[2] for r in (await db.execute(
+        select(S.student_id, S.item_block_id, func.count()).join(M, M.session_id == S.id)
+        .where(S.assignment_id == a.id, M.role == "assistant", M.action == "hint")
+        .group_by(S.student_id, S.item_block_id))).all()}
+    redone = {(r[0], r[1]): r[2] for r in (await db.execute(
+        select(m.PracticeAttempt.student_id, m.PracticeAttempt.item_block_id, func.count())
+        .where(m.PracticeAttempt.assignment_id == a.id)
+        .group_by(m.PracticeAttempt.student_id, m.PracticeAttempt.item_block_id))).all()}
+    reviewed = {r[0] for r in (await db.execute(select(m.ReviewProgress.student_id).where(
+        m.ReviewProgress.assignment_id == a.id, func.cardinality(m.ReviewProgress.seen_ids) > 0))).all()}
+    has_cards = any(b["kind"] == "review_card" for b in pv.snapshot["blocks"])
     out = io.StringIO()
     out.write("\ufeff")
     w = csv.writer(out, lineterminator="\r\n")
-    head = ["Mã học sinh", "Trạng thái", "Số câu đã làm", "Số câu đúng", "Số câu chấm tự động", "Lần trả lời cuối"]
+    head = ["Mã học sinh", "Trạng thái", "Số câu đã làm", "Số câu đúng", "Số câu chấm tự động",
+            "Tổng số gợi ý", "Tổng lần làm lại", "Ôn trước khi làm", "Lần trả lời cuối"]
     for n in range(1, len(items) + 1):
-        head += [f"Câu {n} - Trả lời", f"Câu {n} - Kết quả"]
+        head += [f"Câu {n} - Trả lời", f"Câu {n} - Kết quả", f"Câu {n} - Số gợi ý", f"Câu {n} - Số lần làm lại"]
     w.writerow(head)
     for sid, code in students:
         done = attempts.get(sid, {})
-        row_items: list[str] = []
+        row_items: list[Any] = []
+        hs = [hints.get((sid, UUID(it["id"])), 0) for it in items]
+        rs = [redone.get((sid, UUID(it["id"])), 0) for it in items]
         answered = right = graded = 0
         last: datetime | None = None
         for it in items:
             att = done.get(UUID(it["id"]))
             if att is None:
-                row_items += ["", ""]
+                row_items += ["", "", hs[len(row_items) // 4], rs[len(row_items) // 4]]
                 continue
             answered += 1
             last = att.created_at if last is None or att.created_at > last else last
@@ -263,8 +316,9 @@ async def export_results_csv(db: AsyncSession, user: CurrentUser, class_id: UUID
                 graded += 1
                 right += int(att.is_correct)
             result = "Không chấm tự động" if att.is_correct is None else "Đúng" if att.is_correct else "Sai"
-            row_items += [_answer_text(att.answer), result]
+            row_items += [_answer_text(att.answer), result, hs[len(row_items) // 4], rs[len(row_items) // 4]]
         status = "Đã xong" if items and answered >= len(items) else "Đang làm" if answered else "Chưa làm"
-        w.writerow([_safe(code), status, answered, right, graded,
+        w.writerow([_safe(code), status, answered, right, graded, sum(hs), sum(rs),
+                    ("Có" if sid in reviewed else "Không") if has_cards else "Bài không có thẻ ôn",
                     last.astimezone(VN_TZ).strftime("%d/%m/%Y %H:%M") if last else "", *row_items])
     return f"ket-qua-{a.id.hex[:8]}.csv", out.getvalue()

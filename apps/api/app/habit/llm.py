@@ -3,11 +3,13 @@ builds the prompt and talks to the provider. The model never receives the answer
 student has not answered, so a successful injection still has nothing to leak."""
 
 import asyncio
+import copy
+import logging
 import re
 from typing import Any, Protocol
 
 from app.config import get_settings
-from app.generation.providers import OpenAICompatibleProvider
+from app.generation.providers import OpenAICompatibleProvider, ProviderHTTPError, retry_after_s
 from app.habit import rules
 from app.habit.rules import ItemView
 
@@ -31,15 +33,24 @@ _SLOTS = asyncio.Semaphore(2)  # Render 512 MB: at most two provider calls in fl
 _THINK = re.compile(r"<think>.*?(?:</think>|$)", re.S | re.I)
 
 
+log = logging.getLogger(__name__)
+
+
+def why(e: BaseException) -> str:
+    """HTTP status code when the provider sent one, else the error type. Never the message (it can hold lesson text)."""
+    return str(getattr(e, "status", None) or type(e).__name__)
+
+
 class ModelText(str):
     """A model reply: plain text for every caller, plus which model wrote it and the reasoning that was cut out of it."""
 
     model: str = ""
     reasoning: str = ""
+    attempts: list[str] = []  # models that failed before this one answered, as "model:status" (status code or error type)
 
 
 class ChatLLM(Protocol):
-    async def complete(self, system: str, user: str, max_tokens: int) -> tuple[str, int, int]: ...
+    async def complete(self, system: str, user: str, max_tokens: int, timeout: float | None = None) -> tuple[str, int, int]: ...
 
 
 def profile(model: str, host: str) -> dict[str, Any]:
@@ -88,25 +99,45 @@ class OpenAIChat:
         self.host = base_url.split("/")[2] if "//" in base_url else base_url
         self.providers = [OpenAICompatibleProvider(base_url, key, m, timeout=TIMEOUT) for m in self.models]
 
-    async def complete(self, system: str, user: str, max_tokens: int) -> tuple[str, int, int]:
+    async def complete(self, system: str, user: str, max_tokens: int, timeout: float | None = None) -> tuple[str, int, int]:
+        """`timeout` (seconds, per model) is for long jobs such as drafting questions; chat keeps the short default."""
         last: Exception | None = None
+        attempts: list[str] = []
+        t = timeout or TIMEOUT
         for p in self.providers:
+            if timeout:
+                p = copy.copy(p)  # noqa: PLW2901 a per-call timeout must not leak into concurrent chat calls
+                p.timeout = t
             prof = profile(p.model, self.host)
             tok = prof.pop("_limit_param")
             body = {"model": p.model, "stream": False, tok: max_tokens, **prof,
                     "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
-            try:
-                async with _SLOTS:
-                    data = await asyncio.wait_for(asyncio.to_thread(p._post, body), TIMEOUT + 1)  # noqa: SLF001
-                text, reasoning = split_reasoning(data["choices"][0]["message"])
-            except Exception as e:  # noqa: BLE001 429, 5xx, timeout, bad payload: next model, finally the rule reply
-                last = e
+            data: dict[str, Any] | None = None
+            for second_chance in (bool(timeout), False):  # long jobs: a 429 waits, then this model gets one more try
+                try:
+                    async with _SLOTS:
+                        data = await asyncio.wait_for(asyncio.to_thread(p._post, body), t + 1)  # noqa: SLF001
+                    text, reasoning = split_reasoning(data["choices"][0]["message"])
+                    break
+                except Exception as e:  # noqa: BLE001 429, 5xx, timeout, bad payload: next model, finally the rule reply
+                    attempts.append(f"{p.model}:{why(e)}")
+                    log.warning("chat model %s failed: %s", p.model, why(e))
+                    data = None
+                    if second_chance and isinstance(e, ProviderHTTPError) and e.status == 429:
+                        await asyncio.sleep(retry_after_s(e.detail))
+                        continue
+                    last = e
+                    break
+            if data is None:
                 continue
             u = data.get("usage") or {}
             out = ModelText(text)
-            out.model, out.reasoning = p.model, reasoning
+            out.model, out.reasoning, out.attempts = p.model, reasoning, attempts
             return out, int(u.get("prompt_tokens", 0)), int(u.get("completion_tokens", 0))
-        raise last or RuntimeError("no model configured")
+        if last is not None:
+            last.attempts = attempts  # type: ignore[attr-defined]  # for the caller's log: which models failed and how
+            raise last
+        raise RuntimeError("no model configured")
 
 
 class MockChatLLM:
@@ -115,7 +146,7 @@ class MockChatLLM:
     def __init__(self, reply: str | None = None) -> None:
         self.reply = reply
 
-    async def complete(self, system: str, user: str, max_tokens: int) -> tuple[str, int, int]:
+    async def complete(self, system: str, user: str, max_tokens: int, timeout: float | None = None) -> tuple[str, int, int]:
         text = self.reply or "Em đọc kỹ đề, tìm dữ liệu liên quan trong bài rồi thử làm từng bước nhé."
         return text, len(system + user) // 4, 30
 

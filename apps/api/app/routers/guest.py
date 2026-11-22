@@ -61,11 +61,11 @@ async def create_guest(body: GuestRequest, request: Request, response: Response,
 
 @router.post("/auth/guest/resume", tags=["auth"], operation_id="resumeGuest", response_model=GuestOut,
              openapi_extra=_PUBLIC, summary="Come back as the same guest with the survey code",
-             description="For a lost cookie / another device. 5 wrong codes per IP per 15 minutes → 429 `RATE_LIMITED`.",
+             description="For a lost cookie / another device. 20 wrong tries per survey code per 10 minutes (never per IP) → 429 `RATE_LIMITED`.",
              responses=errs(404, 422, (429, "RATE_LIMITED.")))
 async def resume_guest(body: GuestResumeRequest, request: Request, response: Response, db: Db) -> GuestOut:
     svc.require_enabled()
-    user = await svc.find_guest(db, body.survey_code, _ip(request))
+    user = await svc.find_guest(db, body.survey_code)
     return await _start(db, response, user, body.lesson_key)
 
 

@@ -39,13 +39,14 @@ class Settings(BaseSettings):
     guest_access_enabled: bool = False  # anonymous survey access (POST /v1/auth/guest); 404 when off
     guest_class_code: str = "KS"  # survey class guests join; its assignments are created by `python -m seed.survey`
     guest_max_active: int = 500  # guests seen in the last 14 days; beyond it new guests get 503
-    guest_create_per_hour: int = 60  # per real client IP; a classroom shares one Wi-Fi (NAT), so keep it generous
+    guest_create_per_ip: int = 200  # per real client IP per 10 minutes (GUEST_CREATE_PER_IP); a classroom shares one Wi-Fi (NAT)
     guest_session_days: int = 14
     demo_replay: bool = False  # DEMO_REPLAY: teacher analysis answers with a recorded sample (no network), labelled "replay"
     chat_enabled: bool = False  # Habit (hints + chat) for students; every Habit route is 404 when off
     chat_mode: str = "rule"  # rule (free, deterministic) | llm (rule guards + LLM wording; falls back to rule)
-    chat_max_per_day_per_student: int = 30
-    chat_max_per_item: int = 6
+    chat_max_msgs_per_day: int = 100  # CHAT_MAX_MSGS_PER_DAY: typed questions per student per day; hint presses are not counted
+    chat_max_msgs_per_item: int = 20  # CHAT_MAX_MSGS_PER_ITEM
+    hint_max_per_item: int = 10  # HINT_MAX_PER_ITEM: hint presses per question (own limit, apart from the chat limits)
     chat_llm_base_url: str = ""
     chat_llm_api_key: str = ""
     chat_llm_model: str = ""
@@ -56,6 +57,15 @@ class Settings(BaseSettings):
     chat_max_output_tokens: int = 220
     chat_daily_token_budget: int = 300_000
     habit_daily_goal: int = 3
+    quiz_gen_enabled: bool = False  # QUIZ_GEN_ENABLED: drafts questions + review cards after a plan is read
+    quiz_gen_per_lesson: int = 8
+    quiz_gen_min_mcq: int = 5  # a plan with fewer extracted MCQ gets drafted questions
+    quiz_gen_daily_tokens: int = 100_000
+    quiz_gen_timeout_s: int = 240  # per plan, both calls and the gap between them
+    quiz_gen_gap_s: float = 20.0  # QUIZ_GEN_GAP_S: pause between the quiz and review calls of a plan
+    quiz_gen_model: str = "openai/gpt-oss-120b"  # QUIZ_GEN_MODEL (chat keeps CHAT_LLM_MODEL; same base URL and key)
+    quiz_gen_model_fallback: str = "qwen/qwen3.8-27b"  # QUIZ_GEN_MODEL_FALLBACK
+    quiz_gen_mock: bool = False  # QUIZ_GEN_MOCK: deterministic stand-in model built from the plan text (dev and e2e only)
     chat_ai_extra: bool = False  # CHAT_MODE=llm only: a second, clearly labelled part with general knowledge (unverified)
     personalization_enabled: bool = False  # student-chosen options, focus mode, behaviour-based hints; 404 when off
     source_max_pdf_pages: int = 50  # uploaded PDF / XLSX / PPTX limits (docs/security/THREAT-MODEL-upload.md)

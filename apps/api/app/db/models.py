@@ -252,6 +252,8 @@ class TransformationEvent(Base):
     before_hash: Mapped[str | None] = mapped_column(Text)
     after_hash: Mapped[str] = mapped_column(Text)
     generator_version: Mapped[str | None] = mapped_column(Text)
+    before_payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB)  # teacher edits: content before / after
+    after_payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = ts()
 
 
@@ -337,6 +339,19 @@ class Assignment(Base):
     class_id: Mapped[uuid.UUID] = fk("class.id")
     open_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # soft cancel: history stays
+    created_at: Mapped[datetime] = ts()
+
+
+class PracticeAttempt(Base):
+    """A practice run of an item the student already answered. The first attempt (student_attempt) is what teachers see."""
+    __tablename__ = "practice_attempt"  # append-only (trigger)
+    id: Mapped[uuid.UUID] = pk()
+    assignment_id: Mapped[uuid.UUID] = fk("assignment.id")
+    student_id: Mapped[uuid.UUID] = fk("app_user.id")
+    item_block_id: Mapped[uuid.UUID] = fk("content_block.id")
+    answer: Mapped[dict[str, Any]] = jsonb()
+    is_correct: Mapped[bool | None] = mapped_column(Boolean)
     created_at: Mapped[datetime] = ts()
 
 
@@ -432,7 +447,41 @@ class LessonPlan(Base):
     taught_from: Mapped[date | None] = mapped_column(Date)
     taught_to: Mapped[date | None] = mapped_column(Date)
     redacted_count: Mapped[int] = mapped_column(Integer, server_default="0")
+    ai_state: Mapped[str] = mapped_column(Text, server_default="none")  # none | queued | running | done | failed | skipped
+    ai_stats: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    ai_tokens: Mapped[int] = mapped_column(Integer, server_default="0")
+    ai_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = ts()
+
+
+class PlanAiItem(Base):
+    """A question or review card the model drafted from the plan. Never published by itself: the teacher approves it first."""
+
+    __tablename__ = "plan_ai_item"
+    __table_args__ = (_in("kind", "quiz", "review"), _in("status", "draft", "approved", "rejected"))
+    id: Mapped[uuid.UUID] = pk()
+    lesson_plan_id: Mapped[uuid.UUID] = fk("lesson_plan.id")
+    kind: Mapped[str] = mapped_column(Text)
+    position: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(Text, server_default="draft")
+    origin: Mapped[str] = mapped_column(Text, server_default="ai_generated")
+    payload: Mapped[dict[str, Any]] = jsonb()
+    source_quote: Mapped[str] = mapped_column(Text)
+    needs_confirmation: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
+    created_at: Mapped[datetime] = ts()
+
+
+class ReviewProgress(Base):
+    """Learning memory: how far a student got through the quick review of an assignment (no score)."""
+
+    __tablename__ = "review_progress"
+    assignment_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("assignment.id"), primary_key=True)
+    student_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("app_user.id"), primary_key=True)
+    choice: Mapped[str | None] = mapped_column(Text)  # not_yet | done
+    seen_ids: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(UUID(as_uuid=True)), server_default=text("'{}'"))
+    checks: Mapped[dict[str, Any]] = jsonb("'{}'")
+    reviewed: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    updated_at: Mapped[datetime] = ts()
 
 
 class LessonSection(Base):

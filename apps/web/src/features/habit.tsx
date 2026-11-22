@@ -7,7 +7,7 @@ import { Button } from "@/components/ui";
 import { errorCode, errorMessage } from "@/lib/errors";
 import { newRequestId } from "@/lib/uuid";
 import { HabitMark, HintIcon, SourceRef } from "./habit-parts";
-import { HINT_LEVEL } from "@/lib/labels";
+import { hintTier } from "@/lib/labels";
 import { usePersonalizationOn, usePrefs } from "./personalization";
 import { askHabit, habitKey, useHabit, useHabitOn, type ChatReply } from "./habit-api";
 
@@ -53,11 +53,12 @@ export function HabitBar({ assignmentId }: { assignmentId: string }) {
 }
 
 /** Hint card + "Hỏi HABIT AI" for one item. Own state, so a chat message never re-renders the whole assignment. */
-export function HabitItem({ assignmentId, itemId, answered, explanation }: {
+export function HabitItem({ assignmentId, itemId, answered, explanation, onOpenReview }: {
   assignmentId: string;
   itemId: string;
   answered: boolean;
   explanation: string | null;
+  onOpenReview?: (cardId: string) => void;
 }) {
   const on = useHabitOn();
   const qc = useQueryClient();
@@ -76,7 +77,8 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
   const info = h.data?.hintsAvailable.find((x) => x.itemId === itemId);
   const server = info?.hintsUsed ?? 0;
   const used = Math.max(hints.length, server);
-  const limited = errorCode(err) === "CHAT_LIMIT";
+  const max = info?.hintsMax ?? 10;
+  const limited = errorCode(err) === "HINT_LIMIT"; // hint presses have their own limit, apart from the chat limit
   const openChat = () => {
     setMounted(true);
     setOpen(true);
@@ -100,7 +102,7 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
   }
 
   const chat = mounted ? (
-    <HabitChat assignmentId={assignmentId} itemId={itemId} answered={answered} explanation={explanation} open={open} onClose={close} />
+    <HabitChat assignmentId={assignmentId} itemId={itemId} answered={answered} explanation={explanation} open={open} onClose={close} onOpenReview={onOpenReview} />
   ) : null;
 
   if (answered) {
@@ -121,13 +123,13 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
         <div className="habit-advice" role="note">
           <strong>Gợi ý cho em:</strong> xem lại phần nội dung của bài trước khi làm câu này.
           <p className="habit-preview">
-            <strong>{HINT_LEVEL[1]?.name}:</strong> {info.preview}
+            <strong>{hintTier(1)}:</strong> {info.preview}
           </p>
         </div>
       ) : null}
       <div className="habit-actions">
-        <Button variant="ghost" className="habit-ghost" onClick={() => void hint()} busy={busy} disabled={used >= 3 || limited}>
-          <HintIcon /> {used >= 3 ? "Đã dùng hết gợi ý" : HINT_LEVEL[used + 1]!.name}
+        <Button variant="ghost" className="habit-ghost" onClick={() => void hint()} busy={busy} disabled={used >= max || limited}>
+          <HintIcon /> {used >= max ? "Đã dùng hết gợi ý" : `${hintTier(used + 1)} · còn ${max - used} lượt`}
         </Button>
         <Button variant="ghost" className="habit-ghost" onClick={openChat}>
           <HabitMark /> Hỏi HABIT AI
@@ -137,17 +139,22 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
         {hints.map((x, i) => (
           <div key={i} className="habit-hint">
             <strong>
-              {HINT_LEVEL[x.hintLevel] ? `${HINT_LEVEL[x.hintLevel]!.name} · ${HINT_LEVEL[x.hintLevel]!.topic}` : "Gợi ý"}
+              {hintTier(x.hintsUsed ?? x.hintLevel)} · {x.hintsUsed ?? x.hintLevel}/{max}
             </strong>
             <p>{x.reply}</p>
             {x.sourceRefs.map((s) => (
               <SourceRef key={s.blockId} label={s.label} excerpt={s.excerpt} />
             ))}
+            {x.openReview && onOpenReview ? (
+              <Button variant="secondary" onClick={() => onOpenReview(x.openReview as string)}>
+                Mở thẻ ôn
+              </Button>
+            ) : null}
           </div>
         ))}
         {limited ? (
           <div className="habit-limit" role="status">
-            Hôm nay em hỏi nhiều rồi, thử tự làm nhé!
+            {errorMessage(err)}
           </div>
         ) : null}
         {err && !limited ? (

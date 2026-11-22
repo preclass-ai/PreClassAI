@@ -1,4 +1,4 @@
-"""Seed mock data (all fictional, marked DỮ LIỆU MINH HỌA). Run after migrations:
+"""Seed mock data (all fictional, labelled in the teacher-only source note). Run after migrations:
 
     DATABASE_URL=... uv run python -m seed.seed
 

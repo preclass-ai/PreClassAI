@@ -17,6 +17,7 @@
   --danger-bg: #fcebed;
   --info: #135a76;
   --info-bg: #e3f2f7;
+  --machine: #5b3fa0;
   --neutral-bg: #eaf0ef;
   --sun: #e9ad50;
   --radius: 16px;
@@ -47,6 +48,7 @@
     --danger-bg: #4e2931;
     --info: #a4dfef;
     --info-bg: #26434f;
+    --machine: #cbb8f5;
     --neutral-bg: #2e454a;
     --sun: #f5c56f;
     --shadow: 0 12px 34px rgb(0 0 0 / 16%);
@@ -182,6 +184,7 @@ fieldset { border: 0; padding: 0; margin: 0; }
 .badge-warning { background: var(--warning-bg); color: var(--warning); }
 .badge-danger { background: var(--danger-bg); color: var(--danger); }
 .badge-outline { background: transparent; box-shadow: inset 0 0 0 1px currentColor; }
+.badge-machine { background: transparent; color: var(--machine); box-shadow: inset 0 0 0 1px currentColor; }
 .alert { padding: 13px 16px; border-radius: 12px; border: 1px solid color-mix(in srgb, currentColor 13%, transparent); }
 .alert-info, .alert-neutral { background: var(--info-bg); color: var(--info); }
 .alert-success { background: var(--success-bg); color: var(--success); }
@@ -387,6 +390,7 @@ fieldset { border: 0; padding: 0; margin: 0; }
 .badge-success::before { content: "✓ " / ""; }
 .badge-warning::before { content: "⚠ " / ""; }
 .badge-danger::before { content: "✕ " / ""; }
+.badge-machine::before { content: "⚙ " / ""; }
 .badge-info::before { content: "● " / ""; font-size: 0.7em; vertical-align: 0.1em; }
 .alert-warning::before { content: "⚠ " / ""; font-weight: 800; }
 .alert-danger::before { content: "✕ " / ""; font-weight: 800; }
@@ -592,7 +596,11 @@ fieldset { border: 0; padding: 0; margin: 0; }
 .habit-input textarea { min-height: 44px; max-height: 88px; }
 .habit-count { margin: 0; line-height: 1.2; }
 @media (max-width: 1099px) {
-  .habit-sheet { max-height: min(80dvh, var(--vvh, 80dvh)); bottom: var(--vvb, 0px); }
+  /* A fixed height (not just max-height): the log is flex:1 1 0, so without it the sheet shrinks to header + input and the messages
+     get a thin strip. dvh/svh follow the iOS Safari address bar; --vvh also follows the on-screen keyboard (visualViewport). */
+  .habit-sheet { height: min(85svh, var(--vvh, 85svh)); height: min(85dvh, var(--vvh, 85dvh)); max-height: none; bottom: var(--vvb, 0px); }
+  .habit-sheet[open] { display: flex; flex-direction: column; }
+  .habit-log { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 }
 @media (max-width: 640px) { .habit-msg { font-size: 1rem; } }
 @media (min-width: 1100px) {
@@ -613,3 +621,27 @@ fieldset { border: 0; padding: 0; margin: 0; }
 .heat .heat-high { background: var(--success-bg); color: var(--success); font-weight: 600; }
 .heat .heat-none, .heat .heat-empty { color: var(--muted, inherit); }
 .insights .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+.source-quote { margin: 0; padding: 8px 12px; border-left: 3px solid var(--border); background: var(--surface-2); font-size: 0.9rem; }
+
+.steps { display: flex; gap: 8px; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
+.steps li { flex: 1 1 140px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 999px; text-align: center; font-weight: 600; color: var(--text-muted, var(--text)); }
+.steps li.on { background: var(--info-bg); border-color: var(--primary, var(--border)); color: var(--text); }
+.steps li.done { background: var(--success-bg); }
+.review-link { background: none; border: 0; padding: 4px 0; color: var(--primary, inherit); text-decoration: underline; font: inherit; cursor: pointer; min-height: 44px; }
+.review-example { margin: 0; padding: 8px 12px; background: var(--surface-2); border-radius: var(--radius); }
+
+/* Mobile sheet details: grab handle, chips that scroll sideways and snap, inputs that never trigger iOS zoom */
+.habit-sheet-head { position: relative; }
+.habit-grab { position: absolute; top: 4px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--border); }
+.habit-chips { overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: 14px; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.habit-chips .habit-chip { scroll-snap-align: start; }
+.habit-input textarea, .habit-sheet textarea, .habit-sheet input { font-size: 16px; }
+@media (min-width: 1100px) { .habit-grab { display: none; } }
+
+.answer-reveal, .source-line { margin: 9px 0 0; color: var(--text); }
+.source-line { overflow-wrap: anywhere; }
+
+.getting-started { margin-bottom: 16px; }
+.getting-started ol { margin: 8px 0 0; padding-left: 1.25rem; display: grid; gap: 4px; }
+.next-step { margin-top: 16px; }

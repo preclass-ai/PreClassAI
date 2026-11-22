@@ -23,7 +23,7 @@ test("teacher sees lessons, inspects a block's sources and the publish gate", as
   await expectNoHorizontalScroll(page);
   await page.screenshot({ path: `test-results/screens/editor-${info.project.name}.png`, fullPage: info.project.name !== "webkit-390" });
   // On mobile the inspector is a bottom sheet: close it before moving on.
-  await page.getByRole("button", { name: "Đóng" }).click();
+  await page.getByRole("button", { name: "Đóng", exact: true }).click();
   await expect(page.locator(".editor-inspector.open")).toHaveCount(0);
 
   await page.getByRole("tab", { name: "Duyệt" }).click();
@@ -41,7 +41,7 @@ test("source library lists anchors of a source", async ({ page }) => {
   await login(page, "gv.dia@preclass.local");
   await page.getByRole("link", { name: "Nguồn", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Thư viện nguồn" })).toBeVisible();
-  await page.locator("tbody tr a").first().click();
+  await page.locator("tbody tr a").filter({ hasNotText: /^(Scan|Nguồn thử)/ }).first().click();
   await expect(page.getByRole("heading", { name: /Đoạn nguồn \(bản v\d+\)/ })).toBeVisible();
   await expect(page.locator("td.mono").first()).toBeVisible();
   await expectNoHorizontalScroll(page);

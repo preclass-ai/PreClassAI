@@ -87,6 +87,6 @@ it("other errors (rate limit) still use the shared error box", async () => {
   stub("429");
   renderLogin();
   await typeCodeAndPressEnter("KS-0000");
-  expect(await screen.findByText(/quá nhiều lần/)).toBeTruthy();
+  expect(await screen.findByText(/sai nhiều lần/)).toBeTruthy();
   expect(screen.queryByText(/Mã khảo sát không đúng/)).toBeNull();
 });

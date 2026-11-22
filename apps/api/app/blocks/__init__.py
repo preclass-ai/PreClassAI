@@ -36,6 +36,7 @@ from app.schemas import (
     ProvenanceLinkOut,
     ProvenanceOut,
     ProvenanceUpdate,
+    ReviewCardPayload,
     ReviewEventOut,
     TransformationEventOut,
     ValidationResultOut,
@@ -47,7 +48,7 @@ PAYLOAD: dict[str, type[ApiModel]] = {
     "heading": HeadingPayload, "paragraph": ParagraphPayload, "instruction": InstructionPayload,
     "data_fact": DataFactPayload, "worksheet_item": WorksheetItemPayload, "option": OptionPayload,
     "answer_key": AnswerKeyPayload, "explanation": ExplanationPayload, "card_front": CardPayload,
-    "card_back": CardPayload,
+    "card_back": CardPayload, "review_card": ReviewCardPayload,
 }
 _KEEP: Any = object()  # sentinel: leave noSourceReason unchanged
 _DEP_KIND = {"option": "LABEL_OF", "answer_key": "ANSWER_OF", "card_back": "ANSWER_OF", "explanation": "EXPLANATION_OF"}
@@ -188,7 +189,7 @@ async def _record_edit(
     db: AsyncSession, user: CurrentUser, block: m.ContentBlock, *, payload: dict[str, Any] | None = None,
     no_source_reason: Any = _KEEP,
 ) -> None:
-    before = block.content_hash
+    before, before_payload = block.content_hash, block.payload  # read before the UPDATE below refreshes the object
     new_payload = block.payload if payload is None else payload
     reason = block.no_source_reason if no_source_reason is _KEEP else no_source_reason
     transformation = "PARAPHRASED" if block.transformation == "ORIGINAL" and payload is not None else block.transformation
@@ -199,7 +200,8 @@ async def _record_edit(
         review_status=_status_after_edit(block.review_status), version=m.ContentBlock.version + 1))
     await db.execute(insert(m.TransformationEvent), [{
         "block_id": block.id, "actor_type": "TEACHER", "actor_id": user.id, "operation": "EDIT",
-        "before_hash": before, "after_hash": after, "generator_version": None}])
+        "before_hash": before, "after_hash": after, "generator_version": None,
+        "before_payload": before_payload if payload is not None else None, "after_payload": payload}])
     await invalidate(db, block.revision_id, {block.id})
     await db.commit()
     await db.refresh(block)

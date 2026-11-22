@@ -55,7 +55,7 @@ Transformation = Literal["ORIGINAL", "PARAPHRASED", "SYNTHESISED", "AI_PROPOSED"
 ReviewStatus = Literal["UNREVIEWED", "AUTO_CHECKED", "FLAGGED", "APPROVED", "REVIEW_AGAIN", "REJECTED"]
 BlockKind = Literal[
     "heading", "paragraph", "data_fact", "instruction", "worksheet_item", "option", "answer_key", "explanation",
-    "card_front", "card_back",
+    "card_front", "card_back", "review_card",
 ]
 Relation = Literal["derived_from", "quotes", "supports"]
 LinkStatus = Literal["VERIFIED", "UNRESOLVED"]
@@ -88,7 +88,7 @@ class Problem(ApiModel):
     errors: list[ProblemFieldError] | None = None
     block_ids: list[UUID] | None = Field(None, description="PUBLISH_BLOCKED: blocks that stop the publish.")
     model_config = ex({
-        "type": "https://preclass.local/problems/stale_review", "title": "Nội dung đã thay đổi sau khi bạn xem",
+        "type": "https://preclass.local/problems/stale_review", "title": "Nội dung đã thay đổi sau lần xem trước",
         "status": 409, "detail": "", "code": "STALE_REVIEW"})
 
 
@@ -146,14 +146,14 @@ class SurveyStats(ApiModel):
     active_guests: int = Field(description="Guests seen or created in the last 14 days.")
     created_last_hour: int
     max_active: int = Field(description="GUEST_MAX_ACTIVE.")
-    create_per_hour_per_ip: int = Field(description="GUEST_CREATE_PER_HOUR.")
+    create_per_ip: int = Field(description="GUEST_CREATE_PER_IP: guests one IP may create per 10 minutes.")
     chat_total: int = Field(0, description="Habit replies stored so far.")
     chat_fallback_rate: float = Field(0, description="Share of LLM attempts that fell back to the rule reply.")
     chat_blocked: dict[str, int] = Field(default_factory=dict, description="Replies per blocked_reason.")
     chat_tokens_in: int = 0
     chat_tokens_out: int = 0
     chat_by_model: dict[str, int] = Field(default_factory=dict, description="Replies per model name (main, fallback, cache).")
-    model_config = ex({"activeGuests": 42, "createdLastHour": 12, "maxActive": 500, "createPerHourPerIp": 60,
+    model_config = ex({"activeGuests": 42, "createdLastHour": 12, "maxActive": 500, "createPerIp": 200,
                        "chatTotal": 120, "chatFallbackRate": 0.0, "chatBlocked": {"ANSWER_REQUEST": 7},
                        "chatTokensIn": 0, "chatTokensOut": 0})
 
@@ -227,7 +227,7 @@ class SourceOut(ApiModel):
     created_at: datetime
     model_config = ex({
         "id": I["asset"], "title": "Phân bố dân cư theo vùng (dan-so-vung)",
-        "licenseNote": "DỮ LIỆU MINH HỌA: số liệu giả, không phải số liệu chính thức.", "visibility": "SCHOOL",
+        "licenseNote": "Số liệu giả lập cho bài thử.", "visibility": "SCHOOL",
         "ownerId": I["teacher"], "latestRevision": _SRC_REV, "createdAt": T0})
 
 
@@ -247,7 +247,7 @@ class SourceCreateText(ApiModel):
     license_note: str | None = None
     visibility: Visibility = "PRIVATE"
     model_config = ex({"title": "Bài đọc mẫu", "text": "Tiêu đề\n\nĐoạn một.\n\nĐoạn hai.",
-                       "licenseNote": "DỮ LIỆU MINH HỌA", "visibility": "PRIVATE"})
+                       "licenseNote": "Dùng nội bộ", "visibility": "PRIVATE"})
 
 
 class SourceRevisionCreateText(ApiModel):
@@ -375,6 +375,10 @@ class HistoryEvent(ApiModel):
     operation: Operation | Literal["REVIEW", "PUBLISH", "WITHDRAW"]
     block_id: UUID | None = None
     summary: str | None = None
+    actor_name: str | None = Field(None, description="Display name of the teacher (teacher events only).")
+    block_kind: str | None = Field(None, description="Kind of the edited block (with before/after).")
+    before: dict[str, Any] | None = Field(None, description="EDIT: payload before (null for edits older than the log).")
+    after: dict[str, Any] | None = None
 
 
 class LessonHistory(ApiModel):
@@ -450,6 +454,23 @@ class WorksheetItemPayload(ApiModel):
     stem: str
     item_type: ItemType
     skill: Skill
+    hints: list[str] | None = Field(None, description="Fixed hints 1..3 (AI-drafted questions); never shown outside Habit.")
+    source_quote: str | None = Field(None, description="Plan passage an AI-drafted question is based on.")
+
+
+class ReviewCheckPayload(ApiModel):
+    statement: str
+    answer_true: bool
+    explanation: str
+
+
+class ReviewCardPayload(ApiModel):
+    """A quick-review card (not scored): short points, one example from the plan and a true/false self-check."""
+
+    title: str
+    points: list[str]
+    example: str
+    check: ReviewCheckPayload
 
 
 class OptionPayload(ApiModel):
@@ -662,6 +683,17 @@ class ReviewRequest(ApiModel):
     model_config = ex({"action": "APPROVE", "contentHash": H, "note": None})
 
 
+class ApproveAllRequest(ApiModel):
+    confirm: bool = Field(False, description="false: count only, nothing is written. true: approve the eligible blocks.")
+
+
+class ApproveAllOut(ApiModel):
+    approved: int = Field(description="Blocks approved (or that would be approved when `applied` is false).")
+    skipped: int = Field(description="Unapproved blocks left for a hand review: a warning, a blocker, or not checked yet.")
+    applied: bool
+    model_config = ex({"approved": 12, "skipped": 3, "applied": False})
+
+
 class ReviewOut(ApiModel):
     block: BlockOut
     review_event_id: UUID
@@ -733,6 +765,11 @@ class AssignmentOut(ApiModel):
                        "dueAt": "2026-11-30T23:59:00+07:00"})
 
 
+class AssignmentUpdate(ApiModel):
+    due_at: datetime = Field(description="New due time; must be after the opening time.")
+    model_config = ex({"dueAt": "2026-12-05T23:59:00+07:00"})
+
+
 class AssignmentList(Page):
     items: list[AssignmentOut]
     model_config = ex({"items": [e0(AssignmentOut)], "nextCursor": None})
@@ -773,6 +810,8 @@ class AttemptResult(ApiModel):
     item_id: UUID
     is_correct: bool | None = Field(None, description="null for SHORT / rubric items.")
     explanation: str | None = Field(None, description="Approved explanation; only present after the attempt.")
+    correct_answer: str | None = Field(None, description="Right answer ('B. text' or value and unit); after the attempt.")
+    source_quote: str | None = Field(None, description="'Theo giáo án' passage (AI-drafted questions); after the attempt.")
     model_config = ex({"itemId": I["q1"], "isCorrect": True,
                        "explanation": "Đồng bằng sông Hồng có số dân cao nhất (23,2 triệu người)."})
 
@@ -787,6 +826,29 @@ class StudentItem(ApiModel):
     result: AttemptResult | None = Field(None, description="Present only after this student answered.")
 
 
+class StudentReviewCard(ApiModel):
+    id: UUID
+    position: int
+    title: str
+    points: list[str]
+    example: str
+    check: ReviewCheckPayload = Field(description="True/false self-check, not scored; the explanation is shown at once.")
+
+
+class ReviewState(ApiModel):
+    choice: Literal["not_yet", "done"] | None = Field(None, description="'Em đã học bài này chưa?': not_yet = review first.")
+    seen_ids: list[UUID] = []
+    checks: dict[str, bool] = Field(default_factory=dict, description="Card id to self-check result (true = right).")
+    reviewed: bool = Field(False, description="The student finished the cards or pressed 'Đủ rồi, làm bài'.")
+
+
+class ReviewProgressIn(ApiModel):
+    choice: Literal["not_yet", "done"] | None = None
+    seen_ids: list[UUID] | None = Field(None, max_length=30)
+    checks: dict[str, bool] | None = None
+    reviewed: bool | None = None
+
+
 class StudentAssignmentOut(ApiModel):
     id: UUID
     title: str
@@ -794,6 +856,8 @@ class StudentAssignmentOut(ApiModel):
     due_at: datetime
     blocks: list[StudentContentBlock]
     items: list[StudentItem]
+    review: list[StudentReviewCard] = Field(default_factory=list, description="Approved review cards; empty = no review step.")
+    review_state: ReviewState = Field(default_factory=ReviewState)
     model_config = ex({
         "id": I["assign"], "title": "Phân bố dân cư theo vùng", "openAt": T1, "dueAt": "2026-11-30T23:59:00+07:00",
         "blocks": [{"id": I["p1"], "kind": "paragraph", "position": 2,
@@ -836,6 +900,12 @@ class AttemptRequest(ApiModel):
     model_config = ex({"itemId": I["q1"], "answer": {"choice": "A"}, "requestId": I["request"]})
 
 
+class PracticeRequest(ApiModel):
+    item_id: UUID
+    answer: AnswerIn
+    model_config = ex({"itemId": I["q1"], "answer": {"choice": "B"}})
+
+
 # ---------------------------------------------------------------- Habit (CHAT_ENABLED)
 HabitAction = Literal["hint", "ask", "explain"]
 QuickId = Literal["start", "where_data", "formula", "teacher"]
@@ -863,11 +933,15 @@ class QuickAction(ApiModel):
 
 class ChatReply(ApiModel):
     reply: str = Field(description="Plain text. Never contains the answer before the student has answered the item.")
-    hint_level: int = Field(description="1..3 for `hint`, 0 otherwise.")
+    hint_level: int = Field(description="1..HINT_MAX_PER_ITEM for `hint`, 0 otherwise.")
     source_refs: list[SourceRef]
     extra: str | None = Field(None, description="Second part (CHAT_AI_EXTRA): general knowledge, NOT verified by the teacher.")
     suggestions: list[QuickAction] = Field(default_factory=list, description="Buttons offered after a refusal or off-topic.")
     blocked_reason: str | None = Field(None, description="Refusal code (e.g. ANSWER_REQUEST) when the reply is a refusal.")
+    source: Literal["llm", "rule", "guard"] = Field("rule", description="llm: model; rule: template or lesson; "
+                                                    "guard: a refusal from the safety rules.")
+    hints_used: int | None = Field(None, description="For `hint`: hints used on this item so far (including this one).")
+    open_review: UUID | None = Field(None, description="Review card to open (button 'Mở thẻ ôn'), when the reply points to one.")
     model_config = ex({"reply": "Em đọc kỹ đề và xác định đề đang hỏi về vùng nào, năm nào nhé.", "hintLevel": 1,
                        "sourceRefs": [], "blockedReason": None})
 
@@ -952,6 +1026,17 @@ class BlockedReason(ApiModel):
     count: int
 
 
+class ReviewImpact(ApiModel):
+    """Students who used the quick review vs those who did not. Shown only when BOTH groups have at least 5 students."""
+
+    reviewed_students: int
+    other_students: int
+    review_rate: float = Field(description="Share of the students who answered and also used the review.")
+    avg_correct_with_review: float = Field(description="Mean share of correct answers, students who reviewed (0..1).")
+    avg_correct_without_review: float
+    note: str = Field(description="Always says this is a correlation, not a cause.")
+
+
 class InsightsOut(ApiModel):
     assignment_id: UUID
     lesson_id: UUID
@@ -966,6 +1051,7 @@ class InsightsOut(ApiModel):
     blocked_reasons: list[BlockedReason] = Field(default_factory=list, description="How often HABIT AI declined, by reason.")
     reteach_item_ids: list[UUID] = Field(default_factory=list, description="Items with needsReteach = true.")
     competencies: list[CompetencyStat] = Field(default_factory=list, description="Rate per competency (heatmap).")
+    review_impact: ReviewImpact | None = Field(None, description="Null unless both groups have at least 5 students.")
     llm_available: bool
     model_config = ex({"assignmentId": I["assign"], "lessonId": I["lesson"], "publishedRevisionId": I["lrev"],
                        "canPractice": True, "studentCount": 15, "askingStudents": 6, "totalQuestions": 14, "items": [],
@@ -1032,6 +1118,34 @@ class PlanOut(ApiModel):
     mcq_count: int
     needs_confirmation_count: int
     lesson_id: UUID | None = Field(description="Set once 'Tạo bài chuẩn bị' has been used.")
+    ai_state: Literal["none", "queued", "running", "done", "failed", "skipped"] = Field(
+        "none", description="Drafting of AI questions and review cards: queued/running while the model works.")
+    ai_quiz_count: int = 0
+    ai_quiz_needs_confirmation_count: int = 0
+    ai_review_count: int = 0
+    ai_needs_confirmation_count: int = Field(0, description="AI items not approved yet.")
+    ai_stats: dict[str, Any] | None = Field(None, description="Drafting report per kind, seconds, tokens.")
+
+
+class PlanAiItemOut(ApiModel):
+    id: UUID
+    kind: Literal["quiz", "review"]
+    position: int
+    status: Literal["draft", "approved", "rejected"]
+    origin: str = Field(description="`ai_generated`: written by the model, never published before the teacher approves it.")
+    payload: dict[str, Any] = Field(description="quiz: stem, options[4], correct_index, explanation, hints[3], skill_tag. "
+                                    "review: title, points, example, check{statement, answer_true, explanation}.")
+    source_quote: str = Field(description="The passage of the lesson plan the item is based on.")
+    needs_confirmation: bool = Field(description="True until the teacher approves.")
+
+
+class PlanAiList(ApiModel):
+    items: list[PlanAiItemOut]
+
+
+class PlanAiItemUpdate(ApiModel):
+    status: Literal["draft", "approved", "rejected"] | None = None
+    payload: dict[str, Any] | None = Field(None, description="Edited content, same shape as the item's payload (validated).")
 
 
 class Competency(ApiModel):

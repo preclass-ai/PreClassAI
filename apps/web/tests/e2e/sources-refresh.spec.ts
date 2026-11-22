@@ -5,7 +5,7 @@ test("S01: nguồn mới hiện ngay trong danh sách sau Lưu nguồn", async (
   await login(page, "gv.dia@preclass.local");
   await page.goto("/sources");
   await expect(page.getByRole("table")).toBeVisible();
-  const title = `Nguồn thử ${Date.now()} (DỮ LIỆU MINH HỌA)`;
+  const title = `Nguồn thử ${Date.now()}`;
   await page.getByRole("button", { name: "Thêm nguồn" }).click();
   await page.getByLabel("Tên nguồn").fill(title);
   await page.getByLabel("Nội dung").fill("Đoạn một.\n\nĐoạn hai.");

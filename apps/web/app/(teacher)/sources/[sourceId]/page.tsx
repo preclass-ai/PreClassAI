@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { use, useState } from "react";
 import { Badge, Button, ErrorBox, Loading, PageHeader } from "@/components/ui";
+import { NextStep } from "@/components/next-step";
 import { AnchorTable } from "@/features/anchors";
 import { NewRevisionForm } from "@/features/source-form";
 import { api, unwrap } from "@/lib/api";
@@ -78,6 +79,7 @@ export default function SourceDetailPage({ params }: { params: Promise<{ sourceI
         <ErrorBox error={anchors.error} />
         {anchors.isPending ? <Loading /> : <AnchorTable anchors={anchors.data?.items ?? []} />}
       </section>
+      <NextStep label="Tiếp: Soạn bài" href="/lessons/new" blockedBy={(rev?.anchorCount ?? 0) === 0 ? "Nguồn chưa có đoạn nào để soạn bài." : null} />
     </>
   );
 }

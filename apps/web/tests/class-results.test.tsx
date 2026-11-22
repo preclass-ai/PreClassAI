@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import ClassesPage from "../app/(teacher)/classes/page";
 
 vi.mock("@/lib/auth", () => ({ RequireRole: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), useSearchParams: () => new URLSearchParams("assignment=a1") }));
 vi.mock("@/features/insights", () => ({ Insights: () => null }));
 
 afterEach(cleanup);
@@ -25,7 +25,6 @@ function renderWith(progress: Record<string, unknown>) {
       <ClassesPage />
     </QueryClientProvider>,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Xem tiến độ và câu hỏi" }));
 }
 
 it("shows how many students finished and a link to the class results CSV", () => {

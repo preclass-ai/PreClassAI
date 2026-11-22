@@ -41,3 +41,5 @@ async def analyze(class_id: UUID, assignment_id: UUID, cu: Teacher, db: Db) -> A
              responses=errs(401, 403, 404, (409, "NOTHING_TO_RETEACH, DRAFT_EXISTS")))
 async def reteach(class_id: UUID, assignment_id: UUID, cu: Teacher, db: Db) -> ReteachOut:
     return await svc.reteach(db, cu, class_id, assignment_id)
+
+

@@ -23,7 +23,7 @@ Quyết định và giới hạn: `docs/adr/ADR-0011-cloud-demo-deploy.md`. Ch�
 | `PYTHON_VERSION` | `3.12.8` (Render cần số phiên bản đầy đủ) |
 | `SEED_TEACHER_PASSWORD`, `SEED_REVIEWER_PASSWORD`, `SEED_ADMIN_PASSWORD` | ≥ 12 ký tự mỗi biến (secret, nhập tay). Thiếu: tài khoản demo không được tạo, log cảnh báo, API vẫn chạy |
 | `SEED_STUDENT_PASSWORD` | tùy chọn; không đặt = HS seed không đăng nhập bằng mật khẩu (chỉ khách) |
-| `GUEST_ACCESS_ENABLED`, `GUEST_CLASS_CODE`, `GUEST_CREATE_PER_HOUR` | `true`, `KS`, `200` (một lớp dùng chung Wi-Fi) |
+| `GUEST_ACCESS_ENABLED`, `GUEST_CLASS_CODE`, `GUEST_CREATE_PER_IP` | `true`, `KS`, `200` mỗi 10 phút theo IP (một lớp dùng chung Wi-Fi; mặc định cũng là 200) |
 | `DOCS_ACCESS` | `staff` (khuyến nghị cho demo), `off` cho production |
 
 Nếu bắt buộc dùng chuỗi pooled (`-pooler`), app tự tắt prepared-statement cache của asyncpg; nhưng migration vẫn nên chạy bằng chuỗi direct.

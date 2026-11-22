@@ -20,10 +20,14 @@ from app.config import get_settings
 from app.db import models as m
 from app.db.session import get_db
 from app.errors import ApiError
+from app.publish import cancel_assignment as cancel_assignment_service
 from app.publish import list_class_assignments as list_class_assignments_service
+from app.publish import update_assignment as update_assignment_service
 from app.routers._base import errs
 from app.schemas import (
     AssignmentList,
+    AssignmentOut,
+    AssignmentUpdate,
     AuditLogList,
     AuditLogOut,
     ClassList,
@@ -51,7 +55,7 @@ async def login(
     body: LoginRequest, request: Request, response: Response, db: Annotated[AsyncSession, Depends(get_db)]
 ) -> UserOut:
     ident = body.identifier.strip().lower()
-    key = f"{ident}|{request.client.host if request.client else '-'}"
+    key = ident
     login_limiter.check(key)
     user = await db.scalar(
         select(m.AppUser).where(
@@ -134,6 +138,21 @@ async def list_class_assignments(class_id: UUID, cu: Annotated[CurrentUser, Depe
     return await list_class_assignments_service(db, cu, class_id)
 
 
+@router.patch("/classes/{class_id}/assignments/{assignment_id}", tags=["classes"], operation_id="updateAssignment",
+              response_model=AssignmentOut, summary="Change the due time of an assignment (TEACHER of that class)",
+              responses=errs(401, 403, 404, 422))
+async def update_assignment(class_id: UUID, assignment_id: UUID, body: AssignmentUpdate, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> AssignmentOut:
+    return await update_assignment_service(db, cu, class_id, assignment_id, body)
+
+
+@router.delete("/classes/{class_id}/assignments/{assignment_id}", tags=["classes"], status_code=204,
+               operation_id="cancelAssignment", summary="Cancel an assignment (TEACHER of that class)",
+               description="Soft cancel: students stop seeing it, answers already given stay. Audited as `ASSIGN_CANCEL`.",
+               responses=errs(401, 403, 404))
+async def cancel_assignment(class_id: UUID, assignment_id: UUID, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> None:
+    await cancel_assignment_service(db, cu, class_id, assignment_id)
+
+
 @router.get("/classes/{class_id}/assignments/{assignment_id}/progress", tags=["classes"],
             operation_id="getAssignmentProgress", response_model=ProgressOut,
             summary="First-attempt correct rate per item (TEACHER of that class)",
@@ -145,7 +164,7 @@ async def assignment_progress(class_id: UUID, assignment_id: UUID, cu: Annotated
 @router.get("/classes/{class_id}/assignments/{assignment_id}/results.csv", tags=["classes"],
             operation_id="exportAssignmentResults", summary="Results of an assignment as CSV (TEACHER of that class)",
             description="Like a Google Form response sheet: one row per student of the class (login code; guests are "
-            "`Khách 001`… in joining order, never their survey code, which logs them back in; never a name, never ranked), status, counts, then the answer and Đúng/Sai of each item. UTF-8 with BOM "
+            "`Khách 001`… in joining order, never their survey code, which logs them back in; never a name, never ranked), status, counts, total hints, reviewed before the quiz or not, then the answer, Đúng/Sai and hints of each item. Never chat text. UTF-8 with BOM "
             "for Excel. Another class's or teacher's assignment → 404. Audited as `EXPORT_RESULTS`.",
             responses={200: {"content": {"text/csv": {"schema": {"type": "string"}}}, "description": "CSV file."},
                        **errs(401, 403, 404)})

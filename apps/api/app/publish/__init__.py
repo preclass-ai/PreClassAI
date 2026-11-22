@@ -5,6 +5,7 @@ edit/review are serialised: whichever wins, the other sees the committed state a
 """
 
 import uuid
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func, insert, select, update
@@ -19,9 +20,11 @@ from app.errors import ApiError
 from app.hashing import content_hash
 from app.lessons import revision_out
 from app.schemas import (
+    ApproveAllOut,
     AssignmentCreate,
     AssignmentList,
     AssignmentOut,
+    AssignmentUpdate,
     PublishCheckItem,
     PublishCheckOut,
     PublishedOut,
@@ -50,7 +53,7 @@ async def review_queue(db: AsyncSession, user: CurrentUser, revision_id: UUID, s
 
 async def review_block(db: AsyncSession, user: CurrentUser, block_id: UUID, body: ReviewRequest) -> ReviewOut:
     if user.role == "REVIEWER" and not get_settings().reviewer_enabled:  # second reviewer is a config flag, off by default
-        raise ApiError(403, "FORBIDDEN_ROLE", "Bạn không có quyền thực hiện thao tác này")
+        raise ApiError(403, "FORBIDDEN_ROLE", "Không có quyền thực hiện thao tác này")
     rev_id = await db.scalar(select(m.ContentBlock.revision_id).where(
         m.ContentBlock.id == block_id, m.ContentBlock.deleted_at.is_(None)))
     if rev_id is None:
@@ -67,7 +70,7 @@ async def review_block(db: AsyncSession, user: CurrentUser, block_id: UUID, body
     if block is None:
         raise NOT_FOUND
     if body.content_hash != block.content_hash:  # AT-14: approval is bound to the hash the reviewer saw
-        raise ApiError(409, "STALE_REVIEW", "Nội dung đã thay đổi sau khi bạn xem")
+        raise ApiError(409, "STALE_REVIEW", "Nội dung đã thay đổi sau lần xem trước")
     shashes: list[str] = []
     if body.action == "APPROVE":
         _, evaluated = await evaluate_revision(db, rev.id)
@@ -85,6 +88,26 @@ async def review_block(db: AsyncSession, user: CurrentUser, block_id: UUID, body
     return ReviewOut(block=(await blocks_out(db, [block]))[0], review_event_id=event_id)
 
 
+async def approve_all(db: AsyncSession, user: CurrentUser, revision_id: UUID, confirm: bool) -> ApproveAllOut:
+    """Approve only blocks that are AUTO_CHECKED with no failed rule at all (warning or blocker). One ReviewEvent per block,
+    bound to the hash and sources at this moment. Everything else (flagged, warned, unchecked) still needs a hand review."""
+    rev = await revision_for(db, user, revision_id, write=confirm)
+    if rev.state in _LOCKED:
+        raise ApiError(409, "REVISION_LOCKED", "Bản này không còn sửa được")
+    blocks, evaluated = await evaluate_revision(db, rev.id)
+    todo = [b for b in blocks if b.review_status in ("AUTO_CHECKED", "FLAGGED", "UNREVIEWED", "REVIEW_AGAIN")]
+    ok = [b for b in todo if b.review_status == "AUTO_CHECKED" and not any(r.outcome == "FAIL" for r in evaluated[b.id])]
+    if confirm and ok:
+        for b in ok:
+            await db.execute(insert(m.ReviewEvent), [{
+                "block_id": b.id, "content_hash": b.content_hash, "source_hashes": await current_source_hashes(db, b.id),
+                "reviewer_id": user.id, "action": "APPROVE", "note": "Duyệt tất cả (khối không có cảnh báo)"}])
+            await db.execute(update(m.ContentBlock).where(m.ContentBlock.id == b.id).values(review_status="APPROVED"))
+        audit(db, user.id, "APPROVE_ALL", "lesson_revision", rev.id)
+        await db.commit()
+    return ApproveAllOut(approved=len(ok), skipped=len(todo) - len(ok), applied=confirm)
+
+
 # ----------------------------------------------------------------------------- publish gate
 def _gate(blocks: list[m.ContentBlock], evaluated: dict[UUID, list[R]]) -> list[PublishCheckItem]:
     def fails(b: m.ContentBlock, severity: str | None = None, rule: str | None = None) -> bool:
@@ -98,7 +121,7 @@ def _gate(blocks: list[m.ContentBlock], evaluated: dict[UUID, list[R]]) -> list[
     has_items = any(b.kind == "worksheet_item" for b in blocks)
     return [
         PublishCheckItem(code="ALL_APPROVED", ok=not not_approved, block_ids=not_approved,
-                         message="Mọi khối đã được duyệt." if not not_approved
+                         message="Thầy/cô đã duyệt tất cả các nguồn cần duyệt." if not not_approved
                          else f"Còn {len(not_approved)} khối chưa được duyệt hoặc duyệt không còn hiệu lực."),
         PublishCheckItem(code="NO_BLOCKERS", ok=not blockers, block_ids=blockers,
                          message="Không còn cảnh báo chặn." if not blockers else f"Còn {len(blockers)} khối có lỗi chặn."),
@@ -279,7 +302,59 @@ async def list_class_assignments(db: AsyncSession, user: CurrentUser, class_id: 
         .join(m.PublishedVersion, m.PublishedVersion.id == m.Assignment.published_version_id)
         .join(m.LessonRevision, m.LessonRevision.id == m.PublishedVersion.lesson_revision_id)
         .join(m.Lesson, m.Lesson.id == m.LessonRevision.lesson_id)
-        .where(m.Assignment.class_id == class_id).order_by(m.Assignment.open_at.desc()))).all()
+        .where(m.Assignment.class_id == class_id, m.Assignment.cancelled_at.is_(None))
+        .order_by(m.Assignment.open_at.desc()))).all()
     return AssignmentList(items=[_assignment_out(a, cls.code, t, lid, no) for a, t, lid, no in rows])
+
+
+async def _teacher_class_assignment(db: AsyncSession, user: CurrentUser, class_id: UUID, assignment_id: UUID
+                                    ) -> tuple[m.Assignment, m.Class, m.Lesson, int]:
+    """An open (not cancelled) assignment of a class the teacher belongs to; anything else is a 404."""
+    row = (await db.execute(
+        select(m.Assignment, m.Class, m.Lesson, m.LessonRevision.revision_no)
+        .join(m.Class, m.Class.id == m.Assignment.class_id)
+        .join(m.ClassMember, (m.ClassMember.class_id == m.Class.id) & (m.ClassMember.user_id == user.id)
+              & (m.ClassMember.role_in_class == "TEACHER"))
+        .join(m.PublishedVersion, m.PublishedVersion.id == m.Assignment.published_version_id)
+        .join(m.LessonRevision, m.LessonRevision.id == m.PublishedVersion.lesson_revision_id)
+        .join(m.Lesson, m.Lesson.id == m.LessonRevision.lesson_id)
+        .where(m.Assignment.id == assignment_id, m.Assignment.class_id == class_id,
+               m.Assignment.cancelled_at.is_(None)).with_for_update(of=m.Assignment))).first()
+    if row is None:
+        raise NOT_FOUND
+    return row[0], row[1], row[2], row[3]
+
+
+async def update_assignment(db: AsyncSession, user: CurrentUser, class_id: UUID, assignment_id: UUID,
+                            body: AssignmentUpdate) -> AssignmentOut:
+    a, cls, lesson, no = await _teacher_class_assignment(db, user, class_id, assignment_id)
+    if body.due_at <= a.open_at:
+        raise ApiError(422, "INVALID_WINDOW", "Hạn nộp phải sau thời điểm mở bài")
+    a.due_at = body.due_at
+    audit(db, user.id, "ASSIGN_UPDATE", "assignment", a.id)
+    await db.commit()
+    return _assignment_out(a, cls.code, lesson.title, lesson.id, no)
+
+
+async def cancel_assignment(db: AsyncSession, user: CurrentUser, class_id: UUID, assignment_id: UUID) -> None:
+    a, *_ = await _teacher_class_assignment(db, user, class_id, assignment_id)
+    a.cancelled_at = datetime.now(UTC)  # students stop seeing it; their attempts stay in the results
+    audit(db, user.id, "ASSIGN_CANCEL", "assignment", a.id)
+    await db.commit()
+
+
+async def list_lesson_assignments(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -> AssignmentList:
+    """"Đã giao cho: 10A1 (hạn …)" on the lesson page: author only."""
+    rows = (await db.execute(
+        select(m.Assignment, m.Class.code, m.Lesson.title, m.LessonRevision.revision_no)
+        .join(m.PublishedVersion, m.PublishedVersion.id == m.Assignment.published_version_id)
+        .join(m.LessonRevision, m.LessonRevision.id == m.PublishedVersion.lesson_revision_id)
+        .join(m.Lesson, m.Lesson.id == m.LessonRevision.lesson_id)
+        .join(m.Class, m.Class.id == m.Assignment.class_id)
+        .join(m.ClassMember, (m.ClassMember.class_id == m.Class.id) & (m.ClassMember.user_id == user.id)
+              & (m.ClassMember.role_in_class == "TEACHER"))
+        .where(m.Lesson.id == lesson_id, m.Lesson.author_id == user.id, m.Assignment.cancelled_at.is_(None))
+        .order_by(m.Assignment.due_at))).all()
+    return AssignmentList(items=[_assignment_out(a, code, t, lesson_id, no) for a, code, t, no in rows])
 
 

@@ -4,12 +4,15 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, use } from "react";
 import { StateBadge } from "@/components/badges";
+import { NextStep } from "@/components/next-step";
 import { ErrorBox, Loading, PageHeader } from "@/components/ui";
+import { LessonAssignments } from "@/features/assignments";
 import { Editor } from "@/features/editor";
 import { History } from "@/features/history";
 import { useLesson } from "@/features/lesson-data";
 import { PublishGate } from "@/features/publish";
 import { ReviewQueue } from "@/features/review";
+import { isLocked } from "@/lib/blocks";
 import { useAuth } from "@/lib/auth";
 
 const TABS = [
@@ -53,6 +56,7 @@ function LessonWorkspace({ lessonId }: { lessonId: string }) {
           </>
         }
       />
+      {isTeacher ? <LessonAssignments lessonId={l.id} /> : null}
       <nav className="tabs" role="tablist" aria-label="Các bước của bài">
         {tabs.map((t) => (
           <button
@@ -73,6 +77,19 @@ function LessonWorkspace({ lessonId }: { lessonId: string }) {
         {tab === "publish" && isTeacher ? <PublishGate lesson={l} /> : null}
         {tab === "history" ? <History lesson={l} canEdit={isTeacher} /> : null}
       </div>
+      {tab === "editor" ? (
+        <NextStep label="Tiếp: Duyệt" href="?tab=review" blockedBy={(c.total ?? 0) === 0 ? "Bài chưa có khối nào để duyệt." : null} />
+      ) : null}
+      {tab === "review" && isTeacher ? (
+        <NextStep
+          label="Tiếp: Xuất bản"
+          href="?tab=publish"
+          blockedBy={!isLocked(rev.state) && (c.approved ?? 0) < (c.total ?? 0) ? `Còn ${(c.total ?? 0) - (c.approved ?? 0)} khối chưa duyệt.` : null}
+        />
+      ) : null}
+      {tab === "publish" && isTeacher ? (
+        <NextStep label="Tiếp: Giao bài" href="#giao-bai" blockedBy={!isLocked(rev.state) ? "Hãy xuất bản bản này trước." : null} />
+      ) : null}
     </>
   );
 }

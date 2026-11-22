@@ -109,7 +109,7 @@ export interface paths {
         put?: never;
         /**
          * Come back as the same guest with the survey code
-         * @description For a lost cookie / another device. 5 wrong codes per IP per 15 minutes → 429 `RATE_LIMITED`.
+         * @description For a lost cookie / another device. 20 wrong tries per survey code per 10 minutes (never per IP) → 429 `RATE_LIMITED`.
          */
         post: operations["resumeGuest"];
         delete?: never;
@@ -228,7 +228,7 @@ export interface paths {
         put?: never;
         /**
          * Approve / reject / request changes on one block (author or reviewer)
-         * @description One block per call; there is no bulk approve (PR-02). `contentHash` must equal the current block hash.
+         * @description One block per call (bulk approve exists only for blocks without warnings: approve-all). `contentHash` must equal the current block hash.
          */
         post: operations["reviewBlock"];
         delete?: never;
@@ -269,6 +269,27 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/v1/classes/{class_id}/assignments/{assignment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Cancel an assignment (TEACHER of that class)
+         * @description Soft cancel: students stop seeing it, answers already given stay. Audited as `ASSIGN_CANCEL`.
+         */
+        delete: operations["cancelAssignment"];
+        options?: never;
+        head?: never;
+        /** Change the due time of an assignment (TEACHER of that class) */
+        patch: operations["updateAssignment"];
         trace?: never;
     };
     "/v1/classes/{class_id}/assignments/{assignment_id}/insights": {
@@ -357,7 +378,7 @@ export interface paths {
         };
         /**
          * Results of an assignment as CSV (TEACHER of that class)
-         * @description Like a Google Form response sheet: one row per student of the class (login code; guests are `Khách 001`… in joining order, never their survey code, which logs them back in; never a name, never ranked), status, counts, then the answer and Đúng/Sai of each item. UTF-8 with BOM for Excel. Another class's or teacher's assignment → 404. Audited as `EXPORT_RESULTS`.
+         * @description Like a Google Form response sheet: one row per student of the class (login code; guests are `Khách 001`… in joining order, never their survey code, which logs them back in; never a name, never ranked), status, counts, total hints, reviewed before the quiz or not, then the answer, Đúng/Sai and hints of each item. Never chat text. UTF-8 with BOM for Excel. Another class's or teacher's assignment → 404. Audited as `EXPORT_RESULTS`.
          */
         get: operations["exportAssignmentResults"];
         put?: never;
@@ -491,6 +512,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/lesson-plans/{plan_id}/ai-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Questions and review cards the model drafted from this plan (owner only)
+         * @description Every item is `origin: ai_generated` with the plan passage it quotes (`sourceQuote`). Nothing here reaches students until the teacher approves it and builds the lesson.
+         */
+        get: operations["listPlanAiItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/lesson-plans/{plan_id}/ai-items/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redraft questions and review cards in the background; approved items stay
+         * @description Poll `GET /lesson-plans/{id}` for `aiState`. 409: `QUIZ_GEN_OFF`, `AI_BUSY`, `LESSON_EXISTS`.
+         */
+        post: operations["regeneratePlanAiItems"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/lesson-plans/{plan_id}/ai-items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Approve, reject or edit one drafted item (editing sends it back to draft)
+         * @description Approving confirms the model's answer. 409 `LESSON_EXISTS` once the lesson was built from the plan.
+         */
+        patch: operations["updatePlanAiItem"];
+        trace?: never;
+    };
     "/v1/lesson-plans/{plan_id}/lesson": {
         parameters: {
             query?: never;
@@ -572,6 +653,23 @@ export interface paths {
         };
         /** One lesson with its current revision */
         get: operations["getLesson"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/lessons/{lesson_id}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Classes this lesson is assigned to (author) */
+        get: operations["listLessonAssignments"];
         put?: never;
         post?: never;
         delete?: never;
@@ -665,6 +763,26 @@ export interface paths {
          * @description Students then get 410 `WITHDRAWN`. The reason is logged.
          */
         post: operations["withdrawPublished"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/revisions/{revision_id}/approve-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve every 'machine-checked' block that has no warning (author)
+         * @description Only AUTO_CHECKED blocks with no failed rule. Blocks with a warning, a blocker or a stale check stay for a hand review. `confirm=false` only counts (nothing written); `confirm=true` writes one review event per block.
+         */
+        post: operations["approveAllClean"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1000,7 +1118,7 @@ export interface paths {
         put?: never;
         /**
          * Ask Habit for a hint (1→3), a scoped answer from the approved lesson, or an explanation after answering
-         * @description Grounded only in the published snapshot. Before the student answers the item the reply never contains the answer (label, value, or a verdict on one option); asks for it are refused with a `blockedReason`. `explain` needs the student's own attempt. Limits: `CHAT_MAX_PER_ITEM`, `CHAT_MAX_PER_DAY_PER_STUDENT`. Repeating the same `requestId` returns the stored reply.
+         * @description Grounded only in the published snapshot. Before the student answers the item the reply never contains the answer (label, value, or a verdict on one option); asks for it are refused with a `blockedReason`. `explain` needs the student's own attempt. Limits: `CHAT_MAX_MSGS_PER_ITEM`, `CHAT_MAX_MSGS_PER_DAY` (typed questions) and `HINT_MAX_PER_ITEM` (hint presses). Repeating the same `requestId` returns the stored reply.
          */
         post: operations["chatHabit"];
         delete?: never;
@@ -1022,6 +1140,46 @@ export interface paths {
          */
         get: operations["getHabit"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/student/assignments/{assignment_id}/practice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Practise an item again after the first attempt ("Làm lại")
+         * @description Graded and explained like an attempt, but never counted in the teacher's results, insights or CSV (they keep the first attempt); only the number of redos is exported. Allowed after the due date. 409 `NOT_ANSWERED` before the first attempt.
+         */
+        post: operations["submitPractice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/student/assignments/{assignment_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save progress of the quick review: choice, cards seen, self-check results (not scored)
+         * @description Progress only moves forward (seen cards are added, never removed). It is the student's learning memory: HABIT AI reads it. 422 `INVALID_CARD` for a card that is not in this assignment.
+         */
+        put: operations["saveReviewProgress"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1218,6 +1376,37 @@ export interface components {
             value?: number | null;
         };
         /**
+         * ApproveAllOut
+         * @example {
+         *       "applied": false,
+         *       "approved": 12,
+         *       "skipped": 3
+         *     }
+         */
+        ApproveAllOut: {
+            /** Applied */
+            applied: boolean;
+            /**
+             * Approved
+             * @description Blocks approved (or that would be approved when `applied` is false).
+             */
+            approved: number;
+            /**
+             * Skipped
+             * @description Unapproved blocks left for a hand review: a warning, a blocker, or not checked yet.
+             */
+            skipped: number;
+        };
+        /** ApproveAllRequest */
+        ApproveAllRequest: {
+            /**
+             * Confirm
+             * @description false: count only, nothing is written. true: approve the eligible blocks.
+             * @default false
+             */
+            confirm: boolean;
+        };
+        /**
          * AssignmentCreate
          * @example {
          *       "classId": "d97fbc44-edb6-5333-b65d-1427e836354c",
@@ -1328,6 +1517,20 @@ export interface components {
             revisionNo: number;
         };
         /**
+         * AssignmentUpdate
+         * @example {
+         *       "dueAt": "2026-12-05T23:59:00+07:00"
+         *     }
+         */
+        AssignmentUpdate: {
+            /**
+             * Dueat
+             * Format: date-time
+             * @description New due time; must be after the opening time.
+             */
+            dueAt: string;
+        };
+        /**
          * AttemptRequest
          * @example {
          *       "answer": {
@@ -1361,6 +1564,11 @@ export interface components {
          */
         AttemptResult: {
             /**
+             * Correctanswer
+             * @description Right answer ('B. text' or value and unit); after the attempt.
+             */
+            correctAnswer?: string | null;
+            /**
              * Explanation
              * @description Approved explanation; only present after the attempt.
              */
@@ -1375,6 +1583,11 @@ export interface components {
              * Format: uuid
              */
             itemId: string;
+            /**
+             * Sourcequote
+             * @description 'Theo giáo án' passage (AI-drafted questions); after the attempt.
+             */
+            sourceQuote?: string | null;
         };
         /**
          * AuditLogList
@@ -1544,7 +1757,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "heading" | "paragraph" | "data_fact" | "instruction" | "worksheet_item" | "option" | "answer_key" | "explanation" | "card_front" | "card_back";
+            kind: "heading" | "paragraph" | "data_fact" | "instruction" | "worksheet_item" | "option" | "answer_key" | "explanation" | "card_front" | "card_back" | "review_card";
             /** Parentid */
             parentId?: string | null;
             /** Payload */
@@ -1640,7 +1853,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "heading" | "paragraph" | "data_fact" | "instruction" | "worksheet_item" | "option" | "answer_key" | "explanation" | "card_front" | "card_back";
+            kind: "heading" | "paragraph" | "data_fact" | "instruction" | "worksheet_item" | "option" | "answer_key" | "explanation" | "card_front" | "card_back" | "review_card";
             /**
              * Linkcount
              * @default 0
@@ -1794,14 +2007,31 @@ export interface components {
             extra?: string | null;
             /**
              * Hintlevel
-             * @description 1..3 for `hint`, 0 otherwise.
+             * @description 1..HINT_MAX_PER_ITEM for `hint`, 0 otherwise.
              */
             hintLevel: number;
+            /**
+             * Hintsused
+             * @description For `hint`: hints used on this item so far (including this one).
+             */
+            hintsUsed?: number | null;
+            /**
+             * Openreview
+             * @description Review card to open (button 'Mở thẻ ôn'), when the reply points to one.
+             */
+            openReview?: string | null;
             /**
              * Reply
              * @description Plain text. Never contains the answer before the student has answered the item.
              */
             reply: string;
+            /**
+             * Source
+             * @description llm: model; rule: template or lesson; guard: a refusal from the safety rules.
+             * @default rule
+             * @enum {string}
+             */
+            source: "llm" | "rule" | "guard";
             /** Sourcerefs */
             sourceRefs: components["schemas"]["SourceRef"][];
             /**
@@ -2165,17 +2395,38 @@ export interface components {
             /** Actorid */
             actorId?: string | null;
             /**
+             * Actorname
+             * @description Display name of the teacher (teacher events only).
+             */
+            actorName?: string | null;
+            /**
              * Actortype
              * @enum {string}
              */
             actorType: "AI" | "TEACHER" | "SYSTEM";
+            /** After */
+            after?: {
+                [key: string]: unknown;
+            } | null;
             /**
              * At
              * Format: date-time
              */
             at: string;
+            /**
+             * Before
+             * @description EDIT: payload before (null for edits older than the log).
+             */
+            before?: {
+                [key: string]: unknown;
+            } | null;
             /** Blockid */
             blockId?: string | null;
+            /**
+             * Blockkind
+             * @description Kind of the edited block (with before/after).
+             */
+            blockKind?: string | null;
             /** Operation */
             operation: ("GENERATE" | "EDIT" | "REGENERATE" | "SOURCE_REPLACED") | ("REVIEW" | "PUBLISH" | "WITHDRAW");
             /** Summary */
@@ -2363,6 +2614,8 @@ export interface components {
              * @description Items with needsReteach = true.
              */
             reteachItemIds?: string[];
+            /** @description Null unless both groups have at least 5 students. */
+            reviewImpact?: components["schemas"]["ReviewImpact"] | null;
             /** Studentcount */
             studentCount: number;
             /** Themes */
@@ -2655,10 +2908,104 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** PlanAiItemOut */
+        PlanAiItemOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "quiz" | "review";
+            /**
+             * Needsconfirmation
+             * @description True until the teacher approves.
+             */
+            needsConfirmation: boolean;
+            /**
+             * Origin
+             * @description `ai_generated`: written by the model, never published before the teacher approves it.
+             */
+            origin: string;
+            /**
+             * Payload
+             * @description quiz: stem, options[4], correct_index, explanation, hints[3], skill_tag. review: title, points, example, check{statement, answer_true, explanation}.
+             */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Position */
+            position: number;
+            /**
+             * Sourcequote
+             * @description The passage of the lesson plan the item is based on.
+             */
+            sourceQuote: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "approved" | "rejected";
+        };
+        /** PlanAiItemUpdate */
+        PlanAiItemUpdate: {
+            /**
+             * Payload
+             * @description Edited content, same shape as the item's payload (validated).
+             */
+            payload?: {
+                [key: string]: unknown;
+            } | null;
+            /** Status */
+            status?: ("draft" | "approved" | "rejected") | null;
+        };
+        /** PlanAiList */
+        PlanAiList: {
+            /** Items */
+            items: components["schemas"]["PlanAiItemOut"][];
+        };
         /** PlanDetail */
         PlanDetail: {
             /** Activities */
             activities: string[];
+            /**
+             * Aineedsconfirmationcount
+             * @description AI items not approved yet.
+             * @default 0
+             */
+            aiNeedsConfirmationCount: number;
+            /**
+             * Aiquizcount
+             * @default 0
+             */
+            aiQuizCount: number;
+            /**
+             * Aiquizneedsconfirmationcount
+             * @default 0
+             */
+            aiQuizNeedsConfirmationCount: number;
+            /**
+             * Aireviewcount
+             * @default 0
+             */
+            aiReviewCount: number;
+            /**
+             * Aistate
+             * @description Drafting of AI questions and review cards: queued/running while the model works.
+             * @default none
+             * @enum {string}
+             */
+            aiState: "none" | "queued" | "running" | "done" | "failed" | "skipped";
+            /**
+             * Aistats
+             * @description Drafting report per kind, seconds, tokens.
+             */
+            aiStats?: {
+                [key: string]: unknown;
+            } | null;
             /**
              * Competencies
              * @description Competency catalogue of the plan's subject.
@@ -2847,6 +3194,41 @@ export interface components {
         PlanOut: {
             /** Activities */
             activities: string[];
+            /**
+             * Aineedsconfirmationcount
+             * @description AI items not approved yet.
+             * @default 0
+             */
+            aiNeedsConfirmationCount: number;
+            /**
+             * Aiquizcount
+             * @default 0
+             */
+            aiQuizCount: number;
+            /**
+             * Aiquizneedsconfirmationcount
+             * @default 0
+             */
+            aiQuizNeedsConfirmationCount: number;
+            /**
+             * Aireviewcount
+             * @default 0
+             */
+            aiReviewCount: number;
+            /**
+             * Aistate
+             * @description Drafting of AI questions and review cards: queued/running while the model works.
+             * @default none
+             * @enum {string}
+             */
+            aiState: "none" | "queued" | "running" | "done" | "failed" | "skipped";
+            /**
+             * Aistats
+             * @description Drafting report per kind, seconds, tokens.
+             */
+            aiStats?: {
+                [key: string]: unknown;
+            } | null;
             /** Grade */
             grade: number | null;
             /**
@@ -2895,6 +3277,23 @@ export interface components {
             sub: string | null;
         };
         /**
+         * PracticeRequest
+         * @example {
+         *       "answer": {
+         *         "choice": "B"
+         *       },
+         *       "itemId": "02d3cfa8-bb12-5e3f-a869-4eac8504ff73"
+         *     }
+         */
+        PracticeRequest: {
+            answer: components["schemas"]["AnswerIn"];
+            /**
+             * Itemid
+             * Format: uuid
+             */
+            itemId: string;
+        };
+        /**
          * PreferencesIn
          * @example {
          *       "preferences": {
@@ -2937,7 +3336,7 @@ export interface components {
          *       "code": "STALE_REVIEW",
          *       "detail": "",
          *       "status": 409,
-         *       "title": "Nội dung đã thay đổi sau khi bạn xem",
+         *       "title": "Nội dung đã thay đổi sau lần xem trước",
          *       "type": "https://preclass.local/problems/stale_review"
          *     }
          */
@@ -3307,6 +3706,15 @@ export interface components {
              */
             revisionId: string;
         };
+        /** ReviewCheckPayload */
+        ReviewCheckPayload: {
+            /** Answertrue */
+            answerTrue: boolean;
+            /** Explanation */
+            explanation: string;
+            /** Statement */
+            statement: string;
+        };
         /** ReviewEventOut */
         ReviewEventOut: {
             /**
@@ -3344,6 +3752,33 @@ export interface components {
             sourceHashes: string[];
         };
         /**
+         * ReviewImpact
+         * @description Students who used the quick review vs those who did not. Shown only when BOTH groups have at least 5 students.
+         */
+        ReviewImpact: {
+            /**
+             * Avgcorrectwithreview
+             * @description Mean share of correct answers, students who reviewed (0..1).
+             */
+            avgCorrectWithReview: number;
+            /** Avgcorrectwithoutreview */
+            avgCorrectWithoutReview: number;
+            /**
+             * Note
+             * @description Always says this is a correlation, not a cause.
+             */
+            note: string;
+            /** Otherstudents */
+            otherStudents: number;
+            /**
+             * Reviewrate
+             * @description Share of the students who answered and also used the review.
+             */
+            reviewRate: number;
+            /** Reviewedstudents */
+            reviewedStudents: number;
+        };
+        /**
          * ReviewOut
          * @example {
          *       "block": {
@@ -3376,6 +3811,19 @@ export interface components {
              * Format: uuid
              */
             reviewEventId: string;
+        };
+        /** ReviewProgressIn */
+        ReviewProgressIn: {
+            /** Checks */
+            checks?: {
+                [key: string]: boolean;
+            } | null;
+            /** Choice */
+            choice?: ("not_yet" | "done") | null;
+            /** Reviewed */
+            reviewed?: boolean | null;
+            /** Seenids */
+            seenIds?: string[] | null;
         };
         /**
          * ReviewQueue
@@ -3431,6 +3879,32 @@ export interface components {
             contentHash: string;
             /** Note */
             note?: string | null;
+        };
+        /** ReviewState */
+        ReviewState: {
+            /**
+             * Checks
+             * @description Card id to self-check result (true = right).
+             */
+            checks?: {
+                [key: string]: boolean;
+            };
+            /**
+             * Choice
+             * @description 'Em đã học bài này chưa?': not_yet = review first.
+             */
+            choice?: ("not_yet" | "done") | null;
+            /**
+             * Reviewed
+             * @description The student finished the cards or pressed 'Đủ rồi, làm bài'.
+             * @default false
+             */
+            reviewed: boolean;
+            /**
+             * Seenids
+             * @default []
+             */
+            seenIds: string[];
         };
         /**
          * RevisionOut
@@ -3551,7 +4025,7 @@ export interface components {
          * SourceCreateText
          * @description JSON body of POST /sources. For a DOCX use POST /sources/docx (multipart).
          * @example {
-         *       "licenseNote": "DỮ LIỆU MINH HỌA",
+         *       "licenseNote": "Dùng nội bộ",
          *       "text": "Tiêu đề\n\nĐoạn một.\n\nĐoạn hai.",
          *       "title": "Bài đọc mẫu",
          *       "visibility": "PRIVATE"
@@ -3591,7 +4065,7 @@ export interface components {
          *             "sha256": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
          *             "version": 1
          *           },
-         *           "licenseNote": "DỮ LIỆU MINH HỌA: số liệu giả, không phải số liệu chính thức.",
+         *           "licenseNote": "Số liệu giả lập cho bài thử.",
          *           "ownerId": "eb9a9e82-7954-5e82-a597-16c6123031ff",
          *           "title": "Phân bố dân cư theo vùng (dan-so-vung)",
          *           "visibility": "SCHOOL"
@@ -3620,7 +4094,7 @@ export interface components {
          *         "sha256": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
          *         "version": 1
          *       },
-         *       "licenseNote": "DỮ LIỆU MINH HỌA: số liệu giả, không phải số liệu chính thức.",
+         *       "licenseNote": "Số liệu giả lập cho bài thử.",
          *       "ownerId": "eb9a9e82-7954-5e82-a597-16c6123031ff",
          *       "title": "Phân bố dân cư theo vùng (dan-so-vung)",
          *       "visibility": "SCHOOL"
@@ -3807,6 +4281,12 @@ export interface components {
              * Format: date-time
              */
             openAt: string;
+            /**
+             * Review
+             * @description Approved review cards; empty = no review step.
+             */
+            review?: components["schemas"]["StudentReviewCard"][];
+            reviewState?: components["schemas"]["ReviewState"];
             /** Title */
             title: string;
         };
@@ -3915,6 +4395,24 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** StudentReviewCard */
+        StudentReviewCard: {
+            /** @description True/false self-check, not scored; the explanation is shown at once. */
+            check: components["schemas"]["ReviewCheckPayload"];
+            /** Example */
+            example: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Points */
+            points: string[];
+            /** Position */
+            position: number;
+            /** Title */
+            title: string;
+        };
         /** SubjectCompetencyOut */
         SubjectCompetencyOut: {
             /** Code */
@@ -3935,7 +4433,7 @@ export interface components {
          *       "chatTokensIn": 0,
          *       "chatTokensOut": 0,
          *       "chatTotal": 120,
-         *       "createPerHourPerIp": 60,
+         *       "createPerIp": 200,
          *       "createdLastHour": 12,
          *       "maxActive": 500
          *     }
@@ -3983,10 +4481,10 @@ export interface components {
              */
             chatTotal: number;
             /**
-             * Createperhourperip
-             * @description GUEST_CREATE_PER_HOUR.
+             * Createperip
+             * @description GUEST_CREATE_PER_IP: guests one IP may create per 10 minutes.
              */
-            createPerHourPerIp: number;
+            createPerIp: number;
             /** Createdlasthour */
             createdLastHour: number;
             /**
@@ -4171,6 +4669,11 @@ export interface components {
         /** WorksheetItemPayload */
         WorksheetItemPayload: {
             /**
+             * Hints
+             * @description Fixed hints 1..3 (AI-drafted questions); never shown outside Habit.
+             */
+            hints?: string[] | null;
+            /**
              * Itemtype
              * @enum {string}
              */
@@ -4180,6 +4683,11 @@ export interface components {
              * @enum {string}
              */
             skill: "READ_TABLE" | "COMPARE" | "CALCULATE" | "EXPLAIN";
+            /**
+             * Sourcequote
+             * @description Plan passage an AI-drafted question is based on.
+             */
+            sourceQuote?: string | null;
             /** Stem */
             stem: string;
         };
@@ -4986,6 +5494,126 @@ export interface operations {
             };
         };
     };
+    cancelAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: string;
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updateAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: string;
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignmentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getAssignmentInsights: {
         parameters: {
             query?: never;
@@ -5652,6 +6280,203 @@ export interface operations {
             };
         };
     };
+    listPlanAiItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanAiList"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    regeneratePlanAiItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Xung đột trạng thái hoặc phiên bản. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updatePlanAiItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanAiItemUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanAiItemOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Xung đột trạng thái hoặc phiên bản. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     createLessonFromPlan: {
         parameters: {
             query?: never;
@@ -5992,6 +6817,55 @@ export interface operations {
             };
         };
     };
+    listLessonAssignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lesson_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentList"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     generateDraft: {
         parameters: {
             query?: never;
@@ -6252,6 +7126,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    approveAllClean: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                revision_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveAllRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApproveAllOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description REVISION_LOCKED. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -7410,7 +8346,7 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
-            /** @description CHAT_LIMIT. */
+            /** @description CHAT_LIMIT hoặc HINT_LIMIT. */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -7484,6 +8420,157 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submitPractice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PracticeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttemptResult"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description NOT_ANSWERED. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Đã thu hồi (WITHDRAWN). */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    saveReviewProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewProgressIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewState"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Đã thu hồi (WITHDRAWN). */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };

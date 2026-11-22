@@ -12,7 +12,11 @@ export default function PlansPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const file = useRef<HTMLInputElement>(null);
-  const list = useQuery({ queryKey: ["plans"], queryFn: () => unwrap(api.GET("/v1/lesson-plans")) });
+  const list = useQuery({
+    queryKey: ["plans"],
+    queryFn: () => unwrap(api.GET("/v1/lesson-plans")),
+    refetchInterval: (q) => (q.state.data?.items.some((p) => p.aiState === "queued" || p.aiState === "running") ? 2500 : false),
+  });
   // The reading runs on the server as a job: it survives a reload and we resume from the latest job.
   const latest = useQuery({
     queryKey: ["plan-job"],
@@ -86,6 +90,15 @@ export default function PlansPage() {
               <div className="muted small">
                 {p.ppctPeriod ? `Tiết ${p.ppctPeriod}` : ""} {p.taughtFrom ? `· dạy ${fmtDate(p.taughtFrom)}` : ""} · {p.mcqCount} câu trắc nghiệm, {p.needsConfirmationCount} cần xác nhận
               </div>
+              {p.aiState === "queued" || p.aiState === "running" ? (
+                <div className="small" role="status">
+                  Đang soạn câu hỏi…
+                </div>
+              ) : p.aiQuizCount + p.aiReviewCount > 0 ? (
+                <div className="small">
+                  {p.aiQuizCount} câu AI soạn, {p.aiQuizNeedsConfirmationCount} cần xác nhận. {p.aiReviewCount} thẻ ôn.
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>

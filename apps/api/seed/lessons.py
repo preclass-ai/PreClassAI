@@ -3,7 +3,7 @@ each lesson carries one note line under its table, and the source licence note s
 
 from typing import Any
 
-NOTE = "DỮ LIỆU MINH HỌA"
+NOTE = "Số liệu giả cho thử nghiệm"
 
 LESSONS: list[dict[str, Any]] = [
     {

@@ -230,7 +230,7 @@ async def lesson_history(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -
         .where(m.LessonRevision.lesson_id == lesson_id)
         .group_by(m.LessonRevision.id, m.PublishedVersion.created_at).order_by(m.LessonRevision.revision_no))).all()
     t = (await db.execute(
-        select(m.TransformationEvent, m.ContentBlock.revision_id)
+        select(m.TransformationEvent, m.ContentBlock.kind)
         .join(m.ContentBlock, m.ContentBlock.id == m.TransformationEvent.block_id)
         .join(m.LessonRevision, m.LessonRevision.id == m.ContentBlock.revision_id)
         .where(m.LessonRevision.lesson_id == lesson_id).order_by(m.TransformationEvent.created_at.desc()).limit(200))).all()
@@ -239,7 +239,7 @@ async def lesson_history(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -
         .join(m.LessonRevision, m.LessonRevision.id == m.ContentBlock.revision_id)
         .where(m.LessonRevision.lesson_id == lesson_id).order_by(m.ReviewEvent.created_at.desc()).limit(200))).scalars().all()
     events = [HistoryEvent(at=e.created_at, actor_type=e.actor_type, actor_id=e.actor_id, operation=e.operation,
-                           block_id=e.block_id) for e, _ in t]
+                           block_id=e.block_id, block_kind=kind, before=e.before_payload, after=e.after_payload) for e, kind in t]
     events += [HistoryEvent(at=x.created_at, actor_type="TEACHER", actor_id=x.reviewer_id, operation="REVIEW",
                             block_id=x.block_id, summary=x.action) for x in r]
     pubs = (await db.execute(select(m.PublishedVersion).join(
@@ -251,7 +251,13 @@ async def lesson_history(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -
             m.AuditLog.action == "WITHDRAW", m.AuditLog.resource_id.in_([p.id for p in pubs])))).scalars().all()
         events += [HistoryEvent(at=a.created_at, actor_type="TEACHER", actor_id=a.actor_id, operation="WITHDRAW") for a in wd]
     events.sort(key=lambda e: e.at, reverse=True)
+    events = events[:200]
+    ids = {e.actor_id for e in events if e.actor_id}
+    rows = (await db.execute(select(m.AppUser.id, m.AppUser.display_name).where(m.AppUser.id.in_(ids)))).all() if ids else []
+    names = {i: n for i, n in rows}
+    for e in events:
+        e.actor_name = names.get(e.actor_id) if e.actor_id else None
     return LessonHistory(
         revisions=[HistoryRevision(revision_id=v.id, revision_no=v.revision_no, state=v.state, published_at=pub,
                                    block_count=n) for v, n, pub in revs],
-        events=events[:200])
+        events=events)

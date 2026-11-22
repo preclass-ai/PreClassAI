@@ -125,6 +125,10 @@ async def test_at09_editing_an_approved_block_drops_the_approval(client: httpx.A
     assert (ev[0], ev[1], ev[2]) == (old, b["contentHash"], "TEACHER")
     prov = (await client.get(f"/v1/blocks/{B('p1')}/provenance")).json()
     assert [x["isValid"] for x in prov["reviews"]] == [False]  # the old approval no longer counts
+    # K2: the edit log says who, when, and what it said before and after
+    hist = (await client.get(f"/v1/lessons/{uid(f'{L}:lesson')}/history")).json()["events"]
+    e = next(x for x in hist if x["operation"] == "EDIT" and x["blockId"] == str(B("p1")))
+    assert e["actorName"] and e["at"] and e["after"] == {"text": "Một câu mới hoàn toàn."} and e["before"] and e["before"] != e["after"]
 
 
 async def test_edit_in_review_state_also_loses_approval(client: httpx.AsyncClient, db: AsyncSession) -> None:
@@ -285,3 +289,20 @@ async def test_no_source_reason_replaces_links_and_changes_the_hash(client: http
     blk = r.json()["block"]
     assert blk["noSourceReason"] == "Câu hỏi sư phạm" and blk["linkCount"] == 0 and blk["contentHash"] != old
     assert blk["reviewStatus"] == "REVIEW_AGAIN" and await status(db, "q1e") == "REVIEW_AGAIN"
+
+
+# ----------------------------------------------------------------------------- K3: approve all (only clean, machine-checked blocks)
+async def test_approve_all_counts_first_then_approves_only_clean_blocks(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    await login(client, "gv.dia@preclass.local")
+    await db.execute(text("UPDATE content_block SET review_status='FLAGGED' WHERE id=:b"), {"b": B("p1")})
+    url = f"/v1/revisions/{LREV}/approve-all"
+    dry = (await client.post(url, json={})).json()
+    assert dry["applied"] is False and dry["approved"] > 0 and dry["skipped"] >= 1
+    assert await status(db, "q1") == "AUTO_CHECKED"  # nothing written by the count
+    done = (await client.post(url, json={"confirm": True})).json()
+    assert (done["approved"], done["skipped"], done["applied"]) == (dry["approved"], dry["skipped"], True)
+    assert await status(db, "p1") == "FLAGGED"  # a flagged block still needs a hand review
+    n = await db.scalar(text("SELECT count(*) FROM review_event WHERE note LIKE 'Duyệt tất cả%' AND action='APPROVE'"))
+    assert n == done["approved"]  # one logged event per block
+    assert (await client.post(url, json={"confirm": True})).json()["approved"] == 0
+    assert (await client.post(f"/v1/revisions/{uid(f'{LOCKED}:lrev')}/approve-all", json={"confirm": True})).status_code == 409  # published

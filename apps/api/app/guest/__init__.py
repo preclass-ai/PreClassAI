@@ -15,7 +15,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import LoginLimiter
+from app.auth import WRONG_TOO_OFTEN, LoginLimiter
 from app.config import get_settings
 from app.db import models as m
 from app.errors import ApiError
@@ -28,8 +28,12 @@ NOT_ENABLED = ApiError(404, "NOT_FOUND", "Không tìm thấy")
 log = logging.getLogger("preclass.guest")
 WARN_AT = 0.8  # log a warning when a guest limit is 80% used
 
-create_limiter = LoginLimiter(window_s=3600)  # counts every guest created from an IP in the last hour
-resume_limiter = LoginLimiter(max_failures=5, window_s=900)  # wrong codes per IP per 15 minutes
+GUEST_BUSY = "Hệ thống đang đông, em thử lại sau 1 phút nhé."
+# every guest created from an IP in the last 10 minutes
+create_limiter = LoginLimiter(window_s=600, message=GUEST_BUSY, code="GUEST_BUSY")
+resume_limiter = LoginLimiter(max_failures=20, window_s=600, message=WRONG_TOO_OFTEN)  # wrong tries per survey code / 10 minutes
+# all wrong codes together: stops enumeration, no IP
+guess_limiter = LoginLimiter(max_failures=300, window_s=600, message=WRONG_TOO_OFTEN)
 
 
 def require_enabled() -> None:
@@ -64,12 +68,12 @@ async def stats(db: AsyncSession) -> dict[str, int]:
     last_hour = await db.scalar(select(func.count()).select_from(m.AppUser).where(
         m.AppUser.is_guest.is_(True), m.AppUser.created_at > datetime.now(UTC) - timedelta(hours=1)))
     return {"active_guests": await active_guests(db), "created_last_hour": int(last_hour or 0),
-            "max_active": cfg.guest_max_active, "create_per_hour_per_ip": cfg.guest_create_per_hour}
+            "max_active": cfg.guest_max_active, "create_per_ip": cfg.guest_create_per_ip}
 
 
 async def create_guest(db: AsyncSession, ip: str) -> m.AppUser:
     cfg = get_settings()
-    create_limiter.check(ip, cfg.guest_create_per_hour)
+    create_limiter.check(ip, cfg.guest_create_per_ip)
     cls = await survey_class(db)
     active = await active_guests(db)
     if active >= cfg.guest_max_active:
@@ -87,21 +91,24 @@ async def create_guest(db: AsyncSession, ip: str) -> m.AppUser:
     db.add(m.ClassMember(class_id=cls.id, user_id=user.id, role_in_class="STUDENT"))
     create_limiter.fail(ip)
     # Counts only: never the IP or the code in a log line.
-    if len(create_limiter.hits[ip]) >= WARN_AT * cfg.guest_create_per_hour:
-        log.warning("guest creation from one client at %d/%d per hour", len(create_limiter.hits[ip]), cfg.guest_create_per_hour)
+    if len(create_limiter.hits[ip]) >= WARN_AT * cfg.guest_create_per_ip:
+        log.warning("guest creation from one client at %d/%d per 10 min", len(create_limiter.hits[ip]), cfg.guest_create_per_ip)
     if active + 1 >= WARN_AT * cfg.guest_max_active:
         log.warning("active guests %d/%d (>= 80%% of GUEST_MAX_ACTIVE)", active + 1, cfg.guest_max_active)
     return user
 
 
-async def find_guest(db: AsyncSession, raw_code: str, ip: str) -> m.AppUser:
-    resume_limiter.check(ip)
+async def find_guest(db: AsyncSession, raw_code: str) -> m.AppUser:
+    code = normalize_code(raw_code)
+    resume_limiter.check(code)
+    guess_limiter.check("*")
     user = await db.scalar(select(m.AppUser).where(
-        m.AppUser.survey_code == normalize_code(raw_code), m.AppUser.is_guest.is_(True), m.AppUser.is_active.is_(True)))
+        m.AppUser.survey_code == code, m.AppUser.is_guest.is_(True), m.AppUser.is_active.is_(True)))
     if user is None:
-        resume_limiter.fail(ip)
+        resume_limiter.fail(code)
+        guess_limiter.fail("*")
         raise ApiError(404, "NOT_FOUND", "Không tìm thấy mã khảo sát này")
-    resume_limiter.reset(ip)
+    resume_limiter.reset(code)
     user.last_seen_at = datetime.now(UTC)
     return user
 

@@ -168,6 +168,14 @@ async def test_results_csv_one_row_per_student_by_code(client: httpx.AsyncClient
     d = await detail(client)
     mcq = next(i for i in d["items"] if i["itemType"] == "MCQ")
     assert (await attempt(client, mcq["id"], {"choice": "B"})).status_code == 201
+    sid = await db.scalar(text("SELECT id FROM app_user WHERE login_code='HS10-01'"))
+    sess = await db.scalar(text("INSERT INTO chat_session (id, assignment_id, student_id, item_block_id) "
+                                "VALUES (gen_random_uuid(), :a, :s, :i) RETURNING id"), {"a": ASSIGN, "s": sid, "i": mcq["id"]})
+    for _ in (1, 2):  # two hints on this item
+        await db.execute(text("INSERT INTO chat_message (id, session_id, role, action, text, mode) "
+                              "VALUES (gen_random_uuid(), :x, 'assistant', 'hint', 'g', 'rule')"), {"x": sess})
+    await db.execute(text("INSERT INTO review_progress (assignment_id, student_id, seen_ids) VALUES (:a, :s, ARRAY[gen_random_uuid()])"),
+                     {"a": ASSIGN, "s": sid})
     await login(client, "gv.dia@preclass.local")
     r = await client.get(f"/v1/classes/{CLASS}/assignments/{ASSIGN}/results.csv")
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")
@@ -176,11 +184,12 @@ async def test_results_csv_one_row_per_student_by_code(client: httpx.AsyncClient
     assert body_text.startswith("﻿")  # Excel reads the Vietnamese headers
     rows = list(csv.reader(io.StringIO(body_text.lstrip("﻿"))))
     head, body = rows[0], rows[1:]
-    assert head[:2] == ["Mã học sinh", "Trạng thái"] and len(head) == 6 + 2 * len(d["items"])
+    assert head[:2] == ["Mã học sinh", "Trạng thái"] and len(head) == 9 + 4 * len(d["items"])
     assert len(body) == 15 and [b[0] for b in body] == sorted(b[0] for b in body)  # every student, by code
     me = next(b for b in body if b[0] == "HS10-01")
-    col = 6 + 2 * [i["id"] for i in d["items"]].index(mcq["id"])
+    col = 9 + 4 * [i["id"] for i in d["items"]].index(mcq["id"])
     assert me[col] == "B" and me[col + 1] in ("Đúng", "Sai") and me[1] == "Đang làm" and me[2] == "1"
+    assert me[col + 2] == "2" and me[5] == "2" and me[col + 3] == "0" and me[6] == "0" and me[7] == "Bài không có thẻ ôn"  # hints per item and in total; the seed lesson has no review cards
     assert next(b for b in body if b[0] == "HS10-02")[1] == "Chưa làm"
     names = (await db.execute(text("SELECT display_name FROM app_user WHERE role='STUDENT'"))).scalars().all()
     assert not any(n in body_text for n in names if n and not n.startswith(("HS", "Khách")))  # codes, never names

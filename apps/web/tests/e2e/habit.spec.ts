@@ -2,10 +2,10 @@ import { expect, test } from "@playwright/test";
 import { expectNoHorizontalScroll, login } from "./helpers";
 
 // One fresh student per project: attempts are write-once. Needs the API with CHAT_ENABLED=true.
-const STUDENT: Record<string, string> = { "mobile-390": "HS10-01", "tablet-768": "HS10-02", "desktop-1280": "HS10-03", "webkit-390": "HS10-04" };
+const STUDENT: Record<string, string> = { "mobile-390": "HS10-01", "tablet-768": "HS10-02", "desktop-1280": "HS10-08", "webkit-390": "HS10-04" };
 const shot = (name: string, project: string) => `test-results/habit/${name}-${project}.png`;
 
-test("Habit: hints 1→3, refusals, answer, explanation, goal", async ({ page }, info) => {
+test("Habit: hints 1 to 3 of 10, refusals, answer, explanation, goal", async ({ page }, info) => {
   await login(page, STUDENT[info.project.name] ?? "HS10-15");
   await page.locator(".assignment-card").first().click();
   await expect(page.locator("section.item").first()).toBeVisible({ timeout: 30_000 });
@@ -16,10 +16,10 @@ test("Habit: hints 1→3, refusals, answer, explanation, goal", async ({ page },
 
   const item = page.locator("section.item").first();
   for (const n of [1, 2, 3]) {
-    await item.getByRole("button", { name: `Gợi ý ${n}/3` }).click();
+    await item.getByRole("button", { name: `Gợi ý nhẹ · còn ${11 - n} lượt` }).click();
     await expect(item.locator(".habit-hint")).toHaveCount(n);
   }
-  await expect(item.getByRole("button", { name: /đã dùng hết/ })).toBeDisabled();
+  await expect(item.getByRole("button", { name: "Gợi ý rõ hơn · còn 7 lượt" })).toBeEnabled(); // hints go on up to 10
   await page.screenshot({ path: shot("hints", info.project.name), fullPage: true });
 
   await item.getByRole("button", { name: "Hỏi HABIT AI" }).click();
@@ -27,7 +27,7 @@ test("Habit: hints 1→3, refusals, answer, explanation, goal", async ({ page },
   await expect(sheet).toBeVisible();
   const box = await sheet.boundingBox();
   const vp = page.viewportSize()!;
-  if (vp.width < 1100) expect(box!.height).toBeLessThanOrEqual(vp.height * 0.75 + 1);
+  if (vp.width < 1100) expect(box!.height).toBeLessThanOrEqual(vp.height * 0.85 + 1);
   else expect(Math.round(box!.width)).toBe(390);
   // the first suggestion button is in scope (it used to come back as "outside the lesson")
   await sheet.getByRole("button", { name: "Em nên bắt đầu từ đâu?" }).click();

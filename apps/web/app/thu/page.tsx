@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { ErrorBox, Loading } from "@/components/ui";
-import { DataLink, GUEST_NOTICE } from "@/features/guest";
+import { DataDetails, GUEST_NOTICE } from "@/features/guest";
 import { api, unwrap } from "@/lib/api";
 import { homeFor, ME_KEY, useAuth } from "@/lib/auth";
 
@@ -45,7 +45,8 @@ function Start() {
           ◉ <span>PreClass AI</span>
         </p>
         <h1>Đang vào bài…</h1>
-        <p className="muted">{GUEST_NOTICE} <DataLink /></p>
+        <p className="muted">{GUEST_NOTICE}</p>
+        <DataDetails always />
         {error ? (
           <>
             <ErrorBox error={error} />

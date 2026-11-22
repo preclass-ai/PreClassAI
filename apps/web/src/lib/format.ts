@@ -44,6 +44,11 @@ export function toLocalInput(d: Date): string {
 }
 
 /** "Trước buổi học 1 ngày": the lesson day (`yyyy-mm-dd` from a date input) minus one day at 23:59, as a datetime-local value. */
+/** True when the lesson day (YYYY-MM-DD) is not after the due day of a datetime-local value: students could still hand in after the lesson. */
+export function dueNotBeforeLesson(lessonDay: string, dueAt: string): boolean {
+  return !!lessonDay && !!dueAt && dueAt.slice(0, 10) >= lessonDay;
+}
+
 export function dueDayBefore(lessonDay: string): string {
   const d = new Date(`${lessonDay}T00:00:00`);
   d.setDate(d.getDate() - 1);
