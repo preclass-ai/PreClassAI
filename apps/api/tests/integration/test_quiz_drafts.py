@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import habit
 from app.config import get_settings
 from app.generation.providers import ProviderHTTPError
-from app.habit import llm
 from app.ids import uid
 from app.lessonplan import quizgen
 from tests.conftest import login
@@ -112,7 +111,7 @@ async def test_budget_and_missing_model_skip_without_failing(client: httpx.Async
     gen.setenv("QUIZ_GEN_MOCK", "false")
     gen.setenv("QUIZ_GEN_DAILY_TOKENS", "100000")
     get_settings.cache_clear()
-    gen.setattr(llm, "get_chat_llm", lambda: None)
+    gen.setattr(quizgen, "get_client", lambda: None)
     third = await upload(client)
     assert third["aiState"] == "skipped" and third["aiStats"]["reason"] == "no_model" and third["aiQuizCount"] == 0
 
@@ -134,7 +133,7 @@ async def test_a_broken_json_reply_is_retried_once(client: httpx.AsyncClient, ge
     gen.setenv("QUIZ_GEN_MOCK", "false")
     get_settings.cache_clear()
     fake = BrokenThenGood()
-    gen.setattr(llm, "get_chat_llm", lambda: fake)
+    gen.setattr(quizgen, "get_client", lambda: fake)
     await login(client, "gv.dia@preclass.local")
     p = await upload(client)
     assert p["aiState"] == "done" and p["aiStats"]["quiz"]["calls"] == 2 and p["aiQuizCount"] >= 5
@@ -206,7 +205,7 @@ async def test_a_failed_review_does_not_cost_the_quiz(client: httpx.AsyncClient,
                                                       err: BaseException, status: str) -> None:
     gen.setenv("QUIZ_GEN_MOCK", "false")
     get_settings.cache_clear()
-    gen.setattr(llm, "get_chat_llm", lambda: ReviewBroken(err))
+    gen.setattr(quizgen, "get_client", lambda: ReviewBroken(err))
     await login(client, "gv.dia@preclass.local")
     p = await upload(client)
     assert p["aiState"] == "done" and p["aiQuizCount"] >= 5 and p["aiReviewCount"] == 0  # the quiz is saved
@@ -215,7 +214,7 @@ async def test_a_failed_review_does_not_cost_the_quiz(client: httpx.AsyncClient,
     quiz_ids = {i["id"] for i in (await client.get(f"/v1/lesson-plans/{p['id']}/ai-items")).json()["items"] if i["kind"] == "quiz"}
 
     # "Tạo lại" with a working model redoes only the review: the quiz drafts keep their ids
-    gen.setattr(llm, "get_chat_llm", lambda: quizgen.MockQuizLLM())
+    gen.setattr(quizgen, "get_client", lambda: quizgen.MockQuizLLM())
     await quizgen.run_plan(db, UUID(p["id"]))
     after = (await client.get(f"/v1/lesson-plans/{p['id']}")).json()
     items = (await client.get(f"/v1/lesson-plans/{p['id']}/ai-items")).json()["items"]
@@ -235,7 +234,7 @@ async def test_review_cards_all_rejected_are_marked_not_drafted(client: httpx.As
 
     gen.setenv("QUIZ_GEN_MOCK", "false")
     get_settings.cache_clear()
-    gen.setattr(llm, "get_chat_llm", lambda: FakeQuotes())
+    gen.setattr(quizgen, "get_client", lambda: FakeQuotes())
     await login(client, "gv.dia@preclass.local")
     p = await upload(client)
     r = p["aiStats"]["review"]
@@ -255,7 +254,7 @@ async def test_unknown_sentence_ids_are_rejected_and_the_server_writes_the_quote
 
     gen.setenv("QUIZ_GEN_MOCK", "false")
     get_settings.cache_clear()
-    gen.setattr(llm, "get_chat_llm", lambda: BadIds())
+    gen.setattr(quizgen, "get_client", lambda: BadIds())
     await login(client, "gv.dia@preclass.local")
     p = await upload(client)
     assert p["aiStats"]["review"]["rejected"] == {"bad_sentence_id": 2} and p["aiReviewCount"] == 3
@@ -278,7 +277,7 @@ async def test_the_gap_between_quiz_and_review_calls_is_respected(client: httpx.
     gen.setenv("QUIZ_GEN_MOCK", "false")
     gen.setenv("QUIZ_GEN_GAP_S", "20")
     get_settings.cache_clear()
-    gen.setattr(llm, "get_chat_llm", lambda: Recorder())
+    gen.setattr(quizgen, "get_client", lambda: Recorder())
     gen.setattr(quizgen.asyncio, "sleep", fake_sleep)
     await login(client, "gv.dia@preclass.local")
     await upload(client)

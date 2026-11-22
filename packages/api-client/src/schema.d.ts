@@ -4025,7 +4025,7 @@ export interface components {
          * SourceCreateText
          * @description JSON body of POST /sources. For a DOCX use POST /sources/docx (multipart).
          * @example {
-         *       "licenseNote": "DỮ LIỆU MINH HỌA",
+         *       "licenseNote": "Dùng nội bộ",
          *       "text": "Tiêu đề\n\nĐoạn một.\n\nĐoạn hai.",
          *       "title": "Bài đọc mẫu",
          *       "visibility": "PRIVATE"
@@ -4065,7 +4065,7 @@ export interface components {
          *             "sha256": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
          *             "version": 1
          *           },
-         *           "licenseNote": "DỮ LIỆU MINH HỌA: số liệu giả, không phải số liệu chính thức.",
+         *           "licenseNote": "Số liệu giả lập cho bài thử.",
          *           "ownerId": "eb9a9e82-7954-5e82-a597-16c6123031ff",
          *           "title": "Phân bố dân cư theo vùng (dan-so-vung)",
          *           "visibility": "SCHOOL"
@@ -4094,7 +4094,7 @@ export interface components {
          *         "sha256": "9f2c1b7a4e5d63c8a0b1d2e3f405162738495a6b7c8d9e0f1a2b3c4d5e6f7a8b",
          *         "version": 1
          *       },
-         *       "licenseNote": "DỮ LIỆU MINH HỌA: số liệu giả, không phải số liệu chính thức.",
+         *       "licenseNote": "Số liệu giả lập cho bài thử.",
          *       "ownerId": "eb9a9e82-7954-5e82-a597-16c6123031ff",
          *       "title": "Phân bố dân cư theo vùng (dan-so-vung)",
          *       "visibility": "SCHOOL"
