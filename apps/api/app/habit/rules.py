@@ -43,7 +43,8 @@ QUICK_LEVEL = {"start": 1, "where_data": 2, "formula": 3}
 TEACHER_REPLY = "Em ghi lại câu hỏi rồi hỏi thầy cô trong giờ học nhé. Thầy cô sẽ giải thích kỹ hơn."
 # General "how do I do this" questions are in scope: they get the hint for that step (normalised, so no diacritics needed).
 HOWTO = {
-    1: ("bat dau", "lam sao", "lam the nao", "khong hieu", "khong biet", "goi y", "cach lam", "nen lam gi", "buoc dau", "bi tac"),
+    1: ("bat dau", "lam sao", "lam the nao", "khong hieu", "khong biet", "goi y", "cach lam", "nen lam gi", "buoc dau", "bi tac",
+        "chua hoc", "hoc tu dau", "hoc the nao", "hoc nhu the nao", "nen hoc", "on tap", "chua biet", "chua hieu", "chua lam"),
     2: ("nam o dau", "tim o dau", "lay o dau", "du lieu nao", "so lieu nao", "du lieu o dau", "so lieu o dau", "bang o dau"),
     3: ("cong thuc", "cach tinh", "tinh nhu the nao", "tinh the nao"),
 }
@@ -53,7 +54,7 @@ HOWTO = {
 # so "cảm ơn, cho em đáp án luôn" is not small talk (and the intent check still runs first in `smalltalk`).
 _SMALL_ANCHOR = {"cam", "thanks", "thank", "chao", "hello", "hi", "hey", "ok", "oke", "okay", "da", "vang", "hieu", "tuyet", "duoc"}
 _SMALL_WORDS = _SMALL_ANCHOR | {"on", "you", "xin", "roi", "voi", "hay", "qua", "nhe", "nha", "nhieu", "thay", "co", "habit", "ai",
-                                "em", "ban", "a", "oi", "ha"}
+                                "em", "ban", "a", "oi", "ha", "chatbot", "bot"}
 _SMALL_WORDS.discard("a")  # a lone "A" is an option label, not small talk
 SMALL_REPLY = {
     "THANKS": ["Không có gì em nhé! Em cứ làm tiếp câu này, cần gợi ý thì HABIT AI ở đây.",
@@ -62,15 +63,22 @@ SMALL_REPLY = {
     "GREET": ["Chào em! HABIT AI sẵn sàng. Em đọc đề rồi hỏi mình khi cần gợi ý nhé.",
               "Chào em! Em bắt đầu từ việc đọc kỹ đề, cần gì cứ hỏi HABIT AI.",
               "Xin chào em! Em làm câu này đi, kẹt chỗ nào mình gợi ý cho."],
+    "INTRO": ["Mình là HABIT AI, trợ lý học tập của lớp. Mình gợi ý từng bước, không đưa đáp án. Em muốn bắt đầu từ đâu?"],
     "ACK": ["Tốt lắm! Em làm tiếp nhé, cần gợi ý thì cứ hỏi HABIT AI.",
             "Ok em! Em thử làm rồi nộp bài, kẹt thì xin gợi ý.",
             "Được rồi em. Em tiếp tục làm câu này nhé."],
 }
 
 
+_WHO = ("ten gi", "ten la gi", "la ai", "ten minh", "ten ban", "ban la gi")  # "bạn tên gì", "bạn là ai": the assistant introduces itself
+
+
 def smalltalk(msg: str) -> str | None:
-    """THANKS | GREET | ACK when the whole message is small talk, else None (any answer request or odd word means None)."""
-    toks = norm(msg).split()
+    """INTRO | THANKS | GREET | ACK when the whole message is small talk, else None (any answer request or odd word means None)."""
+    n = norm(msg)
+    toks = n.split()
+    if toks and len(toks) <= 10 and intent(msg, None) is None and any(k in f" {n} " for k in _WHO):
+        return "INTRO"
     if not toks or len(toks) > 8 or intent(msg, None) is not None or not set(toks) <= _SMALL_WORDS or not set(toks) & _SMALL_ANCHOR:
         return None
     if set(toks) & {"cam", "thanks", "thank"}:
@@ -285,7 +293,7 @@ def decide(v: ItemView, action: str, msg: str, used_hints: int, small: bool = Fa
         level = QUICK_LEVEL[quick]
         text, refs = hint(v, level, reps=(seen or {}).get(level, 0), small=small, table_first=table_first)
     elif (kind := smalltalk(msg)) is not None:  # "cảm ơn", "ok", "em hiểu rồi": friendly, not "ngoài bài học"
-        text = SMALL_REPLY[kind][turn % 3]
+        text = SMALL_REPLY[kind][turn % len(SMALL_REPLY[kind])]
     elif (lvl := howto(msg)) is not None and intent(msg, v) is None:  # "how do I start", "where is the data", ...
         level = lvl
         text, refs = hint(v, level, reps=(seen or {}).get(level, 0), small=small, table_first=table_first)
