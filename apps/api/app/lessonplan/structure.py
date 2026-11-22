@@ -38,6 +38,8 @@ SUB_KIND = {"muc tieu": "muc_tieu", "noi dung": "noi_dung", "san pham": "san_pha
 STEP = re.compile(r"^buoc\s*[1-4]\b")
 OBJ_HEAD = re.compile(r"^(?:\d+\s*[.)]\s*|[-•+*]\s*)?(kien thuc|nang luc chung|nang luc chuyen biet|nang luc dac thu|nang luc|pham chat)\s*[:.]?\s*$")
 FIGURE = re.compile(r"^(?:hinh|bieu do|so do|luoc do|ban do|anh)\s*\d*\s*[.:]")
+# where the last option ends when the next section of the plan is glued to it: "c) Sản phẩm", "d) Tổ chức thực hiện", "Hoạt động 3", "Bước 1"
+SECTION_CUT = re.compile(r"\s+(?:[a-d]\s*\)\s*(?=[A-ZÀ-Ỵ])|(?:Sản phẩm|Tổ chức thực hiện|Hoạt động|Bước\s*\d)\b)")
 OPTION = re.compile(r"(?:(?<=\s)|^)([A-D])\s*[.)]\s*")
 BULLET = re.compile(r"^\s*(?:[-•+*]|\d+\s*[.)]|[a-dA-D]\s*[.)]|buoc\s*\d|hoat dong|C[âa]u\s*\d)", re.IGNORECASE)
 DATE = re.compile(r"(?<![\d/])(\d{1,2})\s*[/.\-]\s*(\d{1,2})(?:\s*[/.\-]\s*(\d{2,4}))?")
@@ -250,7 +252,11 @@ def _parse_mcq(u: _Unit) -> tuple[str, list[tuple[str, str]], dict[str, bool]] |
     stem = body[: hits[0][1]].strip()
     opts = []
     for k, (letter, _, end) in enumerate(hits):
-        stop = hits[k + 1][1] if k + 1 < len(hits) else len(body)
+        if k + 1 < len(hits):
+            stop = hits[k + 1][1]
+        else:
+            cut = SECTION_CUT.search(body, end)
+            stop = cut.start() if cut else len(body)
         opts.append((letter, body[end:stop].strip()))
     flags: dict[str, bool] = {}
     for ln in u.lines:
