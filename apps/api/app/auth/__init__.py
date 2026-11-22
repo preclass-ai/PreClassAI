@@ -116,7 +116,7 @@ async def current_user(request: Request, db: Annotated[AsyncSession, Depends(get
                 user.last_seen_at = now  # hourly: enough for "inactive for N days" purging
                 await db.commit()
             return CurrentUser(user, row[0])
-    raise ApiError(401, "UNAUTHENTICATED", "Bạn chưa đăng nhập hoặc phiên đã hết hạn")
+    raise ApiError(401, "UNAUTHENTICATED", "Chưa đăng nhập hoặc phiên đã hết hạn")
 
 
 def require_role(*roles: str):  # type: ignore[no-untyped-def]
@@ -124,7 +124,7 @@ def require_role(*roles: str):  # type: ignore[no-untyped-def]
 
     async def dep(user: Annotated[CurrentUser, Depends(current_user)]) -> CurrentUser:
         if user.role not in roles:
-            raise ApiError(403, "FORBIDDEN_ROLE", "Bạn không có quyền thực hiện thao tác này")
+            raise ApiError(403, "FORBIDDEN_ROLE", "Không có quyền thực hiện thao tác này")
         return user
 
     return dep

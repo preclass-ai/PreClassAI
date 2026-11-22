@@ -52,7 +52,7 @@ async def review_queue(db: AsyncSession, user: CurrentUser, revision_id: UUID, s
 
 async def review_block(db: AsyncSession, user: CurrentUser, block_id: UUID, body: ReviewRequest) -> ReviewOut:
     if user.role == "REVIEWER" and not get_settings().reviewer_enabled:  # second reviewer is a config flag, off by default
-        raise ApiError(403, "FORBIDDEN_ROLE", "Bạn không có quyền thực hiện thao tác này")
+        raise ApiError(403, "FORBIDDEN_ROLE", "Không có quyền thực hiện thao tác này")
     rev_id = await db.scalar(select(m.ContentBlock.revision_id).where(
         m.ContentBlock.id == block_id, m.ContentBlock.deleted_at.is_(None)))
     if rev_id is None:
@@ -69,7 +69,7 @@ async def review_block(db: AsyncSession, user: CurrentUser, block_id: UUID, body
     if block is None:
         raise NOT_FOUND
     if body.content_hash != block.content_hash:  # AT-14: approval is bound to the hash the reviewer saw
-        raise ApiError(409, "STALE_REVIEW", "Nội dung đã thay đổi sau khi bạn xem")
+        raise ApiError(409, "STALE_REVIEW", "Nội dung đã thay đổi sau lần xem trước")
     shashes: list[str] = []
     if body.action == "APPROVE":
         _, evaluated = await evaluate_revision(db, rev.id)

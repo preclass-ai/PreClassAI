@@ -3264,7 +3264,7 @@ export interface components {
          *       "code": "STALE_REVIEW",
          *       "detail": "",
          *       "status": 409,
-         *       "title": "Nội dung đã thay đổi sau khi bạn xem",
+         *       "title": "Nội dung đã thay đổi sau lần xem trước",
          *       "type": "https://preclass.local/problems/stale_review"
          *     }
          */

@@ -88,7 +88,7 @@ class Problem(ApiModel):
     errors: list[ProblemFieldError] | None = None
     block_ids: list[UUID] | None = Field(None, description="PUBLISH_BLOCKED: blocks that stop the publish.")
     model_config = ex({
-        "type": "https://preclass.local/problems/stale_review", "title": "Nội dung đã thay đổi sau khi bạn xem",
+        "type": "https://preclass.local/problems/stale_review", "title": "Nội dung đã thay đổi sau lần xem trước",
         "status": 409, "detail": "", "code": "STALE_REVIEW"})
 
 
