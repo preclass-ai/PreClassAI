@@ -94,7 +94,8 @@ def _gate(blocks: list[m.ContentBlock], evaluated: dict[UUID, list[R]]) -> list[
     not_approved = [b.id for b in blocks if b.review_status != "APPROVED" or fails(b, rule="VAL-06")]
     blockers = [b.id for b in blocks if fails(b, "BLOCKER")]
     bad_sources = [b.id for b in blocks if fails(b, rule="VAL-01")]
-    has_items = any(b.kind in ("worksheet_item", "card_front") for b in blocks)
+    # Only questions count: flashcards are shown to students but never answered, so a cards-only lesson has nothing to do.
+    has_items = any(b.kind == "worksheet_item" for b in blocks)
     return [
         PublishCheckItem(code="ALL_APPROVED", ok=not not_approved, block_ids=not_approved,
                          message="Mọi khối đã được duyệt." if not not_approved
@@ -104,7 +105,7 @@ def _gate(blocks: list[m.ContentBlock], evaluated: dict[UUID, list[R]]) -> list[
         PublishCheckItem(code="SOURCES_VALID", ok=not bad_sources, block_ids=bad_sources,
                          message="Mọi nguồn đều hợp lệ." if not bad_sources else "Có khối liên kết nguồn không hợp lệ."),
         PublishCheckItem(code="HAS_ITEMS", ok=has_items,
-                         message="Có câu hỏi/thẻ." if has_items else "Bản chưa có câu hỏi hoặc thẻ nào."),
+                         message="Có câu hỏi." if has_items else "Bản chưa có câu hỏi nào (thẻ ghi nhớ không tính là câu hỏi)."),
     ]
 
 
@@ -232,9 +233,9 @@ async def withdraw(db: AsyncSession, user: CurrentUser, published_id: UUID, reas
     return _out(pv, lesson.title)
 
 
-def _assignment_out(a: m.Assignment, code: str, title: str) -> AssignmentOut:
+def _assignment_out(a: m.Assignment, code: str, title: str, lesson_id: UUID, revision_no: int) -> AssignmentOut:
     return AssignmentOut(id=a.id, published_version_id=a.published_version_id, class_id=a.class_id, class_code=code,
-                         lesson_title=title, open_at=a.open_at, due_at=a.due_at)
+                         lesson_id=lesson_id, lesson_title=title, revision_no=revision_no, open_at=a.open_at, due_at=a.due_at)
 
 
 async def create_assignment(
@@ -263,7 +264,8 @@ async def create_assignment(
     db.add(a)
     audit(db, user.id, "ASSIGN", "assignment", None)
     await db.commit()
-    return _assignment_out(a, cls.code, lesson.title)
+    rev = await db.get(m.LessonRevision, pv.lesson_revision_id)
+    return _assignment_out(a, cls.code, lesson.title, lesson.id, rev.revision_no if rev else 0)
 
 
 async def list_class_assignments(db: AsyncSession, user: CurrentUser, class_id: UUID) -> AssignmentList:
@@ -273,11 +275,11 @@ async def list_class_assignments(db: AsyncSession, user: CurrentUser, class_id: 
     if cls is None:
         raise NOT_FOUND
     rows = (await db.execute(
-        select(m.Assignment, m.Lesson.title)
+        select(m.Assignment, m.Lesson.title, m.Lesson.id, m.LessonRevision.revision_no)
         .join(m.PublishedVersion, m.PublishedVersion.id == m.Assignment.published_version_id)
         .join(m.LessonRevision, m.LessonRevision.id == m.PublishedVersion.lesson_revision_id)
         .join(m.Lesson, m.Lesson.id == m.LessonRevision.lesson_id)
         .where(m.Assignment.class_id == class_id).order_by(m.Assignment.open_at.desc()))).all()
-    return AssignmentList(items=[_assignment_out(a, cls.code, t) for a, t in rows])
+    return AssignmentList(items=[_assignment_out(a, cls.code, t, lid, no) for a, t, lid, no in rows])
 
 

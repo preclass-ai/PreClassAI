@@ -3,10 +3,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Button, DataNotice, Empty, ErrorBox, Loading, PageHeader } from "@/components/ui";
+import { Badge, Button, Empty, ErrorBox, Loading, PageHeader } from "@/components/ui";
 import { NewSourceForm } from "@/features/source-form";
 import { api, unwrap } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { VISIBILITY } from "@/lib/labels";
 import { fmtDateTime } from "@/lib/format";
 import { refresh } from "@/lib/query";
 
@@ -20,14 +21,13 @@ export default function SourcesPage() {
     <>
       <PageHeader
         title="Thư viện nguồn"
-        sub="Nguồn là căn cứ để AI soạn và để giáo viên kiểm chứng. Bản nguồn đã tải lên không bị sửa."
+        sub="Tài liệu gốc (sách giáo khoa, bảng số liệu…) để AI soạn bài và để thầy cô đối chiếu khi duyệt."
         actions={
           <Button variant="primary" onClick={() => setAdding((v) => !v)}>
             {adding ? "Đóng" : "Thêm nguồn"}
           </Button>
         }
       />
-      <DataNotice />
       {adding ? (
         <section className="card">
           <h2>Nguồn mới</h2>
@@ -51,10 +51,10 @@ export default function SourcesPage() {
             <thead>
               <tr>
                 <th>Tên nguồn</th>
-                <th>Phạm vi</th>
-                <th>Bản</th>
-                <th>Đoạn nguồn</th>
-                <th>Trạng thái đọc</th>
+                <th>Ai dùng được</th>
+                <th>Phiên bản</th>
+                <th>Số đoạn</th>
+                <th>Đọc tệp</th>
                 <th>Ngày tạo</th>
               </tr>
             </thead>
@@ -65,8 +65,8 @@ export default function SourcesPage() {
                     <Link href={`/sources/${s.id}`}>{s.title}</Link>
                     {s.ownerId !== user?.id ? <span className="muted small"> · của đồng nghiệp</span> : null}
                   </td>
-                  <td>{s.visibility === "SCHOOL" ? "Cả trường" : "Riêng"}</td>
-                  <td>v{s.latestRevision.version}</td>
+                  <td>{VISIBILITY[s.visibility]}</td>
+                  <td>Bản #{s.latestRevision.version}</td>
                   <td>{s.latestRevision.anchorCount}</td>
                   <td>
                     <Badge tone={s.latestRevision.extractStatus === "OK" ? "success" : s.latestRevision.extractStatus === "FAILED" ? "danger" : "info"}>

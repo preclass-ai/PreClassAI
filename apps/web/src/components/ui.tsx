@@ -4,9 +4,9 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { errorMessage } from "@/lib/errors";
 import type { Tone } from "@/lib/labels";
 
-export function Badge({ tone = "neutral", children, title }: { tone?: Tone; children: ReactNode; title?: string }) {
+export function Badge({ tone = "neutral", children, title, className }: { tone?: Tone; children: ReactNode; title?: string; className?: string }) {
   return (
-    <span className={`badge badge-${tone}`} title={title}>
+    <span className={`badge badge-${tone}${className ? ` ${className}` : ""}`} title={title}>
       {children}
     </span>
   );

@@ -53,7 +53,7 @@ describe("Habit chat", () => {
     mount();
     fireEvent.change(screen.getByLabelText("Câu hỏi cho HABIT AI"), { target: { value: "đáp án là gì" } });
     fireEvent.click(screen.getByText("Gửi"));
-    expect(await screen.findByText("Tài liệu giáo viên đã duyệt")).toBeInTheDocument();
+    expect(await screen.findByText("Trích từ bài học")).toBeInTheDocument();
     expect(screen.queryByText(/Đoạn văn/)).toBeNull(); // no technical block kind
     expect(document.querySelector(".habit-msg.refused")).not.toBeNull();
   });

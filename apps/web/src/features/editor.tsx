@@ -243,7 +243,7 @@ function BlockDetail({ block, lesson, editable, canReview, onClose, onChanged }:
       </div>
       <ErrorBox error={error} />
       {editing && draft.restored ? (
-        <Notice tone="info">Đã khôi phục nội dung bạn đang sửa dở (chưa lưu lên máy chủ).</Notice>
+        <Notice tone="info">Đã khôi phục nội dung thầy cô đang sửa dở (chưa lưu lên máy chủ).</Notice>
       ) : null}
       {editing ? (
         <form className="stack" onSubmit={save}>

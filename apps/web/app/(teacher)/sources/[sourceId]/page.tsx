@@ -9,6 +9,7 @@ import { NewRevisionForm } from "@/features/source-form";
 import { api, unwrap } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fmtDateTime } from "@/lib/format";
+import { VISIBILITY } from "@/lib/labels";
 import { refresh } from "@/lib/query";
 
 export default function SourceDetailPage({ params }: { params: Promise<{ sourceId: string }> }) {
@@ -46,7 +47,7 @@ export default function SourceDetailPage({ params }: { params: Promise<{ sourceI
         title={s.title}
         sub={
           <>
-            Bản v{rev?.version} · {rev?.anchorCount} đoạn nguồn · {s.visibility === "SCHOOL" ? "Cả trường" : "Riêng"} ·
+            Bản #{rev?.version} · {rev?.anchorCount} đoạn · {VISIBILITY[s.visibility]} ·
             tải lên {fmtDateTime(rev?.createdAt)}
             {s.licenseNote ? ` · ${s.licenseNote}` : ""}
           </>

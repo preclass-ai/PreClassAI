@@ -65,7 +65,7 @@ test("HABIT AI panel: empty and full conversation", async ({ page }, info) => {
   }
   await expect(sheet.locator(".habit-msg.refused")).toHaveCount(2);
   await expect(sheet.locator(".habit-source").first()).toBeVisible(); // one source block, neutral label
-  await expect(sheet.locator(".habit-source-label").first()).toHaveText("Tài liệu giáo viên đã duyệt");
+  await expect(sheet.locator(".habit-source-label").first()).toHaveText("Trích từ bài học");
   await expect(sheet.locator(".habit-source")).toHaveCount(1);
   const last = sheet.getByRole("group", { name: "Em có thể chọn" }).getByRole("button");
   await expect(last).toHaveCount(4);

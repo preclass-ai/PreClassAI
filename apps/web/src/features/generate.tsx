@@ -70,7 +70,7 @@ export function GeneratePanel({ lessonId, hasBlocks, onDone }: {
         ) : null}
       </div>
       <p className="muted small">
-        AI chỉ đọc các đoạn nguồn của bài. Mọi khối AI tạo đều cần bạn kiểm tra và duyệt; AI không tự duyệt.
+        AI chỉ đọc các đoạn nguồn của bài. Mọi khối AI tạo đều cần thầy cô kiểm tra và duyệt; AI không tự duyệt.
       </p>
       <ErrorBox error={error} />
       <div className="row">
@@ -112,7 +112,7 @@ export function GeneratePanel({ lessonId, hasBlocks, onDone }: {
         </Notice>
       ) : null}
       {status === "FAILED" ? (
-        <Notice tone="danger">Sinh nội dung thất bại{job.data?.error ? `: ${job.data.error}` : ""}. Bạn có thể thử lại.</Notice>
+        <Notice tone="danger">Sinh nội dung thất bại{job.data?.error ? `: ${job.data.error}` : ""}. Thầy cô có thể thử lại.</Notice>
       ) : null}
       <div>
         <Button type="submit" variant="primary" busy={busy} disabled={running}>

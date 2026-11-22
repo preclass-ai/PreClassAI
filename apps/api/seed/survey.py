@@ -52,6 +52,12 @@ async def ensure_survey_class(conn: AsyncConnection, code: str) -> int:
                 id=uid(f"{pv}:assignment:{code}"), published_version_id=pv, class_id=cid,
                 open_at=now - timedelta(days=1), due_at=now + timedelta(days=365)))
             added += 1
+    # The seed also assigns these lessons to class 10A1 (+30 days). Teachers look at 10A1 while guests see KS, so give both
+    # the same deadline: otherwise the teacher and the student screens show different due dates for the same lesson.
+    for pv in pvs:
+        ks_due = select(A.c.due_at).where(A.c.class_id == cid, A.c.published_version_id == pv).scalar_subquery()
+        await conn.execute(update(A).where(  # type: ignore[arg-type]
+            A.c.class_id == uid("class:10A1"), A.c.published_version_id == pv).values(due_at=ks_due))
     return added
 
 

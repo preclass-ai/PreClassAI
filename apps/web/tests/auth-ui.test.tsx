@@ -93,7 +93,7 @@ it("with guest access on: a big guest button first, the account form collapsed b
     </QueryClientProvider>,
   );
   expect(screen.getByRole("button", { name: "Vào làm thử (không cần tài khoản)" })).toBeTruthy();
-  expect(screen.getByText(/Không thu tên hay email/)).toBeTruthy();
+  expect(screen.getByText(/không hỏi tên hay email/)).toBeTruthy();
   const details = container.querySelectorAll("details.login-more");
   expect(details.length).toBe(2);
   details.forEach((d) => expect(d.hasAttribute("open")).toBe(false));
