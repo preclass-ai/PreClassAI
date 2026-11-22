@@ -23,7 +23,7 @@ test("teacher sees lessons, inspects a block's sources and the publish gate", as
   await expectNoHorizontalScroll(page);
   await page.screenshot({ path: `test-results/screens/editor-${info.project.name}.png`, fullPage: info.project.name !== "webkit-390" });
   // On mobile the inspector is a bottom sheet: close it before moving on.
-  await page.getByRole("button", { name: "Đóng" }).click();
+  await page.getByRole("button", { name: "Đóng", exact: true }).click();
   await expect(page.locator(".editor-inspector.open")).toHaveCount(0);
 
   await page.getByRole("tab", { name: "Duyệt" }).click();

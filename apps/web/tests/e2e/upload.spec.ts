@@ -64,6 +64,6 @@ test("scanned PDF and hostile files give friendly messages", async ({ page }, in
     await page.getByText("Tải tệp (Word, PDF, Excel, PowerPoint)").click();
     await save(page, file, `Độc ${file}`);
     await expect(page.getByRole("alert").filter({ hasText: msg })).toBeVisible({ timeout: 30_000 });
-    await page.getByRole("button", { name: "Đóng" }).click();
+    await page.getByRole("button", { name: "Đóng", exact: true }).click();
   }
 });

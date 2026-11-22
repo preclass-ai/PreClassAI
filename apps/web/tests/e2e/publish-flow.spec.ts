@@ -4,7 +4,7 @@ import { login } from "./helpers";
 // Changes data (adds a revision to the seeded lesson each run): desktop only, dev/staging seed only.
 test("new revision → approve block by block → publish → assign (S04–S06)", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop-1280", "write flow runs once");
-  test.setTimeout(150_000); // approving block by block takes about 30 s on a fresh seed and longer after the other specs added revisions
+  test.setTimeout(240_000); // approving block by block takes about 30 s on a fresh seed and longer after the other specs added revisions
   page.on("dialog", (d) => void d.accept());
   await login(page, "gv.dia@preclass.local");
   await page.getByRole("link", { name: "Phân bố dân cư theo vùng" }).click();
@@ -21,7 +21,7 @@ test("new revision → approve block by block → publish → assign (S04–S06)
   await expect(approve.first()).toBeVisible();
   // The queue re-renders after every decision, so a click can land on a card that is replaced a moment later and be lost
   // (no error on screen, the "x/y đã duyệt" counter does not move). Click again until the queue is empty.
-  for (let i = 0; i < 80 && (await approve.count()) > 0; i++) {
+  for (let i = 0; i < 200 && (await approve.count()) > 0; i++) {
     const before = await approve.count();
     await approve.first().click();
     await expect.poll(() => approve.count(), { timeout: 4_000 }).toBeLessThan(before).catch(() => undefined);
