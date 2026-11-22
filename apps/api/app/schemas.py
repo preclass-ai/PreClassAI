@@ -991,6 +991,17 @@ class BlockedReason(ApiModel):
     count: int
 
 
+class ReviewImpact(ApiModel):
+    """Students who used the quick review vs those who did not. Shown only when BOTH groups have at least 5 students."""
+
+    reviewed_students: int
+    other_students: int
+    review_rate: float = Field(description="Share of the students who answered and also used the review.")
+    avg_correct_with_review: float = Field(description="Mean share of correct answers, students who reviewed (0..1).")
+    avg_correct_without_review: float
+    note: str = Field(description="Always says this is a correlation, not a cause.")
+
+
 class InsightsOut(ApiModel):
     assignment_id: UUID
     lesson_id: UUID
@@ -1005,6 +1016,7 @@ class InsightsOut(ApiModel):
     blocked_reasons: list[BlockedReason] = Field(default_factory=list, description="How often HABIT AI declined, by reason.")
     reteach_item_ids: list[UUID] = Field(default_factory=list, description="Items with needsReteach = true.")
     competencies: list[CompetencyStat] = Field(default_factory=list, description="Rate per competency (heatmap).")
+    review_impact: ReviewImpact | None = Field(None, description="Null unless both groups have at least 5 students.")
     llm_available: bool
     model_config = ex({"assignmentId": I["assign"], "lessonId": I["lesson"], "publishedRevisionId": I["lrev"],
                        "canPractice": True, "studentCount": 15, "askingStudents": 6, "totalQuestions": 14, "items": [],

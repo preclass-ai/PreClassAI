@@ -33,6 +33,7 @@ from app.schemas import (
     InsightTheme,
     ProgressItem,
     ReteachOut,
+    ReviewImpact,
 )
 
 # (key, label, normalised cues): the first theme with a matching cue wins, so "dap an" beats a generic "tinh".
@@ -71,6 +72,29 @@ async def _assignment(db: AsyncSession, user: CurrentUser, class_id: UUID, assig
     if row is None:
         raise NOT_FOUND
     return row[0], row[1], row[2]
+
+
+MIN_GROUP = 5  # each group needs this many students before a comparison is shown (small groups mislead and can identify children)
+
+
+def impact(with_review: list[float], without: list[float]) -> ReviewImpact | None:
+    if len(with_review) < MIN_GROUP or len(without) < MIN_GROUP:
+        return None
+    n = len(with_review) + len(without)
+    return ReviewImpact(
+        reviewed_students=len(with_review), other_students=len(without), review_rate=len(with_review) / n,
+        avg_correct_with_review=sum(with_review) / len(with_review), avg_correct_without_review=sum(without) / len(without),
+        note="Đây là tương quan, chưa phải nhân quả: học sinh chịu ôn trước có thể vốn đã chăm hơn.")
+
+
+async def review_impact(db: AsyncSession, assignment_id: UUID) -> ReviewImpact | None:
+    A = m.StudentAttempt  # noqa: N806
+    rates = (await db.execute(select(A.student_id, func.count().filter(A.is_correct.is_(True)), func.count(A.is_correct))
+                              .where(A.assignment_id == assignment_id).group_by(A.student_id))).all()
+    seen = {r[0] for r in (await db.execute(select(m.ReviewProgress.student_id).where(
+        m.ReviewProgress.assignment_id == assignment_id, func.cardinality(m.ReviewProgress.seen_ids) > 0))).all()}
+    graded = [(sid, ok / n) for sid, ok, n in rates if n]
+    return impact([r for sid, r in graded if sid in seen], [r for sid, r in graded if sid not in seen])
 
 
 async def insights(db: AsyncSession, user: CurrentUser, class_id: UUID, assignment_id: UUID) -> InsightsOut:
@@ -134,6 +158,7 @@ async def insights(db: AsyncSession, user: CurrentUser, class_id: UUID, assignme
     return InsightsOut(
         assignment_id=a.id, lesson_id=lesson.id, published_revision_id=pv.lesson_revision_id, can_practice=lesson.author_id == user.id,
         student_count=prog.student_count, asking_students=int(asking_students), total_questions=len(asked), items=items,
+        review_impact=await review_impact(db, a.id),
         themes=out_themes, focus_skills=focus, llm_available=cfg.chat_mode == "llm" and llm.get_chat_llm() is not None,
         blocked_reasons=[BlockedReason(reason=str(r), count=int(c)) for r, c in blocked],
         reteach_item_ids=[i.item_block_id for i in items if i.needs_reteach], competencies=competencies)

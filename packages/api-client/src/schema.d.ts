@@ -1040,7 +1040,7 @@ export interface paths {
         put?: never;
         /**
          * Ask Habit for a hint (1→3), a scoped answer from the approved lesson, or an explanation after answering
-         * @description Grounded only in the published snapshot. Before the student answers the item the reply never contains the answer (label, value, or a verdict on one option); asks for it are refused with a `blockedReason`. `explain` needs the student's own attempt. Limits: `CHAT_MAX_PER_ITEM`, `CHAT_MAX_PER_DAY_PER_STUDENT`. Repeating the same `requestId` returns the stored reply.
+         * @description Grounded only in the published snapshot. Before the student answers the item the reply never contains the answer (label, value, or a verdict on one option); asks for it are refused with a `blockedReason`. `explain` needs the student's own attempt. Limits: `CHAT_MAX_MSGS_PER_ITEM`, `CHAT_MAX_MSGS_PER_DAY` (typed questions) and `HINT_MAX_PER_ITEM` (hint presses). Repeating the same `requestId` returns the stored reply.
          */
         post: operations["chatHabit"];
         delete?: never;
@@ -2417,6 +2417,8 @@ export interface components {
              * @description Items with needsReteach = true.
              */
             reteachItemIds?: string[];
+            /** @description Null unless both groups have at least 5 students. */
+            reviewImpact?: components["schemas"]["ReviewImpact"] | null;
             /** Studentcount */
             studentCount: number;
             /** Themes */
@@ -3521,6 +3523,33 @@ export interface components {
             reviewerName: string;
             /** Sourcehashes */
             sourceHashes: string[];
+        };
+        /**
+         * ReviewImpact
+         * @description Students who used the quick review vs those who did not. Shown only when BOTH groups have at least 5 students.
+         */
+        ReviewImpact: {
+            /**
+             * Avgcorrectwithreview
+             * @description Mean share of correct answers, students who reviewed (0..1).
+             */
+            avgCorrectWithReview: number;
+            /** Avgcorrectwithoutreview */
+            avgCorrectWithoutReview: number;
+            /**
+             * Note
+             * @description Always says this is a correlation, not a cause.
+             */
+            note: string;
+            /** Otherstudents */
+            otherStudents: number;
+            /**
+             * Reviewrate
+             * @description Share of the students who answered and also used the review.
+             */
+            reviewRate: number;
+            /** Reviewedstudents */
+            reviewedStudents: number;
         };
         /**
          * ReviewOut
@@ -7794,7 +7823,7 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
-            /** @description CHAT_LIMIT. */
+            /** @description CHAT_LIMIT hoặc HINT_LIMIT. */
             429: {
                 headers: {
                     [name: string]: unknown;

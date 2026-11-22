@@ -191,3 +191,32 @@ async def test_competency_heatmap_groups_first_attempt_rate(client: httpx.AsyncC
     assert c["code"] == "TIM_HIEU" and c["name"] and set(c["itemIds"]) == set(ids)
     assert 0 <= c["firstAttemptCorrectRate"] <= 1 and c["answeredCount"] == sum(i["answeredCount"] for i in d["items"])
     assert all(i["competencyCode"] == "TIM_HIEU" for i in d["items"])
+
+
+def test_review_impact_needs_five_students_in_each_group() -> None:
+    assert insights.impact([1.0] * 4, [0.5] * 9) is None and insights.impact([1.0] * 9, [0.5] * 4) is None
+    r = insights.impact([1.0] * 5, [0.5] * 5)
+    assert r and r.review_rate == 0.5 and r.avg_correct_with_review == 1.0 and r.avg_correct_without_review == 0.5
+    assert "tương quan" in r.note and "chưa phải nhân quả" in r.note
+
+
+async def test_review_impact_is_hidden_until_both_groups_have_five(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    await login(client, "gv.dia@preclass.local")
+    assert (await client.get(URL)).json()["reviewImpact"] is None  # no review progress at all
+    item = (await db.execute(text("SELECT id FROM content_block WHERE kind='worksheet_item' AND deleted_at IS NULL LIMIT 1"))).scalar_one()
+    kids = (await db.execute(text("SELECT user_id FROM class_member WHERE class_id=:c AND role_in_class='STUDENT' ORDER BY user_id LIMIT 10"),
+                             {"c": CLASS})).scalars().all()
+    assert len(kids) == 10
+    for k, sid in enumerate(kids):
+        await db.execute(text("INSERT INTO student_attempt (assignment_id, student_id, item_block_id, answer, is_correct, request_id) "
+                              "VALUES (:a, :s, :i, '{}', :ok, gen_random_uuid())"), {"a": ASSIGN, "s": sid, "i": item, "ok": k < 5})
+    for sid in kids[:4]:  # 4 reviewed, 6 not: too few in one group
+        await db.execute(text("INSERT INTO review_progress (assignment_id, student_id, seen_ids) VALUES (:a, :s, ARRAY[gen_random_uuid()])"),
+                         {"a": ASSIGN, "s": sid})
+    assert (await client.get(URL)).json()["reviewImpact"] is None
+    await db.execute(text("INSERT INTO review_progress (assignment_id, student_id, seen_ids) VALUES (:a, :s, ARRAY[gen_random_uuid()])"),
+                     {"a": ASSIGN, "s": kids[4]})
+    r = (await client.get(URL)).json()["reviewImpact"]
+    assert r["reviewedStudents"] == 5 and r["otherStudents"] == 5 and r["reviewRate"] == 0.5
+    assert r["avgCorrectWithReview"] == 1.0 and r["avgCorrectWithoutReview"] == 0.0 and "chưa phải nhân quả" in r["note"]
+    assert "studentId" not in json.dumps(r)  # aggregates only

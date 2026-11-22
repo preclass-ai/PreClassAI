@@ -23,7 +23,7 @@ test("HABIT AI sheet on a phone: messages are readable, last message in view, ch
   const log = sheet.locator(".habit-log");
   const thin = (await log.boundingBox())!.height;
   await page.screenshot({ path: shot("before", n) });
-  await fix.evaluate((el) => el.remove());
+  await fix.evaluate((el) => (el as Element).remove());
 
   for (const q of ["dân cư là gì", "em cần số liệu nào", "cảm ơn nhé"]) {
     const res = page.waitForResponse((r) => r.url().includes("/chat") && r.request().method() === "POST");

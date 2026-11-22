@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Remove the "(DỮ LIỆU MINH HỌA)" label from titles and notes of an existing database. NEVER runs automatically.
 
     cd apps/api
@@ -35,7 +36,8 @@ async def run(apply: bool) -> None:
     async with engine.begin() as conn:
         total = 0
         for table, col in FIELDS:
-            rows = (await conn.execute(text(f"SELECT id, {col} AS v FROM {table} WHERE {col} ILIKE '%DỮ LIỆU MINH HỌA%'"))).all()  # noqa: S608 constants
+            sql = f"SELECT id, {col} AS v FROM {table} WHERE {col} ILIKE '%DỮ LIỆU MINH HỌA%'"  # noqa: S608 constants
+            rows = (await conn.execute(text(sql))).all()
             for r in rows:
                 new = clean(r.v)
                 print(f"{table}.{col} {r.id}: {r.v!r} -> {new!r}")

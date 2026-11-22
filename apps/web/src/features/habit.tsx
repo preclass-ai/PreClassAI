@@ -52,11 +52,12 @@ export function HabitBar({ assignmentId }: { assignmentId: string }) {
 }
 
 /** Hint card + "Hỏi HABIT AI" for one item. Own state, so a chat message never re-renders the whole assignment. */
-export function HabitItem({ assignmentId, itemId, answered, explanation }: {
+export function HabitItem({ assignmentId, itemId, answered, explanation, onOpenReview }: {
   assignmentId: string;
   itemId: string;
   answered: boolean;
   explanation: string | null;
+  onOpenReview?: (cardId: string) => void;
 }) {
   const on = useHabitOn();
   const qc = useQueryClient();
@@ -75,7 +76,8 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
   const info = h.data?.hintsAvailable.find((x) => x.itemId === itemId);
   const server = info?.hintsUsed ?? 0;
   const used = Math.max(hints.length, server);
-  const limited = errorCode(err) === "CHAT_LIMIT";
+  const max = info?.hintsMax ?? 10;
+  const limited = errorCode(err) === "HINT_LIMIT"; // hint presses have their own limit, apart from the chat limit
   const openChat = () => {
     setMounted(true);
     setOpen(true);
@@ -99,7 +101,7 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
   }
 
   const chat = mounted ? (
-    <HabitChat assignmentId={assignmentId} itemId={itemId} answered={answered} explanation={explanation} open={open} onClose={close} />
+    <HabitChat assignmentId={assignmentId} itemId={itemId} answered={answered} explanation={explanation} open={open} onClose={close} onOpenReview={onOpenReview} />
   ) : null;
 
   if (answered) {
@@ -125,8 +127,8 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
         </div>
       ) : null}
       <div className="habit-actions">
-        <Button variant="ghost" className="habit-ghost" onClick={() => void hint()} busy={busy} disabled={used >= 3 || limited}>
-          <HintIcon /> {used >= 3 ? "Gợi ý 3/3 (đã dùng hết)" : `Gợi ý ${used + 1}/3`}
+        <Button variant="ghost" className="habit-ghost" onClick={() => void hint()} busy={busy} disabled={used >= max || limited}>
+          <HintIcon /> {used >= max ? `Gợi ý ${max}/${max} (đã dùng hết)` : `Gợi ý ${used + 1}/${max}`}
         </Button>
         <Button variant="ghost" className="habit-ghost" onClick={openChat}>
           <HabitMark /> Hỏi HABIT AI
@@ -135,16 +137,21 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
       <div aria-live="polite">
         {hints.map((x, i) => (
           <div key={i} className="habit-hint">
-            <strong>Gợi ý {x.hintLevel}/3</strong>
+            <strong>Gợi ý {x.hintsUsed ?? x.hintLevel}/{max}</strong>
             <p>{x.reply}</p>
             {x.sourceRefs.map((s) => (
               <SourceRef key={s.blockId} label={s.label} excerpt={s.excerpt} />
             ))}
+            {x.openReview && onOpenReview ? (
+              <Button variant="secondary" onClick={() => onOpenReview(x.openReview as string)}>
+                Mở thẻ ôn
+              </Button>
+            ) : null}
           </div>
         ))}
         {limited ? (
           <div className="habit-limit" role="status">
-            Hôm nay em hỏi nhiều rồi, thử tự làm nhé!
+            {errorMessage(err)}
           </div>
         ) : null}
         {err && !limited ? (

@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """One real run of the quiz drafting against a local lesson plan, for the numbers only. Writes nothing, prints NO plan content.
 
     cd apps/api            # CHAT_LLM_BASE_URL / CHAT_LLM_API_KEY / CHAT_LLM_MODEL come from the environment or .env
@@ -13,7 +14,7 @@ import time
 
 sys.path.insert(0, os.getcwd())  # run from apps/api
 from app.config import get_settings  # noqa: E402
-from app.habit import llm, rules  # noqa: E402
+from app.habit import rules  # noqa: E402
 from app.lessonplan import parse_plan_file, quizgen  # noqa: E402
 from app.sources.formats import Limits  # noqa: E402
 
@@ -48,7 +49,8 @@ async def main(path: str, only: int | None) -> None:
             t0 = time.monotonic()
             ask = f"Soạn cần {want} {'câu hỏi' if kind == 'quiz' else 'thẻ ôn tập'} từ <plan>."
             try:
-                got, bad, tokens, calls, used = await quizgen._ask(client, system, text, ask, key, model, 4000, 90.0)  # noqa: SLF001
+                res = await quizgen._ask(client, system, text, ask, key, model, 4000, 90.0)  # noqa: SLF001
+                got, bad, tokens, calls, used = res
             except Exception as e:  # noqa: BLE001
                 print(f"  {kind}: model error {type(e).__name__}")
                 continue

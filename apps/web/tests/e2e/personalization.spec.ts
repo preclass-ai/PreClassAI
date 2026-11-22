@@ -25,7 +25,7 @@ test("student picks options, uses focus mode with a timer, and the choices persi
   await expect(focus.getByRole("timer")).toContainText("09:5");
   await expect(page.locator("section.item")).toHaveCount(1); // one question per screen
   await expect(page.getByRole("region", { name: "Thói quen học của em" })).toHaveCount(0); // secondary parts hidden
-  await focus.getByRole("button", { name: "Gợi ý 1/3" }).click();
+  await focus.getByRole("button", { name: "Gợi ý 1/10" }).click();
   const hint = focus.locator(".habit-hint").first();
   await expect(hint).toBeVisible();
   expect((await hint.innerText()).length).toBeLessThan(160); // "chia nhỏ": one short sentence

@@ -2,6 +2,7 @@
 
 import { GuestBanner, GuestSurveyCard } from "@/features/guest";
 import { HabitBar, HabitItem } from "@/features/habit";
+import { ReviewAsk, ReviewStepper, Steps, type Stage } from "@/features/review-step";
 import { habitKey } from "@/features/habit-api";
 import { FocusTimer, PersonalizationBar, usePersonalizationOn, usePrefs } from "@/features/personalization";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +25,8 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
   const [closed, setClosed] = useState(false);
   const [focus, setFocus] = useState(false);
   const [idx, setIdx] = useState(0);
+  const [view, setView] = useState<Stage | "auto">("auto"); // the student's own choice; "auto" follows what the server remembers
+  const [cardId, setCardId] = useState<string | null>(null);
   const persOn = usePersonalizationOn();
   const prefs = usePrefs(persOn);
   const a = useQuery({
@@ -52,6 +55,17 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
   }
 
   const data = a.data;
+  const review = data.review ?? [];
+  const hasReview = review.length > 0; // no approved review cards: the lesson is the quiz alone, as before
+  const rs = { seenIds: [], checks: {}, reviewed: false, choice: null, ...data.reviewState };
+  const auto: Stage = !hasReview ? "quiz" : rs.choice === null ? "ask" : rs.choice === "not_yet" && !rs.reviewed ? "review" : "quiz";
+  const stage: Stage = !hasReview ? "quiz" : view === "auto" ? auto : view;
+  const reload = () => void qc.invalidateQueries({ queryKey: key });
+  const openReview = (id: string) => {
+    setCardId(id);
+    setView("review");
+    window.scrollTo({ top: 0 });
+  };
   const isClosed = closed || new Date(data.dueAt).getTime() < Date.now();
   // Content and items share one position space in the snapshot: show them in authoring order.
   const entries = [
@@ -61,7 +75,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
   const answered = data.items.filter((i) => i.result).length;
   let n = 0;
   const items = data.items.slice().sort((x, y) => x.position - y.position);
-  const inFocus = focus && persOn && items.length > 0;
+  const inFocus = focus && persOn && items.length > 0 && stage === "quiz";
   const cur = items[Math.min(idx, items.length - 1)];
   const content = entries.filter((e): e is { pos: number; block: ContentBlock } => "block" in e);
   const itemProps = (item: Item, no: number) => ({
@@ -74,6 +88,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
       void qc.invalidateQueries({ queryKey: habitKey(assignmentId) }); // streak + daily goal
     },
     onClosed: () => setClosed(true),
+    onOpenReview: hasReview ? openReview : undefined,
   });
 
   return (
@@ -94,7 +109,21 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
       )}
       {inFocus ? null : <GuestBanner />}
       {inFocus ? null : <HabitBar assignmentId={assignmentId} />}
-      <PersonalizationBar focus={focus} onFocus={(on) => { setFocus(on); setIdx(0); }} />
+      {hasReview && !inFocus ? <Steps stage={stage} /> : null}
+      {stage === "ask" ? (
+        <ReviewAsk assignmentId={assignmentId} onChoose={(c) => setView(c === "done" ? "quiz" : "review")} onSaved={reload} />
+      ) : null}
+      {stage === "review" ? (
+        <ReviewStepper assignmentId={assignmentId} cards={review} state={rs} startId={cardId} onSaved={reload} onDone={() => setView("quiz")} />
+      ) : null}
+      {stage === "quiz" && hasReview && !inFocus ? (
+        <p>
+          <button type="button" className="link-btn" onClick={() => setView("review")}>
+            Xem lại phần ôn
+          </button>
+        </p>
+      ) : null}
+      {stage === "quiz" ? <PersonalizationBar focus={focus} onFocus={(on) => { setFocus(on); setIdx(0); }} /> : null}
       {prefs.nhac_tien_do && !inFocus ? (
         <p className="pers-nudge" role="status">
           Em đã làm {answered}/{data.items.length} câu{answered < data.items.length ? `, còn ${data.items.length - answered} câu nữa là xong.` : ". Giỏi lắm!"}
@@ -121,7 +150,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
           </div>
         </section>
       ) : null}
-      {inFocus ? null : entries.map((e) =>
+      {inFocus || stage !== "quiz" ? null : entries.map((e) =>
         "block" in e && e.block ? (
           <ContentView key={e.block.id} block={e.block} />
         ) : "item" in e && e.item ? (
@@ -158,13 +187,14 @@ function ContentView({ block }: { block: ContentBlock }) {
   }
 }
 
-function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
+function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed, onOpenReview }: {
   no: number;
   item: Item;
   assignmentId: string;
   disabled: boolean;
   onAnswered: () => void;
   onClosed: () => void;
+  onOpenReview?: (cardId: string) => void;
 }) {
   const [choice, setChoice] = useState<string>("");
   const [value, setValue] = useState("");
@@ -213,7 +243,7 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
       <p id={`q-${item.id}`} className="stem">
         {item.stem}
       </p>
-      <HabitItem assignmentId={assignmentId} itemId={item.id} answered={!!result} explanation={result?.explanation ?? null} />
+      <HabitItem assignmentId={assignmentId} itemId={item.id} answered={!!result} explanation={result?.explanation ?? null} onOpenReview={onOpenReview} />
       {result ? (
         <Result result={result} />
       ) : (

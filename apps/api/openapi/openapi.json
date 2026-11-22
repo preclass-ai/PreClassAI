@@ -2581,6 +2581,17 @@
             "title": "Reteachitemids",
             "type": "array"
           },
+          "reviewImpact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewImpact"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null unless both groups have at least 5 students."
+          },
           "studentCount": {
             "title": "Studentcount",
             "type": "integer"
@@ -4862,6 +4873,48 @@
           "createdAt"
         ],
         "title": "ReviewEventOut",
+        "type": "object"
+      },
+      "ReviewImpact": {
+        "description": "Students who used the quick review vs those who did not. Shown only when BOTH groups have at least 5 students.",
+        "properties": {
+          "avgCorrectWithReview": {
+            "description": "Mean share of correct answers, students who reviewed (0..1).",
+            "title": "Avgcorrectwithreview",
+            "type": "number"
+          },
+          "avgCorrectWithoutReview": {
+            "title": "Avgcorrectwithoutreview",
+            "type": "number"
+          },
+          "note": {
+            "description": "Always says this is a correlation, not a cause.",
+            "title": "Note",
+            "type": "string"
+          },
+          "otherStudents": {
+            "title": "Otherstudents",
+            "type": "integer"
+          },
+          "reviewRate": {
+            "description": "Share of the students who answered and also used the review.",
+            "title": "Reviewrate",
+            "type": "number"
+          },
+          "reviewedStudents": {
+            "title": "Reviewedstudents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "reviewedStudents",
+          "otherStudents",
+          "reviewRate",
+          "avgCorrectWithReview",
+          "avgCorrectWithoutReview",
+          "note"
+        ],
+        "title": "ReviewImpact",
         "type": "object"
       },
       "ReviewOut": {
@@ -10711,7 +10764,7 @@
     },
     "/v1/student/assignments/{assignment_id}/chat": {
       "post": {
-        "description": "Grounded only in the published snapshot. Before the student answers the item the reply never contains the answer (label, value, or a verdict on one option); asks for it are refused with a `blockedReason`. `explain` needs the student's own attempt. Limits: `CHAT_MAX_PER_ITEM`, `CHAT_MAX_PER_DAY_PER_STUDENT`. Repeating the same `requestId` returns the stored reply.",
+        "description": "Grounded only in the published snapshot. Before the student answers the item the reply never contains the answer (label, value, or a verdict on one option); asks for it are refused with a `blockedReason`. `explain` needs the student's own attempt. Limits: `CHAT_MAX_MSGS_PER_ITEM`, `CHAT_MAX_MSGS_PER_DAY` (typed questions) and `HINT_MAX_PER_ITEM` (hint presses). Repeating the same `requestId` returns the stored reply.",
         "operationId": "chatHabit",
         "parameters": [
           {
@@ -10814,7 +10867,7 @@
                 }
               }
             },
-            "description": "CHAT_LIMIT."
+            "description": "CHAT_LIMIT hoặc HINT_LIMIT."
           }
         },
         "summary": "Ask Habit for a hint (1→3), a scoped answer from the approved lesson, or an explanation after answering",

@@ -53,6 +53,15 @@ export function Insights({ classId, assignmentId }: { classId: string; assignmen
       )}
 
       {(d.competencies ?? []).length ? <Heatmap d={d} /> : null}
+      {d.reviewImpact ? (
+        <div className="card stack" aria-label="Ôn nhanh trước khi làm bài">
+          <strong>Ôn nhanh trước khi làm bài</strong>
+          <p>
+            {fmtPercent(d.reviewImpact.reviewRate)} học sinh đã ôn ({d.reviewImpact.reviewedStudents}/{d.reviewImpact.reviewedStudents + d.reviewImpact.otherStudents}). Điểm trung bình nhóm có ôn {fmtPercent(d.reviewImpact.avgCorrectWithReview)}, nhóm không ôn {fmtPercent(d.reviewImpact.avgCorrectWithoutReview)}.
+          </p>
+          <p className="muted small">{d.reviewImpact.note}</p>
+        </div>
+      ) : null}
 
       <div className="table-wrap">
         <table>
