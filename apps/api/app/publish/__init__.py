@@ -94,7 +94,8 @@ def _gate(blocks: list[m.ContentBlock], evaluated: dict[UUID, list[R]]) -> list[
     not_approved = [b.id for b in blocks if b.review_status != "APPROVED" or fails(b, rule="VAL-06")]
     blockers = [b.id for b in blocks if fails(b, "BLOCKER")]
     bad_sources = [b.id for b in blocks if fails(b, rule="VAL-01")]
-    has_items = any(b.kind in ("worksheet_item", "card_front") for b in blocks)
+    # Only questions count: flashcards are shown to students but never answered, so a cards-only lesson has nothing to do.
+    has_items = any(b.kind == "worksheet_item" for b in blocks)
     return [
         PublishCheckItem(code="ALL_APPROVED", ok=not not_approved, block_ids=not_approved,
                          message="Mọi khối đã được duyệt." if not not_approved
@@ -104,7 +105,7 @@ def _gate(blocks: list[m.ContentBlock], evaluated: dict[UUID, list[R]]) -> list[
         PublishCheckItem(code="SOURCES_VALID", ok=not bad_sources, block_ids=bad_sources,
                          message="Mọi nguồn đều hợp lệ." if not bad_sources else "Có khối liên kết nguồn không hợp lệ."),
         PublishCheckItem(code="HAS_ITEMS", ok=has_items,
-                         message="Có câu hỏi/thẻ." if has_items else "Bản chưa có câu hỏi hoặc thẻ nào."),
+                         message="Có câu hỏi." if has_items else "Bản chưa có câu hỏi nào (thẻ ghi nhớ không tính là câu hỏi)."),
     ]
 
 

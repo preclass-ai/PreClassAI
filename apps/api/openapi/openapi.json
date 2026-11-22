@@ -5959,7 +5959,7 @@
             "type": "string"
           },
           "rule": {
-            "description": "VAL-01 … VAL-10",
+            "description": "VAL-01 … VAL-11",
             "title": "Rule",
             "type": "string"
           },
