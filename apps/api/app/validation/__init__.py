@@ -1,4 +1,5 @@
-"""Validation rules VAL-01..10 and the runner (GĐ7; VAL-10 = no answer leak before submitting, see leak.py).
+"""Validation rules VAL-01..11 and the runner (GĐ7; VAL-10 = no answer leak before submitting, see leak.py;
+VAL-11 = the data an answer needs is shown before answering).
 
 Results are append-only and bound to the block's content_hash. The runner never approves anything: it only moves a
 block between UNREVIEWED / AUTO_CHECKED / FLAGGED, and APPROVED -> REVIEW_AGAIN when an approval is no longer valid.
@@ -239,7 +240,37 @@ def val10(b: m.ContentBlock, ctx: Ctx) -> R | None:
     return _fail("VAL-10", severity(found), findings=found)
 
 
-RULES = (val01, val02, val03, val04, val05, val06, val08, val09, val10)  # VAL-07 (images): P1 stub, always passes
+def _near(n: Decimal, pool: list[Decimal]) -> bool:
+    return any(abs(n - v) <= TOL for v in pool)
+
+
+def val11(b: m.ContentBlock, ctx: Ctx) -> R | None:
+    """Source numbers the answer relies on must be shown before answering. Catches a stem/data that lists 2 of 4 regions
+    while the answer key and explanation use all 4. Needed numbers: the derivation's operands, and the numbers of the
+    explanation that come from the lesson's sources (computed results such as a sum are not in the sources, so they pass).
+    shortcut: an explanation that cites extra source data nobody needs to answer is also flagged; the teacher edits it."""
+    if b.kind != "worksheet_item":
+        return None
+    kids = ctx.children.get(b.id, [])
+    key = next((k.payload for k in kids if k.kind == "answer_key"), {})
+    shown = [n for _, _, t in ctx.visible for n in parse_numbers(t)]
+    shown += [n for o in kids if o.kind == "option" for n in parse_numbers(str(o.payload.get("text") or ""))]
+    deriv = key.get("derivation")
+    result = derive(deriv, ctx.anchors) if isinstance(deriv, dict) else None
+    answer = [Decimal(str(v)) for v in (key.get("value"), result) if isinstance(v, (int, float, Decimal))]
+    needed: list[Decimal] = []
+    if isinstance(deriv, dict):
+        for o in deriv.get("operands", []):
+            nums = ctx.anchors.get(o) if isinstance(o, str) else None
+            needed += nums[:1] if nums else []
+    for e in kids:
+        if e.kind == "explanation":
+            needed += [n for n in parse_numbers(str(e.payload.get("text") or "")) if n in ctx.lesson_numbers]
+    missing = sorted({float(n) for n in needed if not _exempt(n) and not _near(n, shown) and not _near(n, answer)})
+    return _fail("VAL-11", "BLOCKER", numbersNotShown=missing) if missing else _pass("VAL-11")
+
+
+RULES = (val01, val02, val03, val04, val05, val06, val08, val09, val10, val11)  # VAL-07 (images): P1 stub, always passes
 
 
 async def _context(db: AsyncSession, revision_id: UUID, blocks: list[m.ContentBlock]) -> Ctx:
