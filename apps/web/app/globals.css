@@ -637,3 +637,6 @@ fieldset { border: 0; padding: 0; margin: 0; }
 
 .answer-reveal, .source-line { margin: 9px 0 0; color: var(--text); }
 .source-line { overflow-wrap: anywhere; }
+
+.getting-started { margin-bottom: 16px; }
+.getting-started ol { margin: 8px 0 0; padding-left: 1.25rem; display: grid; gap: 4px; }
