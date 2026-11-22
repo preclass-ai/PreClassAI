@@ -183,7 +183,7 @@ export default function LoginPage() {
       <div className="login-layout">
         <section className="login-story" aria-label="Giới thiệu PreClass AI">
           <div className="login-story-top"><span className="story-symbol" aria-hidden="true">✦</span> Gia sư AI cá nhân</div>
-          <div className="login-story-copy"><p className="eyebrow">Cùng học</p><h2>Làm bài trước, hiểu bài sau.</h2><p>Em tự làm, xin gợi ý khi cần, rồi xem lời giải thầy cô đã duyệt.</p></div>
+          <div className="login-story-copy"><p className="eyebrow">Cùng học</p><h2>Học trước, hiểu sâu.</h2><p>Em tự làm, xin gợi ý khi cần, rồi xem lời giải thầy cô đã duyệt.</p></div>
           <div className="atlas-graphic" aria-hidden="true"><span className="atlas-ring atlas-ring-one" /><span className="atlas-ring atlas-ring-two" /><span className="atlas-center">✦</span></div>
         </section>
         <Suspense>
