@@ -7,6 +7,7 @@ from typing import Any
 
 import httpx
 import pytest
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -151,11 +152,15 @@ async def test_export_has_only_survey_columns(client: httpx.AsyncClient, guests_
     assert g["user"]["id"] not in r.text and "Khách" not in r.text and "@" not in r.text
 
 
-async def test_class_results_csv_never_shows_a_survey_code(client: httpx.AsyncClient, guests_on: None) -> None:
+async def test_class_results_csv_never_shows_a_survey_code(client: httpx.AsyncClient, guests_on: None,
+                                                           db: AsyncSession) -> None:
     """The survey code alone logs a guest back in: the class teacher's CSV labels guests Khách 001… instead."""
     first = await new_guest(client)
     await answer_first_mcq(client, str(KS_ASSIGN))
     second = await new_guest(client)
+    # One test = one transaction, so now() gave both guests the same created_at: set the joining order explicitly.
+    await db.execute(text("UPDATE app_user SET created_at = now() - interval '1 hour' WHERE id = :id"),
+                     {"id": first["user"]["id"]})
     client.cookies.clear()
     await login(client, "gv.dia@preclass.local")
     r = await client.get(f"/v1/classes/{uid('class:KS')}/assignments/{KS_ASSIGN}/results.csv")
