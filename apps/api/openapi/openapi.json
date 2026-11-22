@@ -341,6 +341,50 @@
         "title": "AnswerKeyPayload",
         "type": "object"
       },
+      "ApproveAllOut": {
+        "examples": [
+          {
+            "applied": false,
+            "approved": 12,
+            "skipped": 3
+          }
+        ],
+        "properties": {
+          "applied": {
+            "title": "Applied",
+            "type": "boolean"
+          },
+          "approved": {
+            "description": "Blocks approved (or that would be approved when `applied` is false).",
+            "title": "Approved",
+            "type": "integer"
+          },
+          "skipped": {
+            "description": "Unapproved blocks left for a hand review: a warning, a blocker, or not checked yet.",
+            "title": "Skipped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "approved",
+          "skipped",
+          "applied"
+        ],
+        "title": "ApproveAllOut",
+        "type": "object"
+      },
+      "ApproveAllRequest": {
+        "properties": {
+          "confirm": {
+            "default": false,
+            "description": "false: count only, nothing is written. true: approve the eligible blocks.",
+            "title": "Confirm",
+            "type": "boolean"
+          }
+        },
+        "title": "ApproveAllRequest",
+        "type": "object"
+      },
       "AssignmentCreate": {
         "examples": [
           {
@@ -7515,7 +7559,7 @@
     },
     "/v1/blocks/{block_id}/reviews": {
       "post": {
-        "description": "One block per call; there is no bulk approve (PR-02). `contentHash` must equal the current block hash.",
+        "description": "One block per call (bulk approve exists only for blocks without warnings: approve-all). `contentHash` must equal the current block hash.",
         "operationId": "reviewBlock",
         "parameters": [
           {
@@ -9859,6 +9903,90 @@
         "summary": "Withdraw a published version (author)",
         "tags": [
           "publish"
+        ]
+      }
+    },
+    "/v1/revisions/{revision_id}/approve-all": {
+      "post": {
+        "description": "Only AUTO_CHECKED blocks with no failed rule. Blocks with a warning, a blocker or a stale check stay for a hand review. `confirm=false` only counts (nothing written); `confirm=true` writes one review event per block.",
+        "operationId": "approveAllClean",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveAllRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApproveAllOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "REVISION_LOCKED."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve every 'machine-checked' block that has no warning (author)",
+        "tags": [
+          "review"
         ]
       }
     },

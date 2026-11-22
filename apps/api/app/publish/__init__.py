@@ -20,6 +20,7 @@ from app.errors import ApiError
 from app.hashing import content_hash
 from app.lessons import revision_out
 from app.schemas import (
+    ApproveAllOut,
     AssignmentCreate,
     AssignmentList,
     AssignmentOut,
@@ -85,6 +86,26 @@ async def review_block(db: AsyncSession, user: CurrentUser, block_id: UUID, body
     await db.commit()
     await db.refresh(block)
     return ReviewOut(block=(await blocks_out(db, [block]))[0], review_event_id=event_id)
+
+
+async def approve_all(db: AsyncSession, user: CurrentUser, revision_id: UUID, confirm: bool) -> ApproveAllOut:
+    """Approve only blocks that are AUTO_CHECKED with no failed rule at all (warning or blocker). One ReviewEvent per block,
+    bound to the hash and sources at this moment. Everything else (flagged, warned, unchecked) still needs a hand review."""
+    rev = await revision_for(db, user, revision_id, write=confirm)
+    if rev.state in _LOCKED:
+        raise ApiError(409, "REVISION_LOCKED", "Bản này không còn sửa được")
+    blocks, evaluated = await evaluate_revision(db, rev.id)
+    todo = [b for b in blocks if b.review_status in ("AUTO_CHECKED", "FLAGGED", "UNREVIEWED", "REVIEW_AGAIN")]
+    ok = [b for b in todo if b.review_status == "AUTO_CHECKED" and not any(r.outcome == "FAIL" for r in evaluated[b.id])]
+    if confirm and ok:
+        for b in ok:
+            await db.execute(insert(m.ReviewEvent), [{
+                "block_id": b.id, "content_hash": b.content_hash, "source_hashes": await current_source_hashes(db, b.id),
+                "reviewer_id": user.id, "action": "APPROVE", "note": "Duyệt tất cả (khối không có cảnh báo)"}])
+            await db.execute(update(m.ContentBlock).where(m.ContentBlock.id == b.id).values(review_status="APPROVED"))
+        audit(db, user.id, "APPROVE_ALL", "lesson_revision", rev.id)
+        await db.commit()
+    return ApproveAllOut(approved=len(ok), skipped=len(todo) - len(ok), applied=confirm)
 
 
 # ----------------------------------------------------------------------------- publish gate

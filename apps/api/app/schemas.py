@@ -683,6 +683,17 @@ class ReviewRequest(ApiModel):
     model_config = ex({"action": "APPROVE", "contentHash": H, "note": None})
 
 
+class ApproveAllRequest(ApiModel):
+    confirm: bool = Field(False, description="false: count only, nothing is written. true: approve the eligible blocks.")
+
+
+class ApproveAllOut(ApiModel):
+    approved: int = Field(description="Blocks approved (or that would be approved when `applied` is false).")
+    skipped: int = Field(description="Unapproved blocks left for a hand review: a warning, a blocker, or not checked yet.")
+    applied: bool
+    model_config = ex({"approved": 12, "skipped": 3, "applied": False})
+
+
 class ReviewOut(ApiModel):
     block: BlockOut
     review_event_id: UUID

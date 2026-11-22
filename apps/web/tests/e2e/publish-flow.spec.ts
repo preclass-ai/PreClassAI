@@ -15,8 +15,13 @@ test("new revision → approve block by block → publish → assign (S04–S06)
   if (await newRev.count()) await newRev.click();
   await expect(page.getByText("Bản nháp").first()).toBeVisible();
 
-  // S04: approve each block individually (there is no "approve all").
+  // S04: "Duyệt tất cả" takes only clean machine-checked blocks and says how many it skips; the rest is approved block by block.
   await page.getByRole("tab", { name: "Duyệt" }).click();
+  await page.getByRole("button", { name: "Duyệt tất cả khối không có cảnh báo" }).click();
+  const confirm = page.getByRole("alertdialog", { name: "Xác nhận duyệt tất cả" });
+  await expect(confirm).toContainText(/Duyệt \d+ khối, bỏ qua \d+ khối có cảnh báo/);
+  await confirm.getByRole("button", { name: /^Duyệt \d+ khối$/ }).click();
+  await expect(confirm).toHaveCount(0);
   const approve = page.getByRole("button", { name: "Duyệt khối này" });
   await expect(approve.first()).toBeVisible();
   // The queue re-renders after every decision, so a click can land on a card that is replaced a moment later and be lost

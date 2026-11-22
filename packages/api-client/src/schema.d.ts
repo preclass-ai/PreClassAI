@@ -228,7 +228,7 @@ export interface paths {
         put?: never;
         /**
          * Approve / reject / request changes on one block (author or reviewer)
-         * @description One block per call; there is no bulk approve (PR-02). `contentHash` must equal the current block hash.
+         * @description One block per call (bulk approve exists only for blocks without warnings: approve-all). `contentHash` must equal the current block hash.
          */
         post: operations["reviewBlock"];
         delete?: never;
@@ -763,6 +763,26 @@ export interface paths {
          * @description Students then get 410 `WITHDRAWN`. The reason is logged.
          */
         post: operations["withdrawPublished"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/revisions/{revision_id}/approve-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve every 'machine-checked' block that has no warning (author)
+         * @description Only AUTO_CHECKED blocks with no failed rule. Blocks with a warning, a blocker or a stale check stay for a hand review. `confirm=false` only counts (nothing written); `confirm=true` writes one review event per block.
+         */
+        post: operations["approveAllClean"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1354,6 +1374,37 @@ export interface components {
             unit?: string | null;
             /** Value */
             value?: number | null;
+        };
+        /**
+         * ApproveAllOut
+         * @example {
+         *       "applied": false,
+         *       "approved": 12,
+         *       "skipped": 3
+         *     }
+         */
+        ApproveAllOut: {
+            /** Applied */
+            applied: boolean;
+            /**
+             * Approved
+             * @description Blocks approved (or that would be approved when `applied` is false).
+             */
+            approved: number;
+            /**
+             * Skipped
+             * @description Unapproved blocks left for a hand review: a warning, a blocker, or not checked yet.
+             */
+            skipped: number;
+        };
+        /** ApproveAllRequest */
+        ApproveAllRequest: {
+            /**
+             * Confirm
+             * @description false: count only, nothing is written. true: approve the eligible blocks.
+             * @default false
+             */
+            confirm: boolean;
         };
         /**
          * AssignmentCreate
@@ -7075,6 +7126,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    approveAllClean: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                revision_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveAllRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApproveAllOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description REVISION_LOCKED. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
