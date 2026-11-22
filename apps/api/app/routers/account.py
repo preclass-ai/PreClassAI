@@ -121,7 +121,9 @@ async def list_classes(
         .where(m.ClassMember.user_id == cu.id, m.ClassMember.role_in_class == "TEACHER")
         .order_by(m.Class.code)
     )
-    return ClassList(items=[ClassOut(id=c.id, code=c.code, grade=c.grade, student_count=n) for c, n in rows])
+    survey = get_settings().guest_class_code
+    return ClassList(items=[ClassOut(id=c.id, code=c.code, grade=c.grade, student_count=n, is_survey=c.code == survey)
+                            for c, n in rows])
 
 
 @router.get("/classes/{class_id}/assignments", tags=["classes"], operation_id="listClassAssignments",

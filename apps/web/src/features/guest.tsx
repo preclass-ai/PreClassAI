@@ -6,13 +6,33 @@ import { useAuth } from "@/lib/auth";
 
 /** Shown to the person before an anonymous account is created (login page and /thu). */
 export const GUEST_NOTICE =
-  "Không thu tên hay email. Kết quả làm bài chỉ dùng cho nghiên cứu và không gắn với danh tính của em.";
+  "Không cần đăng ký, không hỏi tên hay email. Bài làm chỉ gắn với một mã khảo sát, không gắn với danh tính của em, và được dùng cho nghiên cứu.";
+
+/** Short answer in a dropdown, with the link to the full page. Guests only: /du-lieu describes the anonymous survey, not
+ * school accounts (those have a name and a class), so showing it to account students would not be true. */
+export function DataDetails() {
+  const { user } = useAuth();
+  if (!user?.isGuest) return null;
+  return (
+    <details className="login-more">
+      <summary>Dữ liệu của em đi đâu?</summary>
+      <div className="stack">
+        <p>
+          Mình lưu mã khảo sát, câu trả lời của em, số lần em xin gợi ý và câu em hỏi HABIT AI (số điện thoại, email, địa
+          chỉ được lọc bỏ trước khi lưu). Thầy cô xem số liệu chung của cả lớp và một số câu hỏi không kèm tên, không xem
+          bài làm của riêng em.
+        </p>
+        <DataLink>Xem đầy đủ</DataLink>
+      </div>
+    </details>
+  );
+}
 
 /** Link to the page that says what is collected, where it is stored and for how long. */
-export function DataLink() {
+export function DataLink({ children = "Dữ liệu của em đi đâu" }: { children?: string }) {
   return (
     <Link href="/du-lieu" className="small">
-      Dữ liệu của em đi đâu
+      {children}
     </Link>
   );
 }

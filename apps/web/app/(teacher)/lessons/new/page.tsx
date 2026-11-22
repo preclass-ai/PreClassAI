@@ -56,7 +56,7 @@ function NewLessonForm() {
       <p className="crumbs">
         <Link href="/lessons">← Bài học</Link>
       </p>
-      <PageHeader title="Tạo bài mới" sub="Chọn nguồn làm căn cứ. Bài ghim đúng bản nguồn bạn chọn hôm nay." />
+      <PageHeader title="Tạo bài mới" sub="Chọn nguồn làm căn cứ. Bài ghim đúng bản nguồn thầy cô chọn hôm nay." />
       <form className="card stack" onSubmit={submit}>
         <ErrorBox error={error} />
         <div className="row">

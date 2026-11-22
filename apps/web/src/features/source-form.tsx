@@ -234,7 +234,7 @@ export function NewRevisionForm({ sourceId, onCreated }: {
       <ErrorBox error={error} />
       <ContentInput mode={mode} setMode={setMode} text={text} setText={setText} file={file} setFile={setFile} accept="docx" />
       <p className="muted small">
-        Bài đang soạn không tự đổi sang bản mới: bài sẽ hiện &quot;có bản nguồn mới&quot; để bạn chủ động đổi.
+        Bài đang soạn không tự đổi sang bản mới: bài sẽ hiện &quot;có bản nguồn mới&quot; để thầy cô chủ động đổi.
       </p>
       <div>
         <Button type="submit" variant="primary" busy={busy}>

@@ -172,12 +172,13 @@ class ClassOut(ApiModel):
     code: str
     grade: Literal[10, 11]
     student_count: int
-    model_config = ex({"id": I["class"], "code": "10A1", "grade": 10, "studentCount": 15})
+    is_survey: bool = Field(False, description="The anonymous survey class (GUEST_CLASS_CODE): its students are guests.")
+    model_config = ex({"id": I["class"], "code": "10A1", "grade": 10, "studentCount": 15, "isSurvey": False})
 
 
 class ClassList(Page):
     items: list[ClassOut]
-    model_config = ex({"items": [{"id": I["class"], "code": "10A1", "grade": 10, "studentCount": 15}],
+    model_config = ex({"items": [{"id": I["class"], "code": "10A1", "grade": 10, "studentCount": 15, "isSurvey": False}],
                        "nextCursor": None})
 
 
@@ -721,11 +722,14 @@ class AssignmentOut(ApiModel):
     published_version_id: UUID
     class_id: UUID
     class_code: str
+    lesson_id: UUID = Field(description="Lesson the published version comes from (link back to it).")
     lesson_title: str
+    revision_no: int = Field(description="Revision number of the lesson that was published (\"Bản #n\").")
     open_at: datetime
     due_at: datetime
     model_config = ex({"id": I["assign"], "publishedVersionId": I["pub"], "classId": I["class"],
-                       "classCode": "10A1", "lessonTitle": "Phân bố dân cư theo vùng", "openAt": T1,
+                       "classCode": "10A1", "lessonId": I["lesson"], "lessonTitle": "Phân bố dân cư theo vùng",
+                       "revisionNo": 1, "openAt": T1,
                        "dueAt": "2026-11-30T23:59:00+07:00"})
 
 

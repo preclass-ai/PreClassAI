@@ -101,6 +101,12 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
         </p>
       ) : null}
       {isClosed ? <Notice>Bài đã hết hạn nộp. Em vẫn xem lại được bài.</Notice> : null}
+      {!isClosed && items.length > 0 && answered === items.length ? (
+        <Notice tone="success">
+          Em đã làm xong bài. Mỗi câu chỉ nộp một lần, để thầy cô biết em hiểu bài đến đâu ngay từ lần làm đầu. Em vẫn có thể
+          xem lại lời giải và hỏi HABIT AI ở từng câu.
+        </Notice>
+      ) : null}
       {inFocus && cur ? (
         <section className="focus" aria-label="Chế độ tập trung">
           <div className="focus-top">

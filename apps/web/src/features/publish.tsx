@@ -165,7 +165,7 @@ function AssignPanel({ lesson, publishedId }: { lesson: Lesson; publishedId: str
       {classes.isPending ? (
         <Loading />
       ) : sameGrade.length === 0 ? (
-        <p className="muted">Bạn chưa có lớp {lesson.grade} nào.</p>
+        <p className="muted">Thầy cô chưa có lớp {lesson.grade} nào.</p>
       ) : (
         <>
           <div className="row">
@@ -173,7 +173,7 @@ function AssignPanel({ lesson, publishedId }: { lesson: Lesson; publishedId: str
               <select value={classId || sameGrade[0]!.id} onChange={(e) => setClassId(e.target.value)}>
                 {sameGrade.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.code} ({c.studentCount} HS)
+                    {c.code}{c.isSurvey ? " (khảo sát)" : ""} · {c.studentCount} HS
                   </option>
                 ))}
               </select>

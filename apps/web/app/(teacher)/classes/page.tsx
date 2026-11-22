@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Empty, ErrorBox, Loading, PageHeader } from "@/components/ui";
@@ -26,7 +27,15 @@ function ClassesView() {
 
   return (
     <>
-      <PageHeader title="Lớp & bài giao" sub="Tiến độ chỉ gồm số liệu tổng hợp của lớp, không có câu trả lời từng học sinh." />
+      <PageHeader
+        title="Lớp & bài giao"
+        sub={'Tiến độ chỉ gồm số liệu tổng hợp của lớp, không có câu trả lời từng học sinh. Để giao bài mới, chọn một bài đã xuất bản rồi mở tab "Xuất bản & giao bài".'}
+        actions={
+          <Link className="btn btn-primary" href="/lessons">
+            Chọn bài để giao
+          </Link>
+        }
+      />
       <ErrorBox error={classes.error} />
       {classes.isPending ? (
         <Loading />
@@ -39,7 +48,7 @@ function ClassesView() {
               className={c.id === classId ? "tab on" : "tab"}
               onClick={() => router.replace(`?class=${c.id}`, { scroll: false })}
             >
-              {c.code} · lớp {c.grade} · {c.studentCount} HS
+              {c.code}{c.isSurvey ? " (khảo sát)" : ""} · lớp {c.grade} · {c.studentCount} HS
             </button>
           ))}
         </nav>
@@ -55,9 +64,12 @@ function ClassesView() {
             <li key={a.id} className="card">
               <div className="section-head">
                 <div>
-                  <h2>{a.lessonTitle}</h2>
+                  <h2>
+                    <Link href={`/lessons/${a.lessonId}`}>{a.lessonTitle}</Link>
+                  </h2>
                   <p className="muted small">
-                    Mở {fmtDateTime(a.openAt)} · hạn {fmtDateTime(a.dueAt)}
+                    Giao từ Bản #{a.revisionNo} · Mở {fmtDateTime(a.openAt)} · hạn {fmtDateTime(a.dueAt)} ·{" "}
+                    <Link href={`/lessons/${a.lessonId}?tab=publish`}>Mở phần giao bài</Link>
                   </p>
                 </div>
                 <button type="button" className="link-btn" onClick={() => setOpen(open === a.id ? null : a.id)}>

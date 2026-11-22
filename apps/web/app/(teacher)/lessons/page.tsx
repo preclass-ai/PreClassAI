@@ -17,7 +17,7 @@ export default function LessonsPage() {
     <>
       <PageHeader
         title="Bài học"
-        sub={isTeacher ? "Bài của bạn. Mỗi bài có các bản (revision); bản đã xuất bản không sửa được." : "Bài được giao cho bạn duyệt."}
+        sub={isTeacher ? "Bài của thầy cô. Mỗi bài có các bản (revision); bản đã xuất bản không sửa được." : "Bài được giao cho thầy cô duyệt."}
         actions={
           isTeacher ? (
             <Link className="btn btn-primary" href="/lessons/new">

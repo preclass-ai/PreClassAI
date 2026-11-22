@@ -7,6 +7,7 @@ import { Button } from "@/components/ui";
 import { errorCode, errorMessage } from "@/lib/errors";
 import { newRequestId } from "@/lib/uuid";
 import { HabitMark, HintIcon, SourceRef } from "./habit-parts";
+import { HINT_LEVEL } from "@/lib/labels";
 import { usePersonalizationOn, usePrefs } from "./personalization";
 import { askHabit, habitKey, useHabit, useHabitOn, type ChatReply } from "./habit-api";
 
@@ -120,13 +121,13 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
         <div className="habit-advice" role="note">
           <strong>Gợi ý cho em:</strong> xem lại phần nội dung của bài trước khi làm câu này.
           <p className="habit-preview">
-            <strong>Gợi ý 1.</strong> {info.preview}
+            <strong>{HINT_LEVEL[1]?.name}:</strong> {info.preview}
           </p>
         </div>
       ) : null}
       <div className="habit-actions">
         <Button variant="ghost" className="habit-ghost" onClick={() => void hint()} busy={busy} disabled={used >= 3 || limited}>
-          <HintIcon /> {used >= 3 ? "Gợi ý 3/3 (đã dùng hết)" : `Gợi ý ${used + 1}/3`}
+          <HintIcon /> {used >= 3 ? "Đã dùng hết gợi ý" : HINT_LEVEL[used + 1]!.name}
         </Button>
         <Button variant="ghost" className="habit-ghost" onClick={openChat}>
           <HabitMark /> Hỏi HABIT AI
@@ -135,7 +136,9 @@ export function HabitItem({ assignmentId, itemId, answered, explanation }: {
       <div aria-live="polite">
         {hints.map((x, i) => (
           <div key={i} className="habit-hint">
-            <strong>Gợi ý {x.hintLevel}/3</strong>
+            <strong>
+              {HINT_LEVEL[x.hintLevel] ? `${HINT_LEVEL[x.hintLevel]!.name} · ${HINT_LEVEL[x.hintLevel]!.topic}` : "Gợi ý"}
+            </strong>
             <p>{x.reply}</p>
             {x.sourceRefs.map((s) => (
               <SourceRef key={s.blockId} label={s.label} excerpt={s.excerpt} />
