@@ -227,7 +227,7 @@ class SourceOut(ApiModel):
     created_at: datetime
     model_config = ex({
         "id": I["asset"], "title": "Phân bố dân cư theo vùng (dan-so-vung)",
-        "licenseNote": "DỮ LIỆU MINH HỌA: số liệu giả, không phải số liệu chính thức.", "visibility": "SCHOOL",
+        "licenseNote": "Số liệu giả lập cho bài thử.", "visibility": "SCHOOL",
         "ownerId": I["teacher"], "latestRevision": _SRC_REV, "createdAt": T0})
 
 
@@ -247,7 +247,7 @@ class SourceCreateText(ApiModel):
     license_note: str | None = None
     visibility: Visibility = "PRIVATE"
     model_config = ex({"title": "Bài đọc mẫu", "text": "Tiêu đề\n\nĐoạn một.\n\nĐoạn hai.",
-                       "licenseNote": "DỮ LIỆU MINH HỌA", "visibility": "PRIVATE"})
+                       "licenseNote": "Dùng nội bộ", "visibility": "PRIVATE"})
 
 
 class SourceRevisionCreateText(ApiModel):

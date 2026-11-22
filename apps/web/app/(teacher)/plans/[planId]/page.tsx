@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { NextStep } from "@/components/next-step";
 import { Badge, Button, ErrorBox, Loading, Notice, PageHeader } from "@/components/ui";
 import { api, unwrap } from "@/lib/api";
 import { AiDrafts } from "@/features/ai-drafts";
@@ -133,7 +134,7 @@ export default function PlanPage() {
 
       <section className="card stack">
         {p.lessonId ? (
-          <Link href={`/lessons/${p.lessonId}?tab=editor`}>Mở bài chuẩn bị đã tạo</Link>
+          <NextStep label="Tiếp: Soạn bài" href={`/lessons/${p.lessonId}?tab=editor`} />
         ) : (
           <>
             <Button variant="primary" busy={build.isPending} onClick={() => build.mutate()}>

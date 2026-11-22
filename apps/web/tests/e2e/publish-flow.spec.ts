@@ -16,7 +16,10 @@ test("new revision → approve block by block → publish → assign (S04–S06)
   await expect(page.getByText("Bản nháp").first()).toBeVisible();
 
   // S04: "Duyệt tất cả" takes only clean machine-checked blocks and says how many it skips; the rest is approved block by block.
-  await page.getByRole("tab", { name: "Duyệt" }).click();
+  await page.getByRole("tab", { name: "Soạn & nguồn" }).click();
+  await page.getByRole("link", { name: "Tiếp: Duyệt" }).click(); // K4: each step ends with a button to the next one
+  await expect(page.getByRole("button", { name: "Tiếp: Xuất bản" })).toBeDisabled(); // not everything is approved yet
+  await expect(page.getByText(/Còn \d+ khối chưa duyệt\./).first()).toBeVisible();
   await page.getByRole("button", { name: "Duyệt tất cả khối không có cảnh báo" }).click();
   const confirm = page.getByRole("alertdialog", { name: "Xác nhận duyệt tất cả" });
   await expect(confirm).toContainText(/Duyệt \d+ khối, bỏ qua \d+ khối có cảnh báo/);
@@ -28,18 +31,21 @@ test("new revision → approve block by block → publish → assign (S04–S06)
   // (no error on screen, the "x/y đã duyệt" counter does not move). Click again until the queue is empty.
   for (let i = 0; i < 200 && (await approve.count()) > 0; i++) {
     const before = await approve.count();
-    await approve.first().click();
+    await approve.first().click({ timeout: 5_000 }).catch(() => undefined); // the card may vanish between count and click
     await expect.poll(() => approve.count(), { timeout: 4_000 }).toBeLessThan(before).catch(() => undefined);
   }
   await expect(approve).toHaveCount(0);
 
   // S05: gate passes, explicit confirmation, publish, then assign to a class of the same grade.
-  await page.getByRole("tab", { name: /Xuất bản/ }).click();
+  await page.getByRole("link", { name: "Tiếp: Xuất bản" }).click();
+  await expect(page.getByRole("button", { name: "Tiếp: Giao bài" })).toBeDisabled(); // not published yet
+  await expect(page.getByText("Hãy xuất bản bản này trước.")).toBeVisible();
   await expect(page.locator(".checklist li.fail")).toHaveCount(0);
   await page.getByText("Tôi đã đọc từng khối").click();
   await page.getByRole("button", { name: "Xuất bản", exact: true }).click();
   await expect(page.getByText(/đã xuất bản\./)).toBeVisible();
-  await page.getByRole("button", { name: "Giao bài" }).click();
+  await expect(page.getByRole("link", { name: "Tiếp: Giao bài" })).toBeVisible();
+  await page.getByRole("button", { name: "Giao bài", exact: true }).click();
   await expect(page.getByText(/Đã giao cho lớp/)).toBeVisible();
 
   // S06: the published snapshot can be opened read-only from the history.

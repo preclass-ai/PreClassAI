@@ -644,3 +644,4 @@ fieldset { border: 0; padding: 0; margin: 0; }
 
 .getting-started { margin-bottom: 16px; }
 .getting-started ol { margin: 8px 0 0; padding-left: 1.25rem; display: grid; gap: 4px; }
+.next-step { margin-top: 16px; }

@@ -7,7 +7,7 @@ const SEED_STUDENT: Record<string, string> = { "390": "HS10-03", "768": "HS10-04
 // Cloud (E2E mode): the seed students cannot log in with a password; the E2E class has its own student.
 const STUDENT = new Proxy(SEED_STUDENT, { get: (t, k: string) => (E2E_MODE ? "E2E-1" : t[k]) });
 const TEXT =
-  "Số dân các vùng (DỮ LIỆU MINH HỌA)\n\nDân cư phân bố không đều giữa các vùng.\n\n" +
+  "Số dân các vùng\n\nDân cư phân bố không đều giữa các vùng.\n\n" +
   "| Vùng | Số dân (triệu người) |\n|---|---|\n| Đồng bằng sông Hồng | 23,2 |\n| Tây Nguyên | 5,9 |\n" +
   "| Đông Nam Bộ | 17,8 |\n| Duyên hải miền Trung | 9,4 |";
 

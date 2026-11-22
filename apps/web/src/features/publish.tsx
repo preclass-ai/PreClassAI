@@ -152,7 +152,7 @@ function AssignPanel({ lesson, publishedId }: { lesson: Lesson; publishedId: str
   }
 
   return (
-    <form className="card stack" onSubmit={assign}>
+    <form className="card stack" id="giao-bai" onSubmit={assign}>
       <h2>Giao bài cho lớp</h2>
       <p className="muted small">Giao bản đã xuất bản mới nhất. Học sinh chỉ thấy bài từ thời điểm mở.</p>
       <ErrorBox error={error ?? classes.error} />
