@@ -10,7 +10,7 @@ import { use, useRef, useState, type FormEvent } from "react";
 import { Button, ErrorBox, Loading, Notice } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api";
 import { errorCode, errorMessage } from "@/lib/errors";
-import { fmtDate, fmtNumber } from "@/lib/format";
+import { fmtDate, fmtNumber, parseAnswerNumber } from "@/lib/format";
 import { SKILL } from "@/lib/labels";
 import { newRequestId } from "@/lib/uuid";
 
@@ -134,7 +134,8 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
           <ItemView key={e.item.id} {...itemProps(e.item, ++n)} />
         ) : null,
       )}
-      {inFocus ? null : <GuestSurveyCard />}
+      {/* "Thank you" only once every question is answered; the code itself stays visible in the banner meanwhile. */}
+      {!inFocus && items.length > 0 && answered === items.length ? <GuestSurveyCard /> : null}
     </article>
   );
 }
@@ -181,12 +182,16 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
   // Same requestId for retries of one answer: a resend after a network error returns the stored result.
   const requestId = useRef<string | null>(null);
   const result = item.result ?? local;
+  const numeric = item.itemType === "NUMERIC" && value.trim() !== "" ? parseAnswerNumber(value) : null;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     let answer: Schemas["AnswerIn"];
     if (item.itemType === "MCQ") answer = { choice: choice as "A" | "B" | "C" | "D" };
-    else if (item.itemType === "NUMERIC") answer = { value: Number(value.replace(",", ".")) };
+    else if (item.itemType === "NUMERIC") {
+      if (!numeric || !("value" in numeric)) return;
+      answer = { value: numeric.value };
+    }
     else answer = { text: text.trim() };
     requestId.current ??= newRequestId();
     setBusy(true);
@@ -211,7 +216,9 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
     }
   }
 
-  const ready = item.itemType === "MCQ" ? !!choice : item.itemType === "NUMERIC" ? value.trim() !== "" && !Number.isNaN(Number(value.replace(",", "."))) : text.trim() !== "";
+  const ready = item.itemType === "MCQ" ? !!choice : item.itemType === "NUMERIC" ? !!numeric && "value" in numeric : text.trim() !== "";
+  const numericError = numeric && "error" in numeric ? numeric.error : null;
+  const noteId = `note-${item.id}`;
 
   return (
     <section className="card item" aria-labelledby={`q-${item.id}`}>
@@ -247,6 +254,8 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
               inputMode="decimal"
               aria-label="Đáp số"
               placeholder="Nhập đáp số"
+              aria-invalid={numericError ? true : undefined}
+              aria-describedby={noteId}
               value={value}
               disabled={disabled}
               onChange={(e) => setValue(e.target.value)}
@@ -266,8 +275,8 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed }: {
             <Button type="submit" variant="primary" className="submit-btn" busy={busy} disabled={disabled || !ready}>
               Nộp câu trả lời
             </Button>
-            <span className="submit-note" id={`note-${item.id}`}>
-              {ready ? "Em chỉ nộp một lần. Lời giải hiện sau khi nộp." : item.itemType === "MCQ" ? "Chọn một đáp án để nộp." : item.itemType === "NUMERIC" ? "Nhập đáp số để nộp." : "Viết câu trả lời để nộp."}
+            <span className={numericError ? "submit-note field-error" : "submit-note"} id={noteId} aria-live="polite">
+              {numericError ?? (ready ? "Em chỉ nộp một lần. Lời giải hiện sau khi nộp." : item.itemType === "MCQ" ? "Chọn một đáp án để nộp." : item.itemType === "NUMERIC" ? "Nhập đáp số để nộp." : "Viết câu trả lời để nộp.")}
             </span>
           </div>
         </form>
