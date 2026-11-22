@@ -6,7 +6,7 @@ import { Badge, Button, ErrorBox, Field, Loading } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api";
 import { errorCode } from "@/lib/errors";
 import { fmtDateTime } from "@/lib/format";
-import { ACTOR, OPERATION, RELATION } from "@/lib/labels";
+import { ACTOR, OPERATION, RELATION, valName } from "@/lib/labels";
 import { anchorKind, locatorText } from "./anchors";
 import { useLessonAnchors, useProvenance } from "./lesson-data";
 
@@ -49,7 +49,7 @@ export function ValidationList({ results }: { results: Schemas["ValidationResult
       {current.map((r) => (
         <li key={r.id}>
           <Badge tone={r.outcome === "PASS" ? "success" : r.severity === "BLOCKER" ? "danger" : "warning"}>
-            {r.rule} {r.outcome === "PASS" ? "đạt" : r.severity === "BLOCKER" ? "lỗi chặn" : "cảnh báo"}
+            {valName(r.rule)}: {r.outcome === "PASS" ? "đạt" : r.severity === "BLOCKER" ? "lỗi chặn" : "cảnh báo"}
           </Badge>{" "}
           {r.method !== "rule" ? <span className="muted small">{r.method}</span> : null}
           {r.outcome === "FAIL" && r.evidence && Object.keys(r.evidence).length ? (

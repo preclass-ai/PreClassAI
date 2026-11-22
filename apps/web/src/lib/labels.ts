@@ -88,3 +88,19 @@ export type Tone = "neutral" | "info" | "success" | "warning" | "danger";
 
 /** Hint n of the item (1..10): the more a student asks, the more it shows. The name tells which kind of help the press gives. */
 export const hintTier = (n: number): string => (n <= 3 ? "Gợi ý nhẹ" : n <= 7 ? "Gợi ý rõ hơn" : "Hướng dẫn chi tiết");
+
+/** Plain names for the validation rules, so a teacher reads "Đề không lộ đáp án" and not just "VAL-10". */
+export const VAL_NAME: Record<string, string> = {
+  "VAL-01": "Đoạn nguồn có thật",
+  "VAL-02": "Trích đúng nguyên văn",
+  "VAL-03": "Số liệu có nguồn",
+  "VAL-04": "Đáp án rõ ràng",
+  "VAL-05": "Phương án A đến D đủ và không trùng",
+  "VAL-06": "Lần duyệt còn khớp nội dung",
+  "VAL-07": "Hình ảnh",
+  "VAL-08": "Thuật ngữ cần xem lại",
+  "VAL-09": "Giấy phép của nguồn",
+  "VAL-10": "Đề không lộ đáp án",
+  "VAL-11": "Số liệu hiện trong đề",
+};
+export const valName = (rule: string): string => (VAL_NAME[rule] ? `${VAL_NAME[rule]} (${rule})` : rule);
