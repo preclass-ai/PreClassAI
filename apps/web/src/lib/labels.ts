@@ -32,6 +32,7 @@ export const KIND: Record<BlockKind, string> = {
   explanation: "Giải thích",
   card_front: "Thẻ, mặt trước",
   card_back: "Thẻ, mặt sau",
+  review_card: "Thẻ ôn tập",
 };
 
 export const TRANSFORMATION: Record<Transformation, string> = {

@@ -60,6 +60,10 @@ export function summarize(block: Pick<Block, "kind" | "payload">): string {
       const rubric = (p as Record<string, unknown>).rubricPoints;
       return Array.isArray(rubric) ? `Ý chấm: ${rubric.join("; ")}` : "Đáp án";
     }
+    case "review_card": {
+      const pts = Array.isArray((p as Record<string, unknown>).points) ? ((p as Record<string, unknown>).points as string[]) : [];
+      return `${str(p, "title") ?? ""}: ${pts.join(" ")}`.trim();
+    }
     default:
       return str(p, "text") ?? "";
   }

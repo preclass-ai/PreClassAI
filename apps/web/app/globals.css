@@ -608,3 +608,5 @@ fieldset { border: 0; padding: 0; margin: 0; }
 .heat .heat-high { background: var(--success-bg); color: var(--success); font-weight: 600; }
 .heat .heat-none, .heat .heat-empty { color: var(--muted, inherit); }
 .insights .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+.source-quote { margin: 0; padding: 8px 12px; border-left: 3px solid var(--border); background: var(--surface-2); font-size: 0.9rem; }

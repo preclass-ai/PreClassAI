@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Badge, Button, ErrorBox, Loading, Notice, PageHeader } from "@/components/ui";
 import { api, unwrap } from "@/lib/api";
+import { AiDrafts } from "@/features/ai-drafts";
 import { fmtDate } from "@/lib/format";
 
 const ACTIVITY: Record<string, string> = { mo_dau: "Mở đầu", hinh_thanh: "Hình thành kiến thức", luyen_tap: "Luyện tập", van_dung: "Vận dụng" };
@@ -15,7 +16,11 @@ export default function PlanPage() {
   const router = useRouter();
   const qc = useQueryClient();
   const path = { plan_id: planId };
-  const plan = useQuery({ queryKey: ["plan", planId], queryFn: () => unwrap(api.GET("/v1/lesson-plans/{plan_id}", { params: { path } })) });
+  const plan = useQuery({
+    queryKey: ["plan", planId],
+    queryFn: () => unwrap(api.GET("/v1/lesson-plans/{plan_id}", { params: { path } })),
+    refetchInterval: (q) => (q.state.data?.aiState === "queued" || q.state.data?.aiState === "running" ? 2000 : false),
+  });
   const confirm = useMutation({
     mutationFn: (v: { mcq: string; option: "A" | "B" | "C" | "D" }) =>
       unwrap(api.PUT("/v1/lesson-plans/{plan_id}/mcqs/{mcq_id}/answer", { params: { path: { plan_id: planId, mcq_id: v.mcq } }, body: { correctOption: v.option } })),
@@ -124,6 +129,8 @@ export default function PlanPage() {
         ))}
       </section>
 
+      <AiDrafts plan={p} />
+
       <section className="card stack">
         {p.lessonId ? (
           <Link href={`/lessons/${p.lessonId}?tab=editor`}>Mở bài chuẩn bị đã tạo</Link>
@@ -132,7 +139,7 @@ export default function PlanPage() {
             <Button variant="primary" busy={build.isPending} onClick={() => build.mutate()}>
               Tạo bài chuẩn bị trước giờ học
             </Button>
-            <p className="muted small">Tạo bản nháp: câu khơi gợi, thẻ đọc trước, tối đa 5 câu luyện tập đã có đáp án, nhiệm vụ vận dụng. Thầy cô duyệt từng khối rồi mới xuất bản.</p>
+            <p className="muted small">Tạo bản nháp: câu khơi gợi, thẻ đọc trước, tối đa 5 câu luyện tập đã có đáp án, các câu và thẻ ôn do AI soạn mà thầy cô đã Duyệt, nhiệm vụ vận dụng. Thầy cô duyệt từng khối rồi mới xuất bản.</p>
           </>
         )}
         <ErrorBox error={build.error} />
