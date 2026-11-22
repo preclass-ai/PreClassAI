@@ -161,6 +161,8 @@ th { font-size: 0.8rem; color: var(--muted); font-weight: 600; background: var(-
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field-label { font-size: 0.85rem; font-weight: 600; }
 .field-hint { font-size: 0.8rem; color: var(--muted); }
+.field-error { margin: -4px 0 0; font-size: 0.85rem; font-weight: 600; color: var(--danger); }
+input[aria-invalid="true"] { border-color: var(--danger); }
 .check { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
 .check input { margin-top: 4px; }
 fieldset { border: 0; padding: 0; margin: 0; }
@@ -534,6 +536,7 @@ fieldset { border: 0; padding: 0; margin: 0; }
 .submit-btn { min-height: 48px; padding: 0 26px; }
 .submit-btn:disabled { opacity: 1; background: var(--surface-2); border-color: var(--border); color: var(--muted); }
 .submit-note { font-size: 0.88rem; color: var(--muted); }
+.submit-note.field-error { margin: 0; color: var(--danger); }
 .habit-title { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .habit-online { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: var(--success); }
 .habit-online i { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px var(--success-bg); }

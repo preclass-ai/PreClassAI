@@ -15,6 +15,19 @@ export function fmtNumber(n: number | null | undefined): string {
   return n === null || n === undefined ? "Chưa có" : number.format(n);
 }
 
+/**
+ * A student's numeric answer → number, or the reason it cannot be read. Accepts "17,3", "17.3", "-2,5", "1 234" and the
+ * Vietnamese grouped form "1.234,5" / "1.234.567". A lone "1.234" stays 1.234 (decimal), as before. Units, hex
+ * ("0x11"), exponents and "Infinity" are refused instead of being silently converted by Number().
+ */
+export function parseAnswerNumber(raw: string): { value: number } | { error: string } {
+  const s = raw.trim().replace(/(\d)[\s ]+(?=\d)/g, "$1");
+  if (/^[+-]?\d+([.,]\d+)?$/.test(s)) return { value: Number(s.replace(",", ".")) };
+  if (/^[+-]?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) return { value: Number(s.replace(/\./g, "").replace(",", ".")) };
+  if (/\p{L}/u.test(s)) return { error: "Chỉ nhập số, không ghi đơn vị (ví dụ: 17,3)." };
+  return { error: "Đáp số chưa đúng dạng số (ví dụ: 17,3 hoặc -2,5)." };
+}
+
 export function fmtPercent(rate: number | null | undefined): string {
   return rate === null || rate === undefined ? "Chưa có" : `${Math.round(rate * 100)}%`;
 }
