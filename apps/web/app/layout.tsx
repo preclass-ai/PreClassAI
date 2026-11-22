@@ -5,8 +5,8 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "PreClass AI", template: "%s · PreClass AI" },
-  description: "Bài học có nguồn rõ ràng và lời giải do thầy cô duyệt.",
+  title: { default: "PreClass AI · Học trước, hiểu sâu", template: "%s · PreClass AI" },
+  description: "Học trước, hiểu sâu: bài học có nguồn rõ ràng và lời giải do thầy cô duyệt.",
 };
 
 // Designed for Vietnamese: every diacritic comes from the same font (Avenir Next lacked them and mixed in fallbacks).
