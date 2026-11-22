@@ -4050,6 +4050,8 @@
         "examples": [
           {
             "assignmentId": "d186c051-eff2-5d04-8e6a-a01fe9880b24",
+            "completedCount": 9,
+            "inProgressCount": 3,
             "items": [
               {
                 "answeredCount": 12,
@@ -4066,6 +4068,18 @@
             "format": "uuid",
             "title": "Assignmentid",
             "type": "string"
+          },
+          "completedCount": {
+            "default": 0,
+            "description": "Students of the class who answered every item.",
+            "title": "Completedcount",
+            "type": "integer"
+          },
+          "inProgressCount": {
+            "default": 0,
+            "description": "Students who answered some items but not all.",
+            "title": "Inprogresscount",
+            "type": "integer"
           },
           "items": {
             "items": {
@@ -7417,6 +7431,93 @@
           }
         },
         "summary": "First-attempt correct rate per item (TEACHER of that class)",
+        "tags": [
+          "classes"
+        ]
+      }
+    },
+    "/v1/classes/{class_id}/assignments/{assignment_id}/results.csv": {
+      "get": {
+        "description": "Like a Google Form response sheet: one row per student of the class (login code; guests are `Khách 001`… in joining order, never their survey code, which logs them back in; never a name, never ranked), status, counts, then the answer and Đúng/Sai of each item. UTF-8 with BOM for Excel. Another class's or teacher's assignment → 404. Audited as `EXPORT_RESULTS`.",
+        "operationId": "exportAssignmentResults",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "class_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Class Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "CSV file."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Results of an assignment as CSV (TEACHER of that class)",
         "tags": [
           "classes"
         ]

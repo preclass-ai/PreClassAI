@@ -1,5 +1,7 @@
 """GĐ9: student API, attempts, progress. AT-12 (student side), AT-13, PR-08, IDOR/role."""
 
+import csv
+import io
 import json
 import uuid
 from typing import Any
@@ -144,3 +146,46 @@ async def test_progress_for_teacher_of_that_class_only(client: httpx.AsyncClient
     await login(client, "gv.dia@preclass.local")
     wrong = await client.get(f"/v1/classes/{uid('class:11A1')}/assignments/{ASSIGN}/progress")
     assert wrong.status_code == 404  # assignment is not in that class
+
+
+def _ans(item: dict[str, Any], choice: str = "A") -> dict[str, Any]:
+    return {"choice": choice} if item["itemType"] == "MCQ" else {"value": 1} if item["itemType"] == "NUMERIC" else {"text": "ý"}
+
+
+async def test_progress_counts_completed_and_in_progress(client: httpx.AsyncClient) -> None:
+    d = await detail(client)  # HS10-01 answers every item, HS10-02 only the first
+    for i in d["items"]:
+        assert (await attempt(client, i["id"], _ans(i))).status_code == 201
+    await login(client, "HS10-02")
+    assert (await attempt(client, d["items"][0]["id"], _ans(d["items"][0]))).status_code == 201
+    await login(client, "gv.dia@preclass.local")
+    body = (await client.get(f"/v1/classes/{CLASS}/assignments/{ASSIGN}/progress")).json()
+    assert len(d["items"]) > 1
+    assert (body["completedCount"], body["inProgressCount"]) == (1, 1)
+
+
+async def test_results_csv_one_row_per_student_by_code(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    d = await detail(client)
+    mcq = next(i for i in d["items"] if i["itemType"] == "MCQ")
+    assert (await attempt(client, mcq["id"], {"choice": "B"})).status_code == 201
+    await login(client, "gv.dia@preclass.local")
+    r = await client.get(f"/v1/classes/{CLASS}/assignments/{ASSIGN}/results.csv")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")
+    assert "attachment" in r.headers["content-disposition"]
+    body_text = r.content.decode("utf-8")
+    assert body_text.startswith("﻿")  # Excel reads the Vietnamese headers
+    rows = list(csv.reader(io.StringIO(body_text.lstrip("﻿"))))
+    head, body = rows[0], rows[1:]
+    assert head[:2] == ["Mã học sinh", "Trạng thái"] and len(head) == 6 + 2 * len(d["items"])
+    assert len(body) == 15 and [b[0] for b in body] == sorted(b[0] for b in body)  # every student, by code
+    me = next(b for b in body if b[0] == "HS10-01")
+    col = 6 + 2 * [i["id"] for i in d["items"]].index(mcq["id"])
+    assert me[col] == "B" and me[col + 1] in ("Đúng", "Sai") and me[1] == "Đang làm" and me[2] == "1"
+    assert next(b for b in body if b[0] == "HS10-02")[1] == "Chưa làm"
+    names = (await db.execute(text("SELECT display_name FROM app_user WHERE role='STUDENT'"))).scalars().all()
+    assert not any(n in body_text for n in names if n and not n.startswith(("HS", "Khách")))  # codes, never names
+    assert await db.scalar(text("SELECT count(*) FROM audit_log WHERE action='EXPORT_RESULTS'")) == 1
+    await login(client, "gv.khac@preclass.local")  # teacher outside the class
+    assert (await client.get(f"/v1/classes/{CLASS}/assignments/{ASSIGN}/results.csv")).status_code == 404
+    await login(client, "HS10-01")
+    assert (await client.get(f"/v1/classes/{CLASS}/assignments/{ASSIGN}/results.csv")).status_code == 403

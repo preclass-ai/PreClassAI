@@ -160,7 +160,8 @@ Quy tắc hành vi:
 - Chỉ nội dung từ **snapshot đã xuất bản**; DTO whitelist: không có đáp án, rubric, derivation, provenance, review, validation. `card_back` không bao giờ nằm trong danh sách khối.
 - Trước `openAt`, hoặc học sinh không thuộc lớp → **404** (không lộ tồn tại). Sai vai trò → 403 `FORBIDDEN_ROLE`.
 - `POST .../attempts`: mỗi (bài giao, học sinh, câu) một lần; trùng `requestId` trả lại kết quả đã lưu (idempotent). MCQ so `choice`, NUMERIC so `value` theo `tolerance`, SHORT không chấm (`isCorrect: null`). Lời giải chỉ trả sau khi trả lời.
-- `GET /classes/{id}/assignments/{aid}/progress`: chỉ giáo viên của lớp đó, chỉ số tổng hợp (không có tên/đáp án từng học sinh).
+- `GET /classes/{id}/assignments/{aid}/progress`: chỉ giáo viên của lớp đó, chỉ số tổng hợp (không có tên/đáp án từng học sinh); `completedCount` / `inProgressCount` là số học sinh đã làm hết / mới làm một phần.
+- `GET /classes/{id}/assignments/{aid}/results.csv`: chỉ giáo viên của lớp đó (khác lớp → 404). Bảng giống trang câu trả lời Google Form: mỗi học sinh của lớp một dòng theo **mã đăng nhập**; học sinh khách là `Khách 001`, `Khách 002`… theo thứ tự vào lớp, **không bao giờ ghi mã khảo sát** (mã đó đủ để đăng nhập lại qua `/auth/guest/resume`); không có họ tên, không xếp hạng, trạng thái, số câu đã làm/đúng, rồi câu trả lời và Đúng/Sai từng câu. UTF-8 có BOM cho Excel; ô bắt đầu bằng `= + - @` được thêm `'`. Ghi audit `EXPORT_RESULTS`.
 - Chưa làm: thẻ ghi nhớ (flashcard) chưa có luồng trả lời riêng.
 
 ## 10. Khách khảo sát (ẩn danh) — Pha 0

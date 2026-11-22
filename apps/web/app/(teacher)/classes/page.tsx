@@ -29,7 +29,7 @@ function ClassesView() {
     <>
       <PageHeader
         title="Lớp & bài giao"
-        sub="Xem lớp làm bài đến đâu. Số liệu là của cả lớp, không hiện bài làm của từng học sinh."
+        sub="Xem lớp làm bài đến đâu. Trên trang là số liệu của cả lớp; tệp kết quả tải về ghi bài làm theo mã học sinh, không có họ tên."
         actions={
           <Link className="btn btn-primary" href="/lessons">
             Chọn bài để giao
@@ -103,34 +103,56 @@ function Progress({ classId, assignmentId }: { classId: string; assignmentId: st
   if (progress.isPending) return <Loading />;
   if (!progress.data) return <ErrorBox error={progress.error} />;
   const p = progress.data;
+  // Vercel can go live before the API on Render: an older API has no counts and no results.csv, so show neither.
+  const hasCounts = typeof p.completedCount === "number" && typeof p.inProgressCount === "number";
+  const notStarted = hasCounts ? Math.max(0, p.studentCount - p.completedCount - p.inProgressCount) : 0;
   return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Câu</th>
-            <th>Đã trả lời</th>
-            <th>Đúng ngay lần đầu</th>
-          </tr>
-        </thead>
-        <tbody>
-          {p.items.map((i, idx) => (
-            <tr key={i.itemBlockId}>
-              <td>
-                {idx + 1}. {i.stem}
-              </td>
-              <td>
-                {i.answeredCount}/{p.studentCount}
-                <div className="bar" aria-hidden="true">
-                  <span style={{ width: `${p.studentCount ? (100 * i.answeredCount) / p.studentCount : 0}%` }} />
-                </div>
-              </td>
-              <td>{fmtPercent(i.firstAttemptCorrectRate)}</td>
+    <>
+      {hasCounts ? (
+        <div className="section-head">
+          <div>
+            <p className="muted small">
+              {p.completedCount}/{p.studentCount} em đã làm xong · {p.inProgressCount} em đang làm · {notStarted} em
+              chưa làm
+            </p>
+          </div>
+          <a
+            className="btn btn-secondary"
+            href={`/v1/classes/${classId}/assignments/${assignmentId}/results.csv`}
+            download
+          >
+            Tải kết quả (CSV)
+          </a>
+        </div>
+      ) : null}
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Câu</th>
+              <th>Đã trả lời</th>
+              <th>Đúng ngay lần đầu</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {p.items.map((i, idx) => (
+              <tr key={i.itemBlockId}>
+                <td>
+                  {idx + 1}. {i.stem}
+                </td>
+                <td>
+                  {i.answeredCount}/{p.studentCount}
+                  <div className="bar" aria-hidden="true">
+                    <span style={{ width: `${p.studentCount ? (100 * i.answeredCount) / p.studentCount : 0}%` }} />
+                  </div>
+                </td>
+                <td>{fmtPercent(i.firstAttemptCorrectRate)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
