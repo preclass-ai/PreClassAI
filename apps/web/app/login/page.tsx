@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { Button, ErrorBox, Field, Loading } from "@/components/ui";
 import { DataDetails, GUEST_NOTICE } from "@/features/guest";
-import { api, unwrap } from "@/lib/api";
+import { api, ApiError, unwrap } from "@/lib/api";
 import { homeFor, ME_KEY, useAuth } from "@/lib/auth";
 import { withTimeout, useAfter } from "@/lib/http";
 import { safeNext } from "@/lib/redirect";
+
+const WRONG_CODE = "Mã khảo sát không đúng. Em kiểm tra lại mã ở đầu trang bài làm (dạng KS-XXXX).";
 
 function LoginForm() {
   const { user, loading } = useAuth();
@@ -21,6 +23,7 @@ function LoginForm() {
   const [error, setError] = useState<unknown>(null);
   const [guestBusy, setGuestBusy] = useState(false);
   const [code, setCode] = useState("");
+  const [codeError, setCodeError] = useState<string | null>(null);
   // The config decides whether to show the guest button. It must never block the sign-in form: 15 s timeout, no retry.
   const cfg = useQuery({
     queryKey: ["auth-config"],
@@ -53,22 +56,33 @@ function LoginForm() {
   }
 
   async function enterAsGuest() {
+    const resume = code.trim();
     setGuestBusy(true);
     setError(null);
+    setCodeError(null);
     try {
-      const g = code.trim()
-        ? await unwrap(api.POST("/v1/auth/guest/resume", { body: { surveyCode: code.trim() } }))
+      const g = resume
+        ? await unwrap(api.POST("/v1/auth/guest/resume", { body: { surveyCode: resume } }))
         : await unwrap(api.POST("/v1/auth/guest", { body: {} }));
       qc.setQueryData(ME_KEY, g.user);
       router.replace("/student");
     } catch (err) {
-      setError(err);
+      // A wrong or malformed code belongs next to the code field, not in the generic "not found" box.
+      const c = err instanceof ApiError ? err.problem.code : undefined;
+      if (resume && (c === "NOT_FOUND" || c === "VALIDATION_ERROR")) setCodeError(WRONG_CODE);
+      else setError(err);
       setGuestBusy(false);
     }
   }
 
+  function submitCode(e: FormEvent) {
+    e.preventDefault(); // its own form: Enter here must never submit the (collapsed) account form
+    if (code.trim()) void enterAsGuest();
+  }
+
+  // method="post": if JS has not loaded yet, a native submit must never put the password in the URL.
   const accountFields = (
-    <>
+    <form className="stack" method="post" onSubmit={submit}>
       <Field label="Email hoặc mã học sinh">
         <input
           name="identifier"
@@ -92,12 +106,11 @@ function LoginForm() {
       <Button type="submit" variant="primary" busy={busy}>
         Đăng nhập
       </Button>
-    </>
+    </form>
   );
 
-  // method="post": if JS has not loaded yet, a native submit must never put the password in the URL.
   return (
-    <form className="card login-card" method="post" onSubmit={submit}>
+    <div className="card login-card">
       <p className="login-brand">◉ <span>PreClass AI</span></p>
       <h1>Chào mừng trở lại!</h1>
       <p className="muted">Đăng nhập để tiếp tục hành trình học tập của em.</p>
@@ -125,18 +138,34 @@ function LoginForm() {
           </div>
           <details className="login-more">
             <summary>Giáo viên / có tài khoản</summary>
-            <div className="stack">{accountFields}</div>
+            {accountFields}
           </details>
           <details className="login-more">
             <summary>Đã có mã khảo sát?</summary>
-            <div className="stack">
+            <form className="stack" onSubmit={submitCode}>
               <Field label="Mã khảo sát" hint="Dạng KS-XXXX, hiện ở đầu trang bài làm.">
-                <input name="surveyCode" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value)} placeholder="KS-7H4P" />
+                <input
+                  name="surveyCode"
+                  autoComplete="off"
+                  value={code}
+                  onChange={(e) => {
+                    setCode(e.target.value);
+                    setCodeError(null);
+                  }}
+                  placeholder="KS-7H4P"
+                  aria-invalid={codeError ? true : undefined}
+                  aria-describedby={codeError ? "survey-code-error" : undefined}
+                />
               </Field>
-              <Button type="button" busy={guestBusy} disabled={!code.trim()} onClick={() => void enterAsGuest()}>
+              {codeError ? (
+                <p id="survey-code-error" className="field-error" role="alert">
+                  {codeError}
+                </p>
+              ) : null}
+              <Button type="submit" busy={guestBusy} disabled={!code.trim()}>
                 Vào lại bằng mã
               </Button>
-            </div>
+            </form>
           </details>
         </>
       ) : (
@@ -145,7 +174,7 @@ function LoginForm() {
           {accountFields}
         </>
       )}
-    </form>
+    </div>
   );
 }
 
@@ -154,8 +183,8 @@ export default function LoginPage() {
     <main className="login-page">
       <div className="login-layout">
         <section className="login-story" aria-label="Giới thiệu PreClass AI">
-          <div className="login-story-top"><span className="story-symbol" aria-hidden="true">✦</span> Gia sư AI cá nhân</div>
-          <div className="login-story-copy"><p className="eyebrow">Cùng học</p><h2>Làm bài trước, hiểu bài sau.</h2><p>Em tự làm, xin gợi ý khi cần, rồi xem lời giải thầy cô đã duyệt.</p></div>
+          <div className="login-story-top"><span className="story-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 0C12.6 6.6 17.4 11.4 24 12C17.4 12.6 12.6 17.4 12 24C11.4 17.4 6.6 12.6 0 12C6.6 11.4 11.4 6.6 12 0Z" /></svg></span> Gia sư AI cá nhân</div>
+          <div className="login-story-copy"><p className="eyebrow">Cùng học</p><h2>Học trước, hiểu sâu.</h2><p>Em tự làm, xin gợi ý khi cần, rồi xem lời giải thầy cô đã duyệt.</p></div>
           <div className="atlas-graphic" aria-hidden="true"><span className="atlas-ring atlas-ring-one" /><span className="atlas-ring atlas-ring-two" /><span className="atlas-center">✦</span></div>
         </section>
         <Suspense>
