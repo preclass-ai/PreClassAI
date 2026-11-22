@@ -128,8 +128,8 @@ async def ins(conn: AsyncConnection, model: type[m.Base], rows: list[dict[str, A
 async def seed(conn: AsyncConnection, pw_by_role: dict[str, str]) -> None:
     now = datetime.now(UTC)
     # --- users and classes
-    staff = [("gv.dia", "TEACHER", "Cô Địa Lí (minh họa)"), ("gv.khac", "TEACHER", "Thầy Khác (minh họa)"),
-             ("reviewer", "REVIEWER", "Người duyệt (minh họa)"), ("admin", "ADMIN", "Quản trị (minh họa)")]
+    staff = [("gv.dia", "TEACHER", "Cô Địa Lí"), ("gv.khac", "TEACHER", "Thầy Khác"),
+             ("reviewer", "REVIEWER", "Người duyệt"), ("admin", "ADMIN", "Quản trị")]
     users = [{"id": uid(f"user:{n}"), "email": f"{n}@{DOMAIN}", "login_code": None, "display_name": d,
               "role": r, "password_hash": pw_by_role[r]}
              for n, r, d in staff]
@@ -140,7 +140,7 @@ async def seed(conn: AsyncConnection, pw_by_role: dict[str, str]) -> None:
         for i in range(1, 16):
             login = f"HS{grade}-{i:02d}"
             users.append({"id": uid(f"user:{login}"), "email": None, "login_code": login,
-                          "display_name": f"Học sinh {grade}-{i:02d} (minh họa)", "role": "STUDENT",
+                          "display_name": f"Học sinh {grade}-{i:02d}", "role": "STUDENT",
                           "password_hash": pw_by_role["STUDENT"]})
             members.append({"class_id": uid(f"class:{code}"), "user_id": uid(f"user:{login}"),
                             "role_in_class": "STUDENT"})
@@ -169,8 +169,8 @@ async def seed(conn: AsyncConnection, pw_by_role: dict[str, str]) -> None:
                        "locator": loc, "excerpt": ex, "excerpt_hash": excerpt_hash(ex),
                        "numbers": parse_numbers(ex)} for n, (k, ex, loc) in cells.items()}
         text = "\n".join(c[1] for c in cells.values())
-        await ins(conn, m.SourceAsset, [{"id": asset, "owner_id": author, "title": f"{spec['title']} ({spec['key']})",
-                                         "license_note": f"{NOTE}, không phải số liệu chính thức.",
+        await ins(conn, m.SourceAsset, [{"id": asset, "owner_id": author, "title": spec["title"],
+                                         "license_note": f"{NOTE}: số liệu giả, không phải số liệu chính thức.",
                                          "visibility": spec["visibility"]}])
         src_sha = sha256_hex(text)
         await ins(conn, m.SourceRevision, [{"id": rev, "asset_id": asset, "version": 1, "sha256": src_sha,
@@ -194,7 +194,7 @@ async def seed(conn: AsyncConnection, pw_by_role: dict[str, str]) -> None:
              "no_source_reason": b.reason, "is_factual": b.factual} for pos, b in enumerate(blks, start=1)])
         await ins(conn, m.ProvenanceLink, [
             {"block_id": bid(b.key), "anchor_id": anchors[a]["id"], "relation": rel,
-             "rationale": "Dữ liệu minh họa" if rel != "quotes" else None} for b in blks for a, rel in b.links])
+             "rationale": None} for b in blks for a, rel in b.links])
         await ins(conn, m.BlockDependency, [
             {"block_id": bid(b.key), "depends_on_block_id": bid(d), "kind": k} for b in blks for d, k in b.deps])
         await ins(conn, m.TransformationEvent, [

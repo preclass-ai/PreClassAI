@@ -4,7 +4,8 @@ import { Badge } from "./ui";
 
 export function ReviewBadge({ status }: { status: Block["reviewStatus"] }) {
   const s = REVIEW_STATUS[status];
-  return <Badge tone={s.tone}>{s.label}</Badge>;
+  // Machine-checked is outlined, approved is filled: same palette, but "checked" never reads as "approved".
+  return <Badge tone={s.tone} className={status === "AUTO_CHECKED" ? "badge-outline" : undefined}>{s.label}</Badge>;
 }
 
 export function StateBadge({ state }: { state: RevisionState }) {

@@ -32,6 +32,7 @@ from app.schemas import (
     ProgressOut,
     UserOut,
 )
+from app.student import export_results_csv
 from app.student import progress as student_progress
 
 router = APIRouter()
@@ -121,7 +122,9 @@ async def list_classes(
         .where(m.ClassMember.user_id == cu.id, m.ClassMember.role_in_class == "TEACHER")
         .order_by(m.Class.code)
     )
-    return ClassList(items=[ClassOut(id=c.id, code=c.code, grade=c.grade, student_count=n) for c, n in rows])
+    survey = get_settings().guest_class_code
+    return ClassList(items=[ClassOut(id=c.id, code=c.code, grade=c.grade, student_count=n, is_survey=c.code == survey)
+                            for c, n in rows])
 
 
 @router.get("/classes/{class_id}/assignments", tags=["classes"], operation_id="listClassAssignments",
@@ -137,6 +140,21 @@ async def list_class_assignments(class_id: UUID, cu: Annotated[CurrentUser, Depe
             responses=errs(401, 403, 404))
 async def assignment_progress(class_id: UUID, assignment_id: UUID, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> ProgressOut:
     return await student_progress(db, cu, class_id, assignment_id)
+
+
+@router.get("/classes/{class_id}/assignments/{assignment_id}/results.csv", tags=["classes"],
+            operation_id="exportAssignmentResults", summary="Results of an assignment as CSV (TEACHER of that class)",
+            description="Like a Google Form response sheet: one row per student of the class (login code; guests are "
+            "`Khách 001`… in joining order, never their survey code, which logs them back in; never a name, never ranked), status, counts, total hints, reviewed before the quiz or not, then the answer, Đúng/Sai and hints of each item. Never chat text. UTF-8 with BOM "
+            "for Excel. Another class's or teacher's assignment → 404. Audited as `EXPORT_RESULTS`.",
+            responses={200: {"content": {"text/csv": {"schema": {"type": "string"}}}, "description": "CSV file."},
+                       **errs(401, 403, 404)})
+async def assignment_results_csv(class_id: UUID, assignment_id: UUID, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> Response:
+    name, body = await export_results_csv(db, cu, class_id, assignment_id)
+    audit(db, cu.id, "EXPORT_RESULTS", "assignment", assignment_id)
+    await db.commit()
+    return Response(body, media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
 @router.get("/admin/audit-logs", tags=["admin"], operation_id="listAuditLogs", response_model=AuditLogList,

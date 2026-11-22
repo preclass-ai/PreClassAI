@@ -51,7 +51,7 @@ export default function PlansPage() {
 
   return (
     <div className="stack">
-      <PageHeader title="Giáo án" sub="Nạp giáo án (DOCX hoặc PDF có chữ). Hệ thống đọc ra mục tiêu, 4 hoạt động và câu trắc nghiệm để thầy cô kiểm tra rồi tạo bài chuẩn bị trước giờ học." />
+      <PageHeader title="Giáo án" sub="Nạp giáo án (DOCX hoặc PDF có chữ) để tạo bài cho học sinh làm trước giờ học. Thầy cô kiểm tra phần máy đọc được trước khi tạo bài." />
       <section className="card stack">
         <label htmlFor="plan-file">Chọn tệp giáo án</label>
         <input id="plan-file" ref={file} type="file" accept=".docx,.pdf" />

@@ -11,7 +11,7 @@ Decision record: `docs/adr/ADR-0015-ai-quiz-from-plan.md`. `apps/api/app/sources
 4. HABIT AI sheet on phones (part E).
 5. Student flow "1. Ôn nhanh" then "2. Làm bài kiểm tra"; insights review impact (needs 5 students per group).
 6. After a student submits: right answer, explanation and "Theo giáo án: <quote>" (AI-drafted questions carry `sourceQuote` in the item payload) or "Nguồn: tài liệu giáo viên đã duyệt".
-7. Insights: "Tải bảng số liệu (CSV)" per assignment (`GET .../insights/results.csv`): anonymous code, right/wrong and hints per item, reviewed or not, last submit time, then totals (completion, rate per item and per skill). UTF-8 with BOM, no chat text.
+7. Results CSV: one endpoint, `GET /classes/{id}/assignments/{aid}/results.csv` (the "Tải bảng kết quả" button on the class page, from the teacher-results-export PR). This branch added the columns total hints, reviewed before the quiz, and hints per item. The earlier `insights/results.csv` endpoint was removed in the merge of origin/main. Retries do not exist (one attempt per item), so there is no retry column. No survey code, no chat text.
 8. `/du-lieu` states that the plan text (names and signatures removed) goes to the AI service and that the teacher approves before students see anything.
 9. ESLint ignores `.next-e2e/`.
 

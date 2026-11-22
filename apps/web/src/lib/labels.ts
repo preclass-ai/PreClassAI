@@ -7,7 +7,7 @@ export type RevisionState = Schemas["RevisionOut"]["state"];
 
 export const REVIEW_STATUS: Record<ReviewStatus, { label: string; tone: Tone }> = {
   UNREVIEWED: { label: "Chưa kiểm", tone: "neutral" },
-  AUTO_CHECKED: { label: "Máy đã kiểm", tone: "info" },
+  AUTO_CHECKED: { label: "Máy đã kiểm", tone: "info" }, // drawn outlined by ReviewBadge so it never reads like APPROVED
   FLAGGED: { label: "Có vấn đề", tone: "danger" },
   APPROVED: { label: "Đã duyệt", tone: "success" },
   REVIEW_AGAIN: { label: "Cần duyệt lại", tone: "warning" },
@@ -81,4 +81,14 @@ export const OPERATION: Record<string, string> = {
 
 export const ACTOR: Record<string, string> = { AI: "AI", TEACHER: "Giáo viên", SYSTEM: "Hệ thống" };
 
+/** Who can use a source: one wording everywhere (list, detail, form). */
+export const VISIBILITY: Record<"PRIVATE" | "SCHOOL", string> = { PRIVATE: "Chỉ mình thầy cô", SCHOOL: "Cả trường" };
+
 export type Tone = "neutral" | "info" | "success" | "warning" | "danger";
+
+/** Hints go from light to detailed (server levels 1–3): students pick by how much help they want, not by a count. */
+export const HINT_LEVEL: Record<number, { name: string; topic: string }> = {
+  1: { name: "Gợi ý nhẹ", topic: "Bắt đầu từ đâu" },
+  2: { name: "Gợi ý vừa", topic: "Dữ liệu cần dùng ở đâu" },
+  3: { name: "Gợi ý chi tiết", topic: "Cách làm" },
+};

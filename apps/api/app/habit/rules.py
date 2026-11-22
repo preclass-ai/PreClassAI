@@ -123,6 +123,7 @@ class ItemView:
     explanation: str | None = None
     allowed: set[Decimal] = field(default_factory=set)
     hints: list[str] = field(default_factory=list)  # fixed hints 1..3 of an AI-drafted question
+    facts: list[str] = field(default_factory=list)  # data_fact lines as the student sees them ("label: value unit (region, period)")
 
 
 def build_view(snap: dict[str, Any], item: dict[str, Any]) -> ItemView:
@@ -135,17 +136,27 @@ def build_view(snap: dict[str, Any], item: dict[str, Any]) -> ItemView:
     opts = sorted((b["payload"]["label"], b["payload"]["text"]) for b in kids if b["kind"] == "option")
     label = {"heading": "Tiêu đề", "paragraph": "Đoạn văn", "instruction": "Câu dẫn"}
     blocks = [(b["id"], label[b["kind"]], b["payload"]["text"]) for b in snap["blocks"] if b["kind"] in label]
-    fact: dict[str, Any] = next((b["payload"] for b in snap["blocks"] if b["kind"] == "data_fact"), {})
+    facts = [b["payload"] for b in snap["blocks"] if b["kind"] == "data_fact"]
+    fact: dict[str, Any] = facts[0] if facts else {}
     val = key.get("value") if key else None
     v = ItemView(item["id"], item["payload"]["stem"], item["payload"]["itemType"], item["payload"]["skill"], opts, blocks,
                  fact.get("unit"), fact.get("period"), key.get("correct") if key else None,
                  Decimal(str(val)) if val is not None else None, exp["text"] if exp else None)
     v.hints = [str(h) for h in item["payload"].get("hints") or []][:3]
-    for text in [v.stem, *(t for _, t in opts), *(t for _, _, t in blocks), str(v.period or "")]:
+    v.facts = [_fact_line(f) for f in facts]
+    # Data facts are on the student's screen: quoting them is not a leak (the answer itself is still discarded below).
+    for text in [v.stem, *(t for _, t in opts), *(t for _, _, t in blocks), *v.facts, str(v.period or "")]:
         v.allowed.update(parse_numbers(text))
     if v.answer_value is not None:
         v.allowed.discard(v.answer_value)
     return v
+
+
+def _fact_line(p: dict[str, Any]) -> str:
+    val = p.get("value")
+    shown = str(val).replace(".", ",") if val is not None else ""
+    where = ", ".join(str(x) for x in (p.get("region"), p.get("period")) if x)
+    return f"{p.get('label') or ''}: {shown} {p.get('unit') or ''}".strip() + (f" ({where})" if where else "")
 
 
 def intent(msg: str, v: ItemView | None) -> str | None:
@@ -234,6 +245,7 @@ L3B = {
     "CALCULATE": "Cách làm khác: viết công thức bằng chữ, thay các số lấy từ đề vào, tính từng bước và kiểm tra đơn vị ở cuối.",
     "EXPLAIN": "Cách làm khác: trả lời theo ba bước ngắn là hiện tượng, nguyên nhân, dẫn chứng lấy từ nội dung bài.",
 }
+_COUNT = {1: "một", 2: "hai", 3: "ba", 4: "bốn", 5: "năm", 6: "sáu", 7: "bảy", 8: "tám", 9: "chín", 10: "mười"}  # words, never digits: a digit could equal the answer
 NEXT_STEP = {
     1: "Em đã xem hết các gợi ý bước đầu rồi. Em bấm “Số liệu cần dùng nằm ở đâu?” để sang bước tiếp theo nhé.",
     2: "Em đã xem hết các gợi ý về nguồn số liệu rồi. Em bấm “Nhắc lại cách tính” để sang bước tiếp theo nhé.",
@@ -253,6 +265,11 @@ def hint(v: ItemView, level: int, reps: int = 0, small: bool = False,
     if table_first:
         v2 = [f"Em nhìn vào bảng số liệu trước{' (' + ', '.join(bits) + ')' if bits else ''}, rồi mới đọc đoạn văn.",
               "Em ưu tiên bảng số liệu: tìm đúng hàng và cột đề hỏi, rồi mới quay lại đoạn văn để đối chiếu."]
+    elif v.facts:  # the data is in the fact lines: say so plainly instead of "read the text again"
+        many = _COUNT.get(len(v.facts), "các")
+        unit = f" ({', '.join(bits)})" if bits else ""
+        v2 = [f"Số liệu cần dùng nằm ngay trong bài: {many} dòng số liệu in đậm phía trên câu hỏi{unit}. Mỗi dòng là một đối tượng kèm giá trị của nó.",
+              "Em nhìn lại các dòng số liệu in đậm phía trên câu hỏi, chọn đúng những dòng mà đề nhắc tới rồi ghi giá trị và đơn vị ra nháp."]
     else:
         v2 = [f"Em xem lại phần nội dung của bài (tiêu đề và đoạn văn bên dưới).{where} Chỉ cần xác định đúng dữ liệu cần dùng, chưa cần tính vội.",
               f"Em đối chiếu từng từ khóa trong đề với tiêu đề và đoạn văn của bài, rồi đánh dấu chỗ có dữ liệu cần dùng.{where} Chưa cần tính vội."]
@@ -261,7 +278,9 @@ def hint(v: ItemView, level: int, reps: int = 0, small: bool = False,
     if reps >= (3 if lvl == 1 else len(variants)):
         return NEXT_STEP[lvl], []
     text = variants[0] if lvl == 1 else variants[reps]
-    if lvl == 2:
+    if lvl == 2 and v.facts and not table_first:
+        refs = []  # the fact lines are already on screen next to the question
+    elif lvl == 2:
         refs = [b for b in v.blocks if b[1] == "Tiêu đề"][:1] or ([] if table_first else [b for b in v.blocks if b[1] == "Đoạn văn"][:1])
     return (_short(text) if small else text), refs
 

@@ -287,6 +287,8 @@ async def test_assignments_checks_and_listing(client: httpx.AsyncClient) -> None
     await login(client, "gv.dia@preclass.local")
     ok = await client.post(f"/v1/published/{PUB}/assignments", json={"classId": str(uid("class:10A1")), "openAt": OPEN, "dueAt": DUE})
     assert ok.status_code == 201 and ok.json()["classCode"] == "10A1" and ok.json()["lessonTitle"].startswith("Phân bố")
+    lesson_id = str(uid("dan-so-vung:lesson"))
+    assert ok.json()["lessonId"] == lesson_id and ok.json()["revisionNo"] >= 1  # teachers see which lesson and version
     wrong_grade = await client.post(f"/v1/published/{PUB}/assignments", json={"classId": str(uid("class:11A1")), "openAt": OPEN, "dueAt": DUE})
     assert wrong_grade.status_code == 422 and wrong_grade.json()["code"] == "GRADE_MISMATCH"
     window = await client.post(f"/v1/published/{PUB}/assignments", json={"classId": str(uid("class:10A1")), "openAt": DUE, "dueAt": OPEN})
@@ -298,6 +300,7 @@ async def test_assignments_checks_and_listing(client: httpx.AsyncClient) -> None
     neither = await client.post(f"/v1/published/{PUB}/assignments", json={"classId": str(uid("class:10A1")), "openAt": OPEN})
     assert neither.status_code == 422 and neither.json()["code"] == "DUE_REQUIRED"
     listed = (await client.get(f"/v1/classes/{uid('class:10A1')}/assignments")).json()["items"]
+    assert all(i["lessonId"] == lesson_id and i["revisionNo"] == ok.json()["revisionNo"] for i in listed if i["publishedVersionId"] == str(PUB))
     assert {a["id"] for a in listed} >= {ok.json()["id"], str(uid("dan-so-vung:assignment"))}
     client.cookies.clear()
     await login(client, "gv.khac@preclass.local")  # teaches no class and does not own the version

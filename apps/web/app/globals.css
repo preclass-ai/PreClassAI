@@ -179,6 +179,7 @@ fieldset { border: 0; padding: 0; margin: 0; }
 .badge-success { background: var(--success-bg); color: var(--success); }
 .badge-warning { background: var(--warning-bg); color: var(--warning); }
 .badge-danger { background: var(--danger-bg); color: var(--danger); }
+.badge-outline { background: transparent; box-shadow: inset 0 0 0 1px currentColor; }
 .alert { padding: 13px 16px; border-radius: 12px; border: 1px solid color-mix(in srgb, currentColor 13%, transparent); }
 .alert-info, .alert-neutral { background: var(--info-bg); color: var(--info); }
 .alert-success { background: var(--success-bg); color: var(--success); }

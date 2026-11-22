@@ -20,10 +20,10 @@ export function BlockCard({ block, compact }: { block: Block; compact?: boolean 
         <IssueCounts block={block} />
       </span>
       <span className={compact ? "block-text clamp" : "block-text"}>{summarize(block)}</span>
-      {block.transformation === "AI_PROPOSED" && !block.linkCount ? (
-        <span className="no-source">
-          {block.noSourceReason ? `Lý do không có nguồn: ${block.noSourceReason}` : "AI đề xuất, chưa có nguồn và chưa ghi lý do."}
-        </span>
+      {/* Only the case that needs action: a stated reason is in the badge tooltip, the inspector and the review screen,
+          so repeating it under every AI block only buries the blocks that do need attention. */}
+      {block.transformation === "AI_PROPOSED" && !block.linkCount && !block.noSourceReason ? (
+        <span className="no-source">AI đề xuất, chưa có nguồn và chưa ghi lý do.</span>
       ) : null}
     </span>
   );

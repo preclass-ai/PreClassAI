@@ -7,6 +7,7 @@ import { Button } from "@/components/ui";
 import { errorCode, errorMessage } from "@/lib/errors";
 import { newRequestId } from "@/lib/uuid";
 import { HabitMark, HintIcon, SourceRef } from "./habit-parts";
+import { HINT_LEVEL } from "@/lib/labels";
 import { usePersonalizationOn, usePrefs } from "./personalization";
 import { askHabit, habitKey, useHabit, useHabitOn, type ChatReply } from "./habit-api";
 
@@ -122,13 +123,13 @@ export function HabitItem({ assignmentId, itemId, answered, explanation, onOpenR
         <div className="habit-advice" role="note">
           <strong>Gợi ý cho em:</strong> xem lại phần nội dung của bài trước khi làm câu này.
           <p className="habit-preview">
-            <strong>Gợi ý 1.</strong> {info.preview}
+            <strong>{HINT_LEVEL[1]?.name}:</strong> {info.preview}
           </p>
         </div>
       ) : null}
       <div className="habit-actions">
         <Button variant="ghost" className="habit-ghost" onClick={() => void hint()} busy={busy} disabled={used >= max || limited}>
-          <HintIcon /> {used >= max ? `Gợi ý ${max}/${max} (đã dùng hết)` : `Gợi ý ${used + 1}/${max}`}
+          <HintIcon /> {used >= max ? `Đã dùng hết ${max}/${max} gợi ý` : (HINT_LEVEL[used + 1]?.name ?? `Gợi ý ${used + 1}/${max}`)}
         </Button>
         <Button variant="ghost" className="habit-ghost" onClick={openChat}>
           <HabitMark /> Hỏi HABIT AI
@@ -137,7 +138,9 @@ export function HabitItem({ assignmentId, itemId, answered, explanation, onOpenR
       <div aria-live="polite">
         {hints.map((x, i) => (
           <div key={i} className="habit-hint">
-            <strong>Gợi ý {x.hintsUsed ?? x.hintLevel}/{max}</strong>
+            <strong>
+              {(n => (HINT_LEVEL[n] ? `${HINT_LEVEL[n]!.name} · ${HINT_LEVEL[n]!.topic}` : `Gợi ý ${n}/${max}`))(x.hintsUsed ?? x.hintLevel)}
+            </strong>
             <p>{x.reply}</p>
             {x.sourceRefs.map((s) => (
               <SourceRef key={s.blockId} label={s.label} excerpt={s.excerpt} />

@@ -281,3 +281,26 @@ async def test_the_gap_between_quiz_and_review_calls_is_respected(client: httpx.
     await login(client, "gv.dia@preclass.local")
     await upload(client)
     assert order == ["quiz", "sleep 20", "review"]
+
+
+async def test_val11_also_blocks_an_ai_question_whose_explanation_uses_data_the_stem_does_not_show(client: httpx.AsyncClient, gen: pytest.MonkeyPatch) -> None:
+    await login(client, "gv.dia@preclass.local")
+    p = await upload(client)
+    url = f"/v1/lesson-plans/{p['id']}/ai-items"
+    for q in [x for x in (await client.get(url)).json()["items"] if x["kind"] == "quiz"]:
+        assert (await client.patch(f"{url}/{q['id']}", json={"status": "approved"}, headers=H)).status_code == 200
+    out = (await client.post(f"/v1/lesson-plans/{p['id']}/lesson", headers=H)).json()
+    rev = (await client.get(f"/v1/lessons/{out['lessonId']}")).json()["currentRevision"]["id"]
+    blocks = (await client.get(f"/v1/revisions/{rev}/blocks")).json()["items"]
+    def shown(it: dict[str, Any]) -> str:
+        return json.dumps([it["payload"], *(b["payload"] for b in blocks if b["parentId"] == it["id"] and b["kind"] == "option")])
+
+    # an AI question that leaves one plan figure out of its stem and options
+    item, hidden = next((it, n) for it in blocks if it["kind"] == "worksheet_item" and it["payload"].get("hints")
+                        for n in ("98,5", "1 091") if n not in shown(it))
+    expl = next(b for b in blocks if b["kind"] == "explanation" and b["parentId"] == item["id"])
+    edited = {**expl["payload"], "text": expl["payload"]["text"] + f" Số liệu của giáo án: {hidden}."}
+    assert (await client.patch(f"/v1/blocks/{expl['id']}", json={"payload": edited, "version": expl["version"]})).status_code == 200
+    res = (await client.post(f"/v1/revisions/{rev}/validate")).json()
+    failed = [v for b in res["blocks"] for v in b.get("failedRules", []) if b["blockId"] in (item["id"], expl["id"])]
+    assert "VAL-11" in failed, res

@@ -4,6 +4,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.main import app
+from seed.survey import ensure_survey_class
 from tests.conftest import login
 
 pytestmark = pytest.mark.db
@@ -108,6 +109,14 @@ async def test_teacher_sees_only_own_classes_with_student_counts(client: httpx.A
     await login(client, "gv.dia@preclass.local")
     items = (await client.get("/v1/classes")).json()["items"]
     assert [(i["code"], i["grade"], i["studentCount"]) for i in items] == [("10A1", 10, 15), ("11A1", 11, 15)]
+    assert not any(i["isSurvey"] for i in items)
+
+
+async def test_survey_class_is_marked_for_its_teacher(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    await ensure_survey_class(await db.connection(), "KS")
+    await login(client, "gv.dia@preclass.local")
+    marked = {i["code"]: i["isSurvey"] for i in (await client.get("/v1/classes")).json()["items"]}
+    assert marked["KS"] is True and marked["10A1"] is False
     client.cookies.clear()
     await login(client, "gv.khac@preclass.local")  # teaches no class
     assert (await client.get("/v1/classes")).json()["items"] == []

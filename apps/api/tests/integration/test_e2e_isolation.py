@@ -43,6 +43,17 @@ async def test_ks_gets_only_seed_lessons_and_prunes_foreign_unanswered_assignmen
     assert await ensure_survey_class(conn, "KS") == 0  # idempotent
 
 
+async def test_seed_lesson_has_the_same_deadline_for_the_teacher_class_and_the_survey_class(db: AsyncSession) -> None:
+    """Reviewer report: the teacher (class 10A1) saw 20/12/2026, a guest (class KS) saw 20/11/2027 for the same lesson."""
+    await ensure_survey_class(await db.connection(), "KS")
+    dues = (await db.execute(text(
+        "SELECT c.code, a.due_at FROM assignment a JOIN class c ON c.id = a.class_id "
+        "JOIN published_version pv ON pv.id = a.published_version_id "
+        "WHERE c.code IN ('10A1', 'KS') AND pv.snapshot->>'title' = 'Phân bố dân cư theo vùng'"))).all()
+    assert {code for code, _ in dues} == {"10A1", "KS"}
+    assert len({due for _, due in dues}) == 1
+
+
 async def test_e2e_class_has_a_student_only_with_a_password_and_guests_never_join_it(
         client: httpx.AsyncClient, db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
     conn = await db.connection()

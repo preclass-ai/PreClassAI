@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Empty, ErrorBox, Loading, PageHeader } from "@/components/ui";
@@ -26,7 +27,15 @@ function ClassesView() {
 
   return (
     <>
-      <PageHeader title="Lớp & bài giao" sub="Tiến độ chỉ gồm số liệu tổng hợp của lớp, không có câu trả lời từng học sinh." />
+      <PageHeader
+        title="Lớp & bài giao"
+        sub="Xem lớp làm bài đến đâu. Trên trang là số liệu của cả lớp; tệp kết quả tải về ghi bài làm theo mã học sinh, không có họ tên."
+        actions={
+          <Link className="btn btn-primary" href="/lessons">
+            Chọn bài để giao
+          </Link>
+        }
+      />
       <ErrorBox error={classes.error} />
       {classes.isPending ? (
         <Loading />
@@ -39,7 +48,7 @@ function ClassesView() {
               className={c.id === classId ? "tab on" : "tab"}
               onClick={() => router.replace(`?class=${c.id}`, { scroll: false })}
             >
-              {c.code} · lớp {c.grade} · {c.studentCount} HS
+              {c.code}{c.isSurvey ? " (khảo sát)" : ""} · lớp {c.grade} · {c.studentCount} HS
             </button>
           ))}
         </nav>
@@ -55,9 +64,12 @@ function ClassesView() {
             <li key={a.id} className="card">
               <div className="section-head">
                 <div>
-                  <h2>{a.lessonTitle}</h2>
+                  <h2>
+                    <Link href={`/lessons/${a.lessonId}`}>{a.lessonTitle}</Link>
+                  </h2>
                   <p className="muted small">
-                    Mở {fmtDateTime(a.openAt)} · hạn {fmtDateTime(a.dueAt)}
+                    Giao từ Bản #{a.revisionNo} · Mở {fmtDateTime(a.openAt)} · hạn {fmtDateTime(a.dueAt)} ·{" "}
+                    <Link href={`/lessons/${a.lessonId}?tab=publish`}>Mở phần giao bài</Link>
                   </p>
                 </div>
                 <button type="button" className="link-btn" onClick={() => setOpen(open === a.id ? null : a.id)}>
@@ -91,34 +103,56 @@ function Progress({ classId, assignmentId }: { classId: string; assignmentId: st
   if (progress.isPending) return <Loading />;
   if (!progress.data) return <ErrorBox error={progress.error} />;
   const p = progress.data;
+  // Vercel can go live before the API on Render: an older API has no counts and no results.csv, so show neither.
+  const hasCounts = typeof p.completedCount === "number" && typeof p.inProgressCount === "number";
+  const notStarted = hasCounts ? Math.max(0, p.studentCount - p.completedCount - p.inProgressCount) : 0;
   return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Câu</th>
-            <th>Đã trả lời</th>
-            <th>Đúng ngay lần đầu</th>
-          </tr>
-        </thead>
-        <tbody>
-          {p.items.map((i, idx) => (
-            <tr key={i.itemBlockId}>
-              <td>
-                {idx + 1}. {i.stem}
-              </td>
-              <td>
-                {i.answeredCount}/{p.studentCount}
-                <div className="bar" aria-hidden="true">
-                  <span style={{ width: `${p.studentCount ? (100 * i.answeredCount) / p.studentCount : 0}%` }} />
-                </div>
-              </td>
-              <td>{fmtPercent(i.firstAttemptCorrectRate)}</td>
+    <>
+      {hasCounts ? (
+        <div className="section-head">
+          <div>
+            <p className="muted small">
+              {p.completedCount}/{p.studentCount} em đã làm xong · {p.inProgressCount} em đang làm · {notStarted} em
+              chưa làm
+            </p>
+          </div>
+          <a
+            className="btn btn-secondary"
+            href={`/v1/classes/${classId}/assignments/${assignmentId}/results.csv`}
+            download
+          >
+            Tải kết quả (CSV)
+          </a>
+        </div>
+      ) : null}
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Câu</th>
+              <th>Đã trả lời</th>
+              <th>Đúng ngay lần đầu</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {p.items.map((i, idx) => (
+              <tr key={i.itemBlockId}>
+                <td>
+                  {idx + 1}. {i.stem}
+                </td>
+                <td>
+                  {i.answeredCount}/{p.studentCount}
+                  <div className="bar" aria-hidden="true">
+                    <span style={{ width: `${p.studentCount ? (100 * i.answeredCount) / p.studentCount : 0}%` }} />
+                  </div>
+                </td>
+                <td>{fmtPercent(i.firstAttemptCorrectRate)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
