@@ -2315,7 +2315,7 @@
                 "type": "null"
               }
             ],
-            "description": "EDIT of a block's content: the payload before the edit (null for edits made before this was recorded).",
+            "description": "EDIT: payload before (null for edits older than the log).",
             "title": "Before"
           },
           "blockId": {
@@ -2339,7 +2339,7 @@
                 "type": "null"
               }
             ],
-            "description": "Kind of the edited block; with `before`/`after` it lets a client show the change.",
+            "description": "Kind of the edited block (with before/after).",
             "title": "Blockkind"
           },
           "operation": {

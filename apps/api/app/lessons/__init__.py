@@ -253,9 +253,10 @@ async def lesson_history(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -
     events.sort(key=lambda e: e.at, reverse=True)
     events = events[:200]
     ids = {e.actor_id for e in events if e.actor_id}
-    names = dict((await db.execute(select(m.AppUser.id, m.AppUser.display_name).where(m.AppUser.id.in_(ids)))).all()) if ids else {}
+    rows = (await db.execute(select(m.AppUser.id, m.AppUser.display_name).where(m.AppUser.id.in_(ids)))).all() if ids else []
+    names = {i: n for i, n in rows}
     for e in events:
-        e.actor_name = names.get(e.actor_id)
+        e.actor_name = names.get(e.actor_id) if e.actor_id else None
     return LessonHistory(
         revisions=[HistoryRevision(revision_id=v.id, revision_no=v.revision_no, state=v.state, published_at=pub,
                                    block_count=n) for v, n, pub in revs],

@@ -2364,7 +2364,7 @@ export interface components {
             at: string;
             /**
              * Before
-             * @description EDIT of a block's content: the payload before the edit (null for edits made before this was recorded).
+             * @description EDIT: payload before (null for edits older than the log).
              */
             before?: {
                 [key: string]: unknown;
@@ -2373,7 +2373,7 @@ export interface components {
             blockId?: string | null;
             /**
              * Blockkind
-             * @description Kind of the edited block; with `before`/`after` it lets a client show the change.
+             * @description Kind of the edited block (with before/after).
              */
             blockKind?: string | null;
             /** Operation */

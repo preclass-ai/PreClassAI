@@ -21,4 +21,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.get_bind().exec_driver_sql("ALTER TABLE transformation_event DROP COLUMN IF EXISTS before_payload, DROP COLUMN IF EXISTS after_payload")
+    sql = "ALTER TABLE transformation_event DROP COLUMN IF EXISTS before_payload, DROP COLUMN IF EXISTS after_payload"
+    op.get_bind().exec_driver_sql(sql)
