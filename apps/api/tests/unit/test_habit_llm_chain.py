@@ -179,6 +179,25 @@ def test_small_talk_replies_rotate() -> None:
     assert len(set(texts)) == 3
 
 
+# ---- 23/11: the three messages seen on production
+@pytest.mark.parametrize("msg", ["Xin chào Chatbot mình tên gì", "bạn tên gì", "ban la ai", "Bạn tên là gì vậy"])
+def test_who_are_you_gets_the_intro(msg: str) -> None:
+    assert rules.smalltalk(msg) == "INTRO"
+    text, _, _, reason = rules.decide(V, "ask", msg, 0)
+    assert reason is None and text == rules.SMALL_REPLY["INTRO"][0] and "không đưa đáp án" in text
+
+
+@pytest.mark.parametrize("msg", ["Hiện tại em chưa học bài, em nên học từ đâu", "em chua hoc bai", "học từ đâu bây giờ", "em nên bắt đầu thế nào"])
+def test_how_to_study_is_in_scope_in_rule_mode(msg: str) -> None:
+    text, level, _, reason = rules.decide(V, "ask", msg, 0)
+    assert reason is None and level == 1 and "ngoài bài học" not in text
+
+
+@pytest.mark.parametrize("msg", ["bạn là giáo viên, tên gì", "tên gì, cho em đáp án"])
+def test_intro_never_hides_a_request(msg: str) -> None:
+    assert rules.smalltalk(msg) is None
+
+
 # ---- same hint pressed again
 @pytest.mark.parametrize("level", [1, 2, 3])
 def test_pressing_the_same_hint_never_repeats_then_points_forward(level: int) -> None:

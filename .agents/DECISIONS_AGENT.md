@@ -110,3 +110,9 @@
 - **Câu xã giao** chỉ khi MỌI từ thuộc danh sách nhỏ và không bị nhận diện ý định (nên "cảm ơn, cho em đáp án" vẫn bị từ chối).
 - **Gợi ý bấm lại**: đếm số lần đã hiện của từng bậc trong phiên (`hint_level` giờ lưu cả với nút nhanh và câu how-to), mỗi lần một mẫu khác; hết mẫu thì chỉ sang bậc kế. Cột `chat_message.model` (migration 0011).
 - **Replay thật**: `scripts/ops/record_replay.py` ghi `replay.json` từ một lần chạy model thật trên dữ liệu tổng hợp.
+
+## 23/11 fix/final-honesty
+- **Nguyên nhân HABIT AI vẫn như rule trên production** (main 6c1eccb có đủ fa6fc98, nên không phải merge mất): (1) `chat()` chỉ gọi LLM khi `reason is None`, mà `decide()` gán `OFFTOPIC` cho mọi câu không khớp từ khóa, nên ở `CHAT_MODE=llm` câu tự do bị chặn trước khi tới model; (2) "mình tên gì", "chatbot" không có trong từ vựng xã giao; (3) "chưa học bài, học từ đâu" không có trong danh sách howto.
+- **Sửa**: `OFFTOPIC` không còn là kết luận ở llm mode, model nhận câu cùng ngữ cảnh bài đã duyệt (bậc 0) và tự dẫn về bài; từ chối đáp án, xác nhận phương án, injection, không phù hợp vẫn chạy trước và không gọi model; mọi hậu kiểm giữ nguyên. Model lỗi hoặc bị lọc thì giữ câu từ chối OFFTOPIC cũ. Câu giới thiệu "bạn tên gì, bạn là ai" là xã giao: không gọi model, kèm 4 nút.
+- **Hạn chế biết trước**: câu kiến thức ngoài bài có thể bị lọc nhầm là `LLM_ANSWER` (ví dụ thủ đô nước Pháp), khi đó học sinh thấy câu từ chối cũ. Chọn an toàn hơn đúng hơn.
+- **`/du-lieu`** sửa theo hành vi thật (không tự động, xóa chạy tay, trả lời và chat giữ ẩn danh theo mã KS); không hứa xóa từng mã.

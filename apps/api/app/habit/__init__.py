@@ -39,7 +39,7 @@ EXTRA_SEP = "\n\n[EXTRA]\n\n"  # the stored text holds both parts; the API retur
 
 def _reply(text: str, level: int, refs: list[tuple[str, str, str]], reason: str | None) -> ChatReply:
     main, _, extra = text.partition(EXTRA_SEP)
-    offer = reason in rules.REFUSAL and reason != "UNSAFE"
+    offer = (reason in rules.REFUSAL and reason != "UNSAFE") or text in rules.SMALL_REPLY["INTRO"]  # intro: show the buttons
     sugg = [QuickAction(id=k, label=lab) for k, lab in rules.SUGGESTIONS] if offer else []
     return ChatReply(
         reply=main, hint_level=level, blocked_reason=reason if reason in rules.REFUSAL else None, extra=extra or None,
@@ -157,17 +157,19 @@ async def chat(db: AsyncSession, user: CurrentUser, assignment_id: UUID, body: C
     text, level, refs, reason = rules.decide(v, body.action, msg, used, small="chia_nho_tung_buoc" in prefs,
                                              table_first="uu_tien_bang_so_lieu" in prefs, quick=quick, seen=seen, turn=per_item)
     mode, tin, tout, used_model = "rule", 0, 0, None
+    offtopic = reason == "OFFTOPIC"  # no keyword hit is not a verdict: in llm mode the model decides, with the approved lesson
     chatty = body.action == "ask" and not quick and rules.smalltalk(msg) is not None  # greeting or thanks: no model, no tokens
     if body.action != "explain" and not chatty:
-        if cfg.chat_mode == "llm" and reason is None and not quick:
+        if cfg.chat_mode == "llm" and (reason is None or offtopic) and not quick:
             excerpt = " ".join(t for _, _, t in (refs or v.blocks))
             key = (today(), pv.id, body.item_id, level, rules.norm(msg))
             out, fb, tin, tout, used_model = await _llm_reply(db, v, level, msg, text, excerpt, sess, key)
             if out is not None:
-                text, mode = out, "llm"
+                text, mode, reason = out, "llm", None
             else:
-                reason = fb
-        if cfg.chat_mode == "llm" and cfg.chat_ai_extra and body.action == "ask" and reason is None and not quick:
+                reason = fb or reason
+        extra_ok = cfg.chat_ai_extra and body.action == "ask" and reason is None and not offtopic and not quick
+        if cfg.chat_mode == "llm" and extra_ok:
             extra, etin, etout, emodel = await _extra_reply(db, v, msg, pv.id, body.item_id)
             tin, tout = tin + etin, tout + etout
             if extra:

@@ -18,6 +18,6 @@ Sửa so với bản trước của tài liệu này: công văn 5588 không ph�
 - Giáo viên chỉ thấy câu hỏi đã ẩn danh của lớp mình, không xếp hạng học sinh.
 
 ## Việc còn thiếu (ghi trung thực)
-- **Trang "Dữ liệu của em đi đâu"** đã có ở `/du-lieu` (link ở đăng nhập, `/thu` và khu vực học sinh). Thời hạn lưu ghi trên trang: 90 ngày sau khi đợt khảo sát kết thúc rồi xóa (quyết định của nhóm, ngày 21/11/2026). **Chưa có việc tự động xóa**: đến hạn phải chạy tay `scripts/ops/purge_guests.py`; cần người phụ trách nhớ ngày. Trang không nêu nơi xử lý của nhà cung cấp AI ngoài tên máy chủ trong cấu hình (nơi đặt máy chủ của họ chưa kiểm chứng).
+- **Trang "Dữ liệu của em đi đâu"** đã có ở `/du-lieu` (link ở đăng nhập, `/thu` và khu vực học sinh). Từ 23/11/2026 trang nói đúng hành vi thật: không tự động xóa; sau khảo sát nhóm khóa tài khoản khách và chạy tay `scripts/ops/purge_guests.py`; câu trả lời và tin nhắn HABIT AI được giữ ẩn danh (chỉ mã KS) vì bảng chỉ-thêm; chưa có xóa theo từng mã. Trang không nêu nơi xử lý của nhà cung cấp AI ngoài tên máy chủ trong cấu hình (nơi đặt máy chủ của họ chưa kiểm chứng).
 - Quy trình báo cáo sự cố theo công văn 5588 chưa viết: cần người chịu trách nhiệm và kênh báo.
 - Đánh giá tác động xử lý dữ liệu cá nhân (nếu luật mới yêu cầu) chưa làm.

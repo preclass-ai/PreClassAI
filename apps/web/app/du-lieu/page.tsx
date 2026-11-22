@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { api, unwrap } from "@/lib/api";
 
-/** "Dữ liệu của em đi đâu": public, short, written for students. Places and the 90-day period are the team's decisions (see docs/security/PHAP-LY-DU-LIEU.md). */
+/** "Dữ liệu của em đi đâu": public, short, written for students. Places and retention wording must match what really happens (see docs/security/PHAP-LY-DU-LIEU.md). */
 export default function DataPage() {
   const cfg = useQuery({ queryKey: ["auth-config"], queryFn: () => unwrap(api.GET("/v1/auth/config")), staleTime: 300_000 });
   const llm = cfg.data?.chatMode === "llm" && cfg.data.aiProvider;
@@ -42,12 +42,21 @@ export default function DataPage() {
           )}
         </section>
         <section aria-labelledby="d-giu">
-          <h2 id="d-giu">Giữ bao lâu</h2>
-          <p>90 ngày sau khi đợt khảo sát kết thúc, dữ liệu được xóa.</p>
+          <h2 id="d-giu">Giữ bao lâu, xóa thế nào</h2>
+          <p>Không có việc tự động xóa. Sau khi đợt khảo sát kết thúc, nhóm nghiên cứu làm hai việc bằng tay:</p>
+          <ul>
+            <li>Khóa các tài khoản khách, nên mã khảo sát của em không đăng nhập lại được nữa. Tài khoản khách chưa làm bài nào thì được xóa hẳn.</li>
+            <li>Chạy dọn dữ liệu, kiểm tra trước khi chạy thật. Người làm là thầy cô phụ trách và nhóm nghiên cứu. Ngày chạy được ghi vào nhật ký của nhóm.</li>
+          </ul>
+          <p>
+            Câu trả lời bài tập và câu em hỏi HABIT AI không xóa được từng dòng, vì hệ thống chỉ cho thêm, không cho sửa hay xóa. Các dòng này được giữ ẩn danh, chỉ gắn với mã khảo sát (không gắn với tên em) để nhóm dùng cho nghiên cứu. Muốn xóa hết, nhóm phải xóa cả cơ sở dữ liệu của đợt khảo sát.
+          </p>
         </section>
         <section aria-labelledby="d-xoa">
           <h2 id="d-xoa">Em muốn xóa dữ liệu của mình</h2>
-          <p>Em nói với thầy cô phụ trách và đưa mã khảo sát của em. Thầy cô sẽ xóa các dòng có mã đó.</p>
+          <p>
+            Em nói với thầy cô phụ trách và đưa mã khảo sát của em. Hiện chưa có chức năng xóa riêng từng mã. Thầy cô ghi nhận yêu cầu của em và báo lại cho nhóm nghiên cứu để nhóm xử lý.
+          </p>
         </section>
         <p>
           <Link href="/login">Quay lại</Link>

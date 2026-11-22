@@ -154,6 +154,10 @@ Giới hạn tham khảo: khoảng 200 nghìn token mỗi ngày cho mỗi model 
 
 **Dự phòng cho buổi trình diễn không có mạng.** `DEMO_REPLAY=true` làm phần "Học sinh hỏi gì" trả về bản ghi sẵn từ một lần chạy model thật (có nhãn "bản ghi sẵn").
 
-**Xóa dữ liệu khảo sát (chạy tay).** Trang "Dữ liệu của em đi đâu" hứa xóa sau 90 ngày kể từ khi đợt khảo sát kết thúc; việc này chưa tự động. Đến hạn, người phụ trách chạy `cd apps/api && PYTHONPATH=. uv run python ../../scripts/ops/purge_guests.py` `--dry-run` trước, rồi `--days 90`, với `DATABASE_URL` của môi trường cần xóa, rồi ghi ngày chạy vào nhật ký nhóm. Nên đặt nhắc lịch ngay khi đợt khảo sát kết thúc.
+**Xóa dữ liệu khảo sát (chạy tay, không tự động).** Trang `/du-lieu` (sửa 23/11/2026) nói đúng việc này: sau đợt khảo sát, người phụ trách chạy `cd apps/api && PYTHONPATH=. uv run python ../../scripts/ops/purge_guests.py --dry-run`, đọc kết quả, rồi chạy `--days 90` (gõ PURGE) với `DATABASE_URL` của môi trường cần dọn, và ghi ngày chạy vào nhật ký nhóm. Nên đặt nhắc lịch ngay khi đợt khảo sát kết thúc.
 
-**Giới hạn cần biết:** các lượt trả lời là bảng chỉ thêm (trigger trong cơ sở dữ liệu), nên `purge_guests.py` xóa được khách chưa trả lời câu nào, còn khách đã trả lời chỉ bị vô hiệu hóa (khóa phiên, giữ mã khảo sát). Như vậy lời hứa "xóa sau 90 ngày" trên trang `/du-lieu` chưa đúng hoàn toàn với dữ liệu trả lời. Nhóm cần chọn: sửa câu chữ trang (ví dụ "ngừng dùng và không gắn với tên em") hoặc làm một đường xóa riêng có kiểm soát sau kỳ thi. Việc này chưa làm.
+**Loại nào xóa được, loại nào giữ (khớp với `/du-lieu`):**
+- Xóa hẳn: tài khoản khách chưa làm bài nào (tài khoản, phiên, lớp). Chưa kiểm khách chỉ chat mà chưa nộp câu nào: tin nhắn chat là bảng chỉ-thêm nên có thể làm lệnh xóa tài khoản lỗi; chạy `--dry-run` và đọc lỗi nếu có.
+- Khóa, không xóa: tài khoản khách đã trả lời (phiên bị thu hồi, không đăng nhập lại được); mã KS giữ lại.
+- Giữ ẩn danh: lượt trả lời và tin nhắn HABIT AI (đã lọc số điện thoại, email, địa chỉ), chỉ gắn mã KS, phục vụ nghiên cứu. Muốn xóa hết: `scripts/ops/reset_demo_db.py` hoặc xóa nhánh/dự án Neon.
+- Học sinh xin rút dữ liệu: ghi mã KS, báo nhóm; chưa có xóa theo từng mã.
