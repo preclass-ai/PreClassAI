@@ -93,8 +93,9 @@ it("with guest access on: a big guest button first, the account form collapsed b
     </QueryClientProvider>,
   );
   expect(screen.getByRole("button", { name: "Vào làm thử (không cần tài khoản)" })).toBeTruthy();
-  expect(screen.getByText(/không hỏi tên hay email/)).toBeTruthy();
+  expect(screen.getByText(/không yêu cầu họ tên hay email/)).toBeTruthy();
   const details = container.querySelectorAll("details.login-more");
-  expect(details.length).toBe(2);
+  expect(details.length).toBe(3); // teacher / has a code / where does my data go
+  expect(screen.getByText("Dữ liệu của em đi đâu?").closest("details")).toBeTruthy();
   details.forEach((d) => expect(d.hasAttribute("open")).toBe(false));
 });

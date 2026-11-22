@@ -6,13 +6,14 @@ import { useAuth } from "@/lib/auth";
 
 /** Shown to the person before an anonymous account is created (login page and /thu). */
 export const GUEST_NOTICE =
-  "Không cần đăng ký, không hỏi tên hay email. Bài làm chỉ gắn với một mã khảo sát, không gắn với danh tính của em, và được dùng cho nghiên cứu.";
+  "PreClass AI không yêu cầu họ tên hay email. Kết quả làm bài chỉ dùng cho nghiên cứu và không gắn với danh tính của em.";
 
-/** Short answer in a dropdown, with the link to the full page. Guests only: /du-lieu describes the anonymous survey, not
- * school accounts (those have a name and a class), so showing it to account students would not be true. */
-export function DataDetails() {
+/** Short answer in a dropdown, with the link to the full page. In the student area guests only: /du-lieu describes the
+ * anonymous survey, not school accounts (those have a name and a class). `always` is for the login and /thu pages, where
+ * the person has not signed in yet and the text is about the anonymous way in. */
+export function DataDetails({ always = false }: { always?: boolean }) {
   const { user } = useAuth();
-  if (!user?.isGuest) return null;
+  if (!always && !user?.isGuest) return null;
   return (
     <details className="login-more">
       <summary>Dữ liệu của em đi đâu?</summary>

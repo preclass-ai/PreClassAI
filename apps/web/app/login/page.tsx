@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { Button, ErrorBox, Field, Loading } from "@/components/ui";
-import { DataLink, GUEST_NOTICE } from "@/features/guest";
+import { DataDetails, GUEST_NOTICE } from "@/features/guest";
 import { api, unwrap } from "@/lib/api";
 import { homeFor, ME_KEY, useAuth } from "@/lib/auth";
 import { withTimeout, useAfter } from "@/lib/http";
@@ -120,7 +120,8 @@ function LoginForm() {
             <Button type="button" variant="primary" className="btn-lg" busy={guestBusy} onClick={() => void enterAsGuest()}>
               Vào làm thử (không cần tài khoản)
             </Button>
-            <p className="muted small">{GUEST_NOTICE} <DataLink /></p>
+            <p className="muted small">{GUEST_NOTICE}</p>
+            <DataDetails always />
           </div>
           <details className="login-more">
             <summary>Giáo viên / có tài khoản</summary>
