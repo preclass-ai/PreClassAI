@@ -205,7 +205,7 @@ function ApproveClean({ lessonId, revisionId }: { lessonId: string; revisionId: 
           <p>
             {plan.approved === 0
               ? `Không có khối nào duyệt được cùng lúc. ${plan.skipped} khối có cảnh báo hoặc chưa kiểm xong cần duyệt tay.`
-              : `Duyệt ${plan.approved} khối, bỏ qua ${plan.skipped} khối có cảnh báo. Khối có cảnh báo vẫn cần thầy cô duyệt tay.`}
+              : `Duyệt ${plan.approved} khối, bỏ qua ${plan.skipped} khối. Khối có cảnh báo và khối do AI soạn${plan.skippedAi ? ` (${plan.skippedAi} khối)` : ""} thầy cô duyệt từng khối.`}
           </p>
           <div className="actions">
             {plan.approved > 0 ? (
@@ -223,7 +223,7 @@ function ApproveClean({ lessonId, revisionId }: { lessonId: string; revisionId: 
           <Button variant="secondary" busy={busy} onClick={() => void call(false)}>
             Duyệt tất cả khối không có cảnh báo
           </Button>
-          <span className="muted small"> Chỉ các khối &quot;Máy đã kiểm&quot; không có cảnh báo.</span>
+          <span className="muted small"> Chỉ các khối &quot;Máy đã kiểm&quot; không có cảnh báo và không do AI soạn.</span>
         </div>
       )}
       <ErrorBox error={error} />

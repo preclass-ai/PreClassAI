@@ -72,6 +72,27 @@ async def test_drafts_are_labelled_unconfirmed_and_never_reach_the_lesson_unless
     assert (await client.patch(f"/v1/lesson-plans/{p['id']}/ai-items/{quiz[0]['id']}", json={"status": "approved"}, headers=H)).status_code == 409
 
 
+async def test_needs_confirmation_count_follows_each_decision(client: httpx.AsyncClient, gen: pytest.MonkeyPatch) -> None:
+    """The "N cần xác nhận" line counts drafts still waiting: approved ones drop out, rejected ones are not counted at all."""
+    await login(client, "gv.dia@preclass.local")
+    p = await upload(client)
+    url = f"/v1/lesson-plans/{p['id']}/ai-items"
+    quiz = [i for i in (await client.get(url)).json()["items"] if i["kind"] == "quiz"]
+    total = p["aiQuizCount"]
+    assert p["aiQuizNeedsConfirmationCount"] == total
+
+    async def plan() -> dict[str, Any]:
+        return dict((await client.get(f"/v1/lesson-plans/{p['id']}")).json())
+
+    await client.patch(f"{url}/{quiz[0]['id']}", json={"status": "approved"}, headers=H)
+    await client.patch(f"{url}/{quiz[1]['id']}", json={"status": "rejected"}, headers=H)
+    now = await plan()
+    assert (now["aiQuizCount"], now["aiQuizNeedsConfirmationCount"]) == (total - 1, total - 2)
+    edit = {**quiz[0]["payload"], "stem": "Câu hỏi đã được thầy cô sửa lại cho rõ ý hơn?"}
+    await client.patch(f"{url}/{quiz[0]['id']}", json={"payload": edit}, headers=H)  # an edit sends it back to draft
+    assert (await plan())["aiQuizNeedsConfirmationCount"] == total - 1
+
+
 async def test_approve_edit_reject_regenerate(client: httpx.AsyncClient, db: AsyncSession, gen: pytest.MonkeyPatch) -> None:
     await login(client, "gv.dia@preclass.local")
     p = await upload(client)

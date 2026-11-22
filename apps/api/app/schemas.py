@@ -690,8 +690,9 @@ class ApproveAllRequest(ApiModel):
 class ApproveAllOut(ApiModel):
     approved: int = Field(description="Blocks approved (or that would be approved when `applied` is false).")
     skipped: int = Field(description="Unapproved blocks left for a hand review: a warning, a blocker, or not checked yet.")
+    skipped_ai: int = Field(0, description="Of `skipped`: AI drafted blocks (`AI_PROPOSED`), approved only one by one.")
     applied: bool
-    model_config = ex({"approved": 12, "skipped": 3, "applied": False})
+    model_config = ex({"approved": 12, "skipped": 3, "skippedAi": 2, "applied": False})
 
 
 class ReviewOut(ApiModel):

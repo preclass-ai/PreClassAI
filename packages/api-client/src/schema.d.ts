@@ -1380,7 +1380,8 @@ export interface components {
          * @example {
          *       "applied": false,
          *       "approved": 12,
-         *       "skipped": 3
+         *       "skipped": 3,
+         *       "skippedAi": 2
          *     }
          */
         ApproveAllOut: {
@@ -1396,6 +1397,12 @@ export interface components {
              * @description Unapproved blocks left for a hand review: a warning, a blocker, or not checked yet.
              */
             skipped: number;
+            /**
+             * Skippedai
+             * @description Of `skipped`: AI drafted blocks (`AI_PROPOSED`), approved only one by one.
+             * @default 0
+             */
+            skippedAi: number;
         };
         /** ApproveAllRequest */
         ApproveAllRequest: {

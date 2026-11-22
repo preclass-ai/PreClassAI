@@ -346,7 +346,8 @@
           {
             "applied": false,
             "approved": 12,
-            "skipped": 3
+            "skipped": 3,
+            "skippedAi": 2
           }
         ],
         "properties": {
@@ -362,6 +363,12 @@
           "skipped": {
             "description": "Unapproved blocks left for a hand review: a warning, a blocker, or not checked yet.",
             "title": "Skipped",
+            "type": "integer"
+          },
+          "skippedAi": {
+            "default": 0,
+            "description": "Of `skipped`: AI drafted blocks (`AI_PROPOSED`), approved only one by one.",
+            "title": "Skippedai",
             "type": "integer"
           }
         },

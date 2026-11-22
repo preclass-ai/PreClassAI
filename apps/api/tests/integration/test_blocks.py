@@ -291,6 +291,24 @@ async def test_no_source_reason_replaces_links_and_changes_the_hash(client: http
     assert blk["reviewStatus"] == "REVIEW_AGAIN" and await status(db, "q1e") == "REVIEW_AGAIN"
 
 
+async def test_approve_all_never_approves_ai_proposed_blocks(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    """Questions the AI drafted (transformation AI_PROPOSED) are approved one by one, never by "Duyệt tất cả"."""
+    await login(client, "gv.dia@preclass.local")
+    ai = {str(r[0]) for r in await db.execute(text(
+        "SELECT id FROM content_block WHERE revision_id=:r AND transformation='AI_PROPOSED'"), {"r": LREV})}
+    assert ai  # the seed lesson has AI drafted blocks
+    url = f"/v1/revisions/{LREV}/approve-all"
+    dry = (await client.post(url, json={})).json()
+    assert dry["skippedAi"] >= len(ai)
+    await client.post(url, json={"confirm": True})
+    left = {str(r[0]) for r in await db.execute(text(
+        "SELECT id FROM content_block WHERE revision_id=:r AND review_status='APPROVED' AND transformation='AI_PROPOSED'"), {"r": LREV})}
+    assert not left  # none approved by the bulk call
+    h = await db.scalar(text("SELECT content_hash FROM content_block WHERE id=:b"), {"b": B("q1")})
+    one = await client.post(f"/v1/blocks/{B('q1')}/reviews", json={"action": "APPROVE", "contentHash": h})
+    assert one.status_code == 201  # per-block approval still works
+
+
 # ----------------------------------------------------------------------------- K3: approve all (only clean, machine-checked blocks)
 async def test_approve_all_counts_first_then_approves_only_clean_blocks(client: httpx.AsyncClient, db: AsyncSession) -> None:
     await login(client, "gv.dia@preclass.local")
