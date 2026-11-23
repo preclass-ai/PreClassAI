@@ -15,6 +15,7 @@ import { useBlocks, useRefreshLesson } from "./lesson-data";
 import { cleanPayload, PayloadEditor } from "./payload-editor";
 import { ReplaceSourcesPanel } from "./replace-sources";
 import { NewRevisionButton } from "./history";
+import { LessonTitleForm } from "./lesson-title";
 import { ReviewActions } from "./review";
 
 type Lesson = Schemas["LessonOut"];
@@ -59,6 +60,7 @@ export function Editor({ lesson, canEdit }: { lesson: Lesson; canEdit: boolean }
 
   return (
     <div className="stack">
+      {canEdit ? <LessonTitleForm key={`${lesson.title}|${lesson.goal ?? ""}`} lesson={lesson} /> : null}
       {locked ? (
         <Notice tone="info">
           Bản #{rev.revisionNo} đã xuất bản nên không sửa được.{" "}

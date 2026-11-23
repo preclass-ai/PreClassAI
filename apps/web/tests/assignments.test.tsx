@@ -13,7 +13,7 @@ vi.mock("@/lib/api", () => ({
 import { AssignmentActions, LessonAssignments } from "@/features/assignments";
 
 const A = {
-  id: "a1", classId: "c1", classCode: "10A1", lessonId: "l1", lessonTitle: "Dân số", revisionNo: 2, publishedVersionId: "p",
+  id: "a1", classId: "c1", classCode: "10A1", lessonId: "l1", lessonTitle: "Dân số", studentTitle: "Dân số", displayTitle: null, revisionNo: 2, publishedVersionId: "p",
   openAt: "2026-11-01T00:00:00+07:00", dueAt: "2026-11-30T00:00:00+07:00",
 };
 const wrap = (ui: React.ReactNode) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{ui}</QueryClientProvider>);
@@ -55,4 +55,24 @@ it("the lesson page lists the classes it is assigned to, and nothing when none",
   const { container } = wrap(<LessonAssignments lessonId="l2" />);
   await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
   expect(container.textContent).toBe("");
+});
+
+it("renames what students see: trimmed, 3 to 120 characters, null goes back to the published name", async () => {
+  patch.mockResolvedValue(A);
+  wrap(<AssignmentActions classId="c1" assignment={A} />);
+  fireEvent.click(screen.getByRole("button", { name: "Đổi tên hiển thị" }));
+  const input = screen.getByLabelText(/^Tên học sinh thấy/);
+  fireEvent.change(input, { target: { value: "ab" } });
+  expect(screen.getByText("Tên cần ít nhất 3 ký tự.")).toBeTruthy();
+  expect((screen.getByRole("button", { name: "Lưu tên" }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.change(input, { target: { value: "  Bài 4.   Vỏ Trái Đất  " } });
+  fireEvent.click(screen.getByRole("button", { name: "Lưu tên" }));
+  await waitFor(() => expect(patch).toHaveBeenCalledTimes(1));
+  expect(patch.mock.calls[0]![1].body).toEqual({ displayTitle: "Bài 4. Vỏ Trái Đất" });
+  cleanup();
+  wrap(<AssignmentActions classId="c1" assignment={{ ...A, displayTitle: "Tên riêng", studentTitle: "Tên riêng" }} />);
+  fireEvent.click(screen.getByRole("button", { name: "Đổi tên hiển thị" }));
+  fireEvent.click(screen.getByRole("button", { name: "Về tên của bản đã xuất bản" }));
+  await waitFor(() => expect(patch).toHaveBeenCalledTimes(2));
+  expect(patch.mock.calls[1]![1].body).toEqual({ displayTitle: null });
 });
