@@ -16,7 +16,7 @@ function NewLessonForm() {
   const qc = useQueryClient();
   const sources = useQuery({ queryKey: ["sources"], queryFn: () => unwrap(api.GET("/v1/sources")) });
   const [title, setTitle] = useState("");
-  const [grade, setGrade] = useState<10 | 11>(10);
+  const [grade, setGrade] = useState<10 | 11 | 12>(10);
   const [goal, setGoal] = useState("");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -64,9 +64,10 @@ function NewLessonForm() {
             <input required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)} />
           </Field>
           <Field label="Khối lớp">
-            <select value={grade} onChange={(e) => setGrade(Number(e.target.value) as 10 | 11)}>
+            <select value={grade} onChange={(e) => setGrade(Number(e.target.value) as 10 | 11 | 12)}>
               <option value={10}>Lớp 10</option>
               <option value={11}>Lớp 11</option>
+              <option value={12}>Lớp 12</option>
             </select>
           </Field>
         </div>

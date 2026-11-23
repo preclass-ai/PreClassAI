@@ -431,7 +431,7 @@ async def build_lesson(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> Pl
     def anchors_of(kind: str) -> list[m.SourceAnchor]:
         return [by[a] for s in secs if s.activity_type == kind for a in s.anchor_ids if a in by and by[a].kind != "HEADING"]
 
-    lesson = m.Lesson(author_id=user.id, grade=p.grade if p.grade in (10, 11) else 10, title=default_title(p.title),
+    lesson = m.Lesson(author_id=user.id, grade=p.grade if p.grade in (10, 11, 12) else 10, title=default_title(p.title),
                       goal="Bài chuẩn bị trước giờ học, dựng từ giáo án.", teach_date=p.taught_from, lesson_plan_id=p.id)
     db.add(lesson)
     await db.flush()

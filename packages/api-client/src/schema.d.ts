@@ -2145,7 +2145,7 @@ export interface components {
              * Grade
              * @enum {integer}
              */
-            grade: 10 | 11;
+            grade: 10 | 11 | 12;
             /**
              * Id
              * Format: uuid
@@ -2738,7 +2738,7 @@ export interface components {
              * Grade
              * @enum {integer}
              */
-            grade: 10 | 11;
+            grade: 10 | 11 | 12;
             /** Sourcerevisionids */
             sourceRevisionIds: string[];
             /** Title */
@@ -2866,7 +2866,7 @@ export interface components {
              * Grade
              * @enum {integer}
              */
-            grade: 10 | 11;
+            grade: 10 | 11 | 12;
             /**
              * Id
              * Format: uuid

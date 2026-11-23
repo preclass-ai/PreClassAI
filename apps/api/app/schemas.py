@@ -171,7 +171,7 @@ class GuestOut(ApiModel):
 class ClassOut(ApiModel):
     id: UUID
     code: str
-    grade: Literal[10, 11]
+    grade: Literal[10, 11, 12]
     student_count: int
     is_survey: bool = Field(False, description="The anonymous survey class (GUEST_CLASS_CODE): its students are guests.")
     model_config = ex({"id": I["class"], "code": "10A1", "grade": 10, "studentCount": 15, "isSurvey": False})
@@ -307,7 +307,7 @@ _REV = e0(RevisionOut)
 
 class LessonCreate(ApiModel):
     title: str = Field(min_length=1, max_length=200)
-    grade: Literal[10, 11]
+    grade: Literal[10, 11, 12]
     goal: str | None = None
     source_revision_ids: list[UUID] = Field(min_length=1)
     model_config = ex({"title": "Phân bố dân cư theo vùng", "grade": 10,
@@ -339,7 +339,7 @@ class LessonPatch(ApiModel):
 class LessonOut(ApiModel):
     id: UUID
     title: str
-    grade: Literal[10, 11]
+    grade: Literal[10, 11, 12]
     subject: Literal["GEOGRAPHY"] = "GEOGRAPHY"
     goal: str | None
     author_id: UUID

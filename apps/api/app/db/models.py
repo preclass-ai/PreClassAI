@@ -80,7 +80,7 @@ class Session(Base):
 
 class Class(Base):
     __tablename__ = "class"
-    __table_args__ = (CheckConstraint("grade IN (10, 11)", name="ck_class_grade"),)
+    __table_args__ = (CheckConstraint("grade IN (10, 11, 12)", name="ck_class_grade"),)
     id: Mapped[uuid.UUID] = pk()
     code: Mapped[str] = mapped_column(Text, unique=True)
     grade: Mapped[int] = mapped_column(Integer)
@@ -140,7 +140,7 @@ class SourceAnchor(Base):
 
 class Lesson(Base):
     __tablename__ = "lesson"
-    __table_args__ = (CheckConstraint("grade IN (10, 11)", name="ck_lesson_grade"), _in("subject", "GEOGRAPHY"))
+    __table_args__ = (CheckConstraint("grade IN (10, 11, 12)", name="ck_lesson_grade"), _in("subject", "GEOGRAPHY"))
     id: Mapped[uuid.UUID] = pk()
     author_id: Mapped[uuid.UUID] = fk("app_user.id")
     subject: Mapped[str] = mapped_column(Text, server_default="GEOGRAPHY")

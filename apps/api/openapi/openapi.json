@@ -1778,7 +1778,8 @@
           "grade": {
             "enum": [
               10,
-              11
+              11,
+              12
             ],
             "title": "Grade",
             "type": "integer"
@@ -2974,7 +2975,8 @@
           "grade": {
             "enum": [
               10,
-              11
+              11,
+              12
             ],
             "title": "Grade",
             "type": "integer"
@@ -3172,7 +3174,8 @@
           "grade": {
             "enum": [
               10,
-              11
+              11,
+              12
             ],
             "title": "Grade",
             "type": "integer"

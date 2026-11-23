@@ -36,7 +36,7 @@ erDiagram
 |---|---|---|
 | `app_user` | `email` hoặc `login_code`, `display_name`, `role` TEACHER/REVIEWER/STUDENT/ADMIN, `password_hash` (argon2), `is_active` | Học sinh chỉ có `login_code`, không lưu email/SĐT. Khách khảo sát (migration 0002): `is_guest`, `survey_code` (unique, dạng `KS-XXXX`, trùng `login_code`), `last_seen_at`; `password_hash` là giá trị không dùng được; không lưu IP. |
 | `session` | `token_hash`, `user_id`, `expires_at`, `revoked_at` | Cookie session phía server; logout thu hồi thật. |
-| `class`, `class_member` | `code`, `grade` 10/11; `role_in_class` TEACHER/STUDENT | `UNIQUE(class_id, user_id)`. |
+| `class`, `class_member` | `code`, `grade` 10/11/12; `role_in_class` TEACHER/STUDENT | `UNIQUE(class_id, user_id)`. |
 | `source_asset` | `owner_id`, `title`, `license_note`, `visibility` PRIVATE/SCHOOL | SCHOOL cần `license_note` (VAL-09). |
 | `source_revision` | `asset_id`, `version`, `sha256`, `mime`, `extract_status`, `locked_at` | `UNIQUE(asset_id, version)`. **Bất biến** (trừ `extract_status`, `locked_at`). |
 | `source_anchor` | `source_revision_id`, `code` (`anc_<rev8>_<seq>`), `kind`, `locator`, `excerpt`, `excerpt_hash`, `numbers numeric[]` | **Bất biến.** `locator`: `{para_index}` hoặc `{table,row,col}`. `numbers` do parser số Việt Nam (`.` nghìn, `,` thập phân). |
