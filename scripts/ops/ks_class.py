@@ -2,6 +2,7 @@
 
 Run:  cd apps/api && PYTHONPATH=. uv run python ../../scripts/ops/ks_class.py
         [--retitle "<new>" --lesson-title-like "<text>" [--apply]]
+        [--create-class 12A1 --grade 12 --teacher gv01@preclass.local [--apply]]
 
 Without flags: READ ONLY report (the transaction is READ ONLY, Postgres refuses any write). Prints id, join code, display
 name, owner (teacher members), student count and the active assignments of each class.
@@ -11,11 +12,16 @@ and the open assignments of those lessons, old name -> new name. Students read t
 (immutable), so the script changes only mutable fields: lesson.title and assignment.display_title (which students see first).
 With --apply it asks you to type RETITLE, then changes everything in ONE transaction (rolled back on any error) and writes
 rename_log rows (who, when, before, after). DATABASE_URL and passwords are never printed.
+
+--create-class CODE --grade 10|11|12 --teacher EMAIL: dry run by default. Creates one class (display name = code) with that
+teacher as its TEACHER member, in one transaction; nothing else changes. Needs migration 0016 for grade 12 (alembic upgrade
+head). With --apply it asks you to type CLASS. An existing class with that code is left alone.
 """
 
 import argparse
 import asyncio
 import getpass
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -27,6 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine  # noqa:
 
 from app.config import get_settings  # noqa: E402
 from app.db import models as m  # noqa: E402
+from app.ids import uid  # noqa: E402
 from app.schemas import clean_title  # noqa: E402
 
 TEACHER_EMAIL = "gv01@preclass.local"
@@ -102,6 +109,31 @@ async def retitle(engine: Any, new: str, like: str, apply: bool) -> int:
     return 0
 
 
+async def create_class(engine: Any, code: str, grade: int, teacher_email: str, apply: bool) -> int:
+    """Dry run unless `apply`. Same ids as the seed (uid("class:CODE")), so a later seed run finds the class and skips it."""
+    async with engine.begin() as conn:
+        teacher = (await conn.execute(select(m.AppUser.id, m.AppUser.role).where(m.AppUser.email == teacher_email))).first()
+        if teacher is None or teacher.role != "TEACHER":
+            print(f"NOT FOUND: no TEACHER account {teacher_email}. Nothing written.")
+            return 1
+        found = (await conn.execute(select(m.Class).where(m.Class.code == code))).first()
+        if found is not None:
+            print(f"Class {code} already exists (id {found.id}, grade {found.grade}). Nothing to do.")
+            return 0
+        print(f"{'APPLY' if apply else 'DRY RUN'}: create class {code!r} grade {grade}, teacher {teacher_email}")
+        if not apply:
+            print("Nothing written. Add --apply to create it.")
+            return 0
+        if input("Type CLASS to create it: ").strip() != "CLASS":
+            print("Not confirmed, nothing written.")
+            return 1
+        cid = uid(f"class:{code}")
+        await conn.execute(insert(m.Class).values(id=cid, code=code, grade=grade, name=code))  # grade 12 needs migration 0016
+        await conn.execute(insert(m.ClassMember).values(class_id=cid, user_id=teacher.id, role_in_class="TEACHER"))
+        print(f"Created class {code} ({cid}) for {teacher_email} as ops:{getpass.getuser()}.")
+    return 0
+
+
 async def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]  # Windows console is cp1258
     sys.stderr.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
@@ -109,7 +141,22 @@ async def main() -> int:
     ap.add_argument("--retitle", metavar="NEW", help="new student-facing name (3 to 120 characters)")
     ap.add_argument("--lesson-title-like", metavar="TEXT", help="lessons whose title contains TEXT (case-insensitive)")
     ap.add_argument("--apply", action="store_true", help="write (asks for RETITLE); default is a dry run")
+    ap.add_argument("--create-class", metavar="CODE", help="create this class (for example 12A1)")
+    ap.add_argument("--grade", type=int, choices=(10, 11, 12), help="grade of the new class")
+    ap.add_argument("--teacher", metavar="EMAIL", help="TEACHER account that owns the new class")
     args = ap.parse_args()
+    if args.create_class:
+        if args.retitle or args.lesson_title_like or not (args.grade and args.teacher):
+            ap.error("--create-class needs --grade and --teacher, and does not combine with --retitle")
+        if not re.fullmatch(r"[A-Za-z0-9_-]{2,12}", args.create_class):
+            ap.error("class code: 2 to 12 letters, digits, - or _")
+        engine = create_async_engine(get_settings().database_url)
+        try:
+            return await create_class(engine, args.create_class.strip(), args.grade, args.teacher.strip().lower(), args.apply)
+        finally:
+            await engine.dispose()
+    if args.grade or args.teacher:
+        ap.error("--grade and --teacher belong to --create-class")
     if bool(args.retitle) != bool(args.lesson_title_like) or (args.apply and not args.retitle):
         ap.error("--retitle and --lesson-title-like go together; --apply needs both")
     try:
