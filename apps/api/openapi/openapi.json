@@ -6002,12 +6002,12 @@
             "title": "Openat",
             "type": "string"
           },
-          "review": {
-            "description": "Approved review cards; empty = no review step.",
+          "reviewCards": {
+            "description": "Approved review cards; empty = none.",
             "items": {
               "$ref": "#/components/schemas/StudentReviewCard"
             },
-            "title": "Review",
+            "title": "Reviewcards",
             "type": "array"
           },
           "reviewState": {

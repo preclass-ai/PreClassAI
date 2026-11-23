@@ -452,6 +452,8 @@ class MockQuizLLM:
                              "hints": ["Em xác định hai số cần dùng.", "Em chọn phép tính phù hợp.", "Em kiểm tra lại đơn vị."], "source_sentence_ids": [i]})
             return json.dumps({"numeric": made}, ensure_ascii=False), len(user) // 4, 300
         picked = [(i, s) for i, s in numbered_ if len(s.split()) >= 9 and len(s) < 220]
+        if system == SYSTEM_REVIEW:  # a card must not rank the answer of a question (VAL-10 would block the lesson): skip ranking sentences
+            picked = [(i, s) for i, s in picked if not re.search(r"nhất|đứng đầu|hàng đầu|số một|vượt trội", s, re.I)]
         ids = [i for i, _ in picked]
         sents = [s for _, s in picked]
         n = int(re.search(r"cần (\d+)", user).group(1)) if re.search(r"cần (\d+)", user) else 5  # type: ignore[union-attr]

@@ -190,9 +190,9 @@ async def test_whole_flow_review_cards_gate_and_habit_points_to_a_card(client: h
     client.cookies.clear()
     await login(client, "HS10-01")
     a = (await client.get(url_s)).json()
-    assert len(a["items"]) == 3 and len(a["review"]) == 2 and a["reviewState"]["choice"] is None  # 2 AI questions + the confirmed one
+    assert len(a["items"]) == 3 and len(a["reviewCards"]) == 2 and a["reviewState"]["choice"] is None  # 2 AI questions + the confirmed one
     assert all("hints" not in json.dumps(i) and "correct" not in json.dumps(i) for i in a["items"])  # hints and key stay on the server
-    c0, c1 = a["review"][0]["id"], a["review"][1]["id"]
+    c0, c1 = a["reviewCards"][0]["id"], a["reviewCards"][1]["id"]
     st = (await client.put(f"{url_s}/review", json={"choice": "not_yet", "seenIds": [c0], "checks": {c0: True}}, headers=H)).json()
     assert st["choice"] == "not_yet" and st["seenIds"] == [c0] and st["checks"] == {c0: True} and st["reviewed"] is False
     st = (await client.put(f"{url_s}/review", json={"seenIds": [c1], "reviewed": True}, headers=H)).json()
@@ -385,3 +385,68 @@ async def test_the_teacher_chooses_counts_and_level_and_numeric_answers_are_reco
             r = await client.post(f"/v1/blocks/{b['id']}/reviews", json={"action": "APPROVE", "contentHash": b["contentHash"]})
             ev = (await db.execute(text("SELECT rule, evidence FROM validation_result WHERE block_id=:i AND outcome='FAIL'"), {"i": b["id"]})).all()
             assert r.status_code == 201, (b["kind"], ev)
+
+
+def _walk(o: Any, path: str = "") -> list[tuple[str, str, Any]]:
+    """(path, key, value) of every key at every depth of a JSON value."""
+    out: list[tuple[str, str, Any]] = []
+    if isinstance(o, dict):
+        for k, v in o.items():
+            out.append((f"{path}/{k}", k, v))
+            out += _walk(v, f"{path}/{k}")
+    elif isinstance(o, list):
+        for i, v in enumerate(o):
+            out += _walk(v, f"{path}[{i}]")
+    return out
+
+
+LEAK_KEYS = {"provenance", "anchor", "review", "validation", "answerKey", "answer_key", "contentHash", "withdrawReason",
+             "correct", "correctAnswer", "explanation", "sourceQuote", "source_quote", "hints", "derivation", "value", "tolerance"}
+
+
+async def test_opening_an_assignment_before_answering_shows_no_answer_explanation_or_quote(
+    client: httpx.AsyncClient, db: AsyncSession, gen: pytest.MonkeyPatch
+) -> None:
+    """Every key at every depth, except the review cards' own self-check (study material under `reviewCards`), and no quiz answer text
+    inside the review cards. MCQ and numeric AI questions are both published."""
+    await login(client, "gv.dia@preclass.local")
+    p = await upload(client)
+    url = f"/v1/lesson-plans/{p['id']}/ai-items"
+    started: list[tuple[object, quizgen.QuizSpec | None]] = []
+    gen.setattr(quizgen, "start", lambda pid, spec=None: started.append((pid, spec)))
+    await client.post(f"{url}/regenerate", json={"mcq": 3, "numeric": 1}, headers=H)
+    await quizgen.run_plan(db, UUID(p["id"]), spec=started[0][1])
+    items = (await client.get(url)).json()["items"]
+    for i in [x for x in items if x["kind"] == "quiz"] + [x for x in items if x["kind"] == "review"][:3]:
+        assert (await client.patch(f"{url}/{i['id']}", json={"status": "approved"}, headers=H)).status_code == 200
+    out = (await client.post(f"/v1/lesson-plans/{p['id']}/lesson", headers=H)).json()
+    rev = (await client.get(f"/v1/lessons/{out['lessonId']}")).json()["currentRevision"]["id"]
+    blocks = (await client.get(f"/v1/revisions/{rev}/blocks")).json()["items"]
+    for b in blocks:
+        r = await client.post(f"/v1/blocks/{b['id']}/reviews", json={"action": "APPROVE", "contentHash": b["contentHash"]})
+        assert r.status_code == 201, (b["kind"], r.text)
+    ver = (await client.get(f"/v1/lessons/{out['lessonId']}")).json()["currentRevision"]["version"]
+    pub = (await client.post(f"/v1/revisions/{rev}/publish", json={"confirmChecked": True, "version": ver})).json()
+    asg = (await client.post(f"/v1/published/{pub['id']}/assignments", json={
+        "classId": str(uid("class:10A1")), "openAt": "2020-01-01T00:00:00+07:00", "dueAt": "2099-01-01T00:00:00+07:00"})).json()
+    keys_by_kind = {b["kind"]: b for b in blocks}
+    answers = [b["payload"] for b in blocks if b["kind"] == "answer_key"]
+    options = {(b["parentId"], b["payload"]["label"]): b["payload"]["text"] for b in blocks if b["kind"] == "option"}
+    texts = [options[(k["parentId"], k["payload"]["correct"])] for k in blocks if k["kind"] == "answer_key" and k["payload"].get("correct")]
+    assert keys_by_kind and answers and texts
+
+    client.cookies.clear()
+    await login(client, "HS10-01")
+    a = (await client.get(f"/v1/student/assignments/{asg['id']}")).json()
+    assert a["items"] and a["reviewCards"] and "review" not in a  # the cards moved to `reviewCards`
+    rest = {k: v for k, v in a.items() if k != "reviewCards"}
+    leaks = [(path, k) for path, k, _ in _walk(rest) if k in LEAK_KEYS]
+    assert not leaks, leaks  # nothing outside the cards, at any depth (reviewState only holds progress)
+    asked = json.dumps(a["items"], ensure_ascii=False)  # the questions themselves: no source quote of an AI question, no "Theo giáo án:" text
+    assert "Theo giáo án:" not in asked and all(q["sourceQuote"] not in asked for q in items if q["kind"] == "quiz")
+    cards = json.dumps(a["reviewCards"], ensure_ascii=False)
+    assert texts  # a card may restate the fact a question asks about; VAL-10 only blocks cued or numeric answers (see the handoff)
+    for k in answers:
+        if k.get("value") is not None:
+            nums = [n for n in __import__("re").findall(r"\d+(?:[.,]\d+)?", cards)]
+            assert str(k["value"]).replace(".", ",") not in nums and str(k["value"]) not in nums  # nor a numeric answer

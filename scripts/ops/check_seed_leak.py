@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "apps" / "api"))
 from app.validation.leak import item_answer_leaks, visible_text  # noqa: E402
 from tests.habit_support import snapshots  # noqa: E402
 
-SHOWN = ("heading", "paragraph", "instruction", "data_fact", "card_front")
+SHOWN = ("heading", "paragraph", "instruction", "data_fact", "card_front", "review_card")
 
 
 def audit() -> tuple[list[str], Counter[str], int]:

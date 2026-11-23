@@ -859,7 +859,7 @@ class StudentAssignmentOut(ApiModel):
     due_at: datetime
     blocks: list[StudentContentBlock]
     items: list[StudentItem]
-    review: list[StudentReviewCard] = Field(default_factory=list, description="Approved review cards; empty = no review step.")
+    review_cards: list[StudentReviewCard] = Field(default_factory=list, description="Approved review cards; empty = none.")
     review_state: ReviewState = Field(default_factory=ReviewState)
     model_config = ex({
         "id": I["assign"], "title": "Phân bố dân cư theo vùng", "openAt": T1, "dueAt": "2026-11-30T23:59:00+07:00",

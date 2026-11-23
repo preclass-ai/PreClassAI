@@ -55,7 +55,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
   }
 
   const data = a.data;
-  const review = data.review ?? [];
+  const review = data.reviewCards ?? [];
   const hasReview = review.length > 0; // no approved review cards: the lesson is the quiz alone, as before
   const rs = { seenIds: [], checks: {}, reviewed: false, choice: null, ...data.reviewState };
   const auto: Stage = !hasReview ? "quiz" : rs.choice === null ? "ask" : rs.choice === "not_yet" && !rs.reviewed ? "review" : "quiz";

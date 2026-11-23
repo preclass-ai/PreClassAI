@@ -4317,10 +4317,10 @@ export interface components {
              */
             openAt: string;
             /**
-             * Review
-             * @description Approved review cards; empty = no review step.
+             * Reviewcards
+             * @description Approved review cards; empty = none.
              */
-            review?: components["schemas"]["StudentReviewCard"][];
+            reviewCards?: components["schemas"]["StudentReviewCard"][];
             reviewState?: components["schemas"]["ReviewState"];
             /** Title */
             title: string;

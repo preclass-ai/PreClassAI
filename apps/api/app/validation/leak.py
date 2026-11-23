@@ -35,6 +35,10 @@ def visible_text(kind: str, p: dict[str, Any]) -> str:
         v = p.get("value")
         return " ".join(str(x) for x in (p.get("label"), str(v).replace(".", ",") if v is not None else "", p.get("unit"),
                                          p.get("period"), p.get("region")) if x)
+    if kind == "review_card":  # study card shown before the quiz: title, points, example and its own self-check
+        chk: dict[str, Any] = p["check"] if isinstance(p.get("check"), dict) else {}
+        parts = (p.get("title"), *p.get("points", []), p.get("example"), chk.get("statement"), chk.get("explanation"))
+        return " ".join(str(x) for x in parts if x)
     return str(p.get("stem") or p.get("text") or "")
 
 

@@ -305,7 +305,7 @@ async def _context(db: AsyncSession, revision_id: UUID, blocks: list[m.ContentBl
                 m.ReviewEvent.created_at)):
             last[ev.block_id] = ev
     visible = [(b.id, "stem" if b.kind == "worksheet_item" else b.kind, visible_text(b.kind, b.payload)) for b in blocks
-               if b.kind in ("heading", "paragraph", "instruction", "data_fact", "card_front", "worksheet_item")]
+               if b.kind in ("heading", "paragraph", "instruction", "data_fact", "card_front", "worksheet_item", "review_card")]
     return Ctx(anchors, {n for ns in anchors.values() for n in ns}, links, children, last,
                {k: sorted(v) for k, v in shash.items()}, visible)
 
