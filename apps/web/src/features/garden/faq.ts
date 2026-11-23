@@ -4,7 +4,7 @@
  */
 import { stageFor, stageRange, STAGE_TASKS, tasksToNext, type Progress, type Species } from "./species";
 
-export type FaqAction = "tour" | "picker" | "theme";
+export type FaqAction = "tour" | "picker" | "theme" | "selfstudy";
 
 export interface FaqContext {
   species: Species;
@@ -74,6 +74,16 @@ export const FAQ: readonly Entry[] = [
     answer: (c) => ({
       text: `Trong mỗi câu có nút “Hỏi HABIT AI”. Bấm vào đó là ${c.species.mascot} sẽ vào khung trò chuyện, cùng em suy nghĩ về đúng câu ấy, chỉ chỗ số liệu và cách làm. Mình không đưa đáp án đâu nha. Sau khi nộp, nút đổi thành “HABIT AI giải thích” để xem lại lời giải.`,
       follow: ["hint", "privacy"],
+    }),
+  },
+  {
+    id: "study",
+    chip: "Học trước sao cho hiểu?",
+    keys: ["phuong phap", "hoc truoc", "tu hoc", "doc truoc", "cach hoc truoc", "hoc sao", "hoc the nao", "sq3r", "kwl", "feynman", "pomodoro", "cornell", "hay quen", "mau quen", "nho lau", "hoc thuoc", "doc hieu", "bang so lieu", "bieu do", "ky nang", "ki nang"],
+    answer: (c) => ({
+      text: `${c.species.mascot} biết vài cách học trước hay lắm: SQ3R và bảng KWL để đọc bài có mục đích, 5 bước đọc bảng số liệu, kĩ thuật Feynman, tự kiểm tra, ôn ngắt quãng và Pomodoro. Vào tab “Tự học”, chọn điều em hay gặp khó, rồi bấm “Học cùng ${c.species.mascot}” là mình kèm em từng bước.`,
+      actions: [{ label: "Mở Tự học", action: "selfstudy" }],
+      follow: ["do", "focus"],
     }),
   },
   {
@@ -178,7 +188,7 @@ export const FAQ: readonly Entry[] = [
 ];
 
 const BY_ID = Object.fromEntries(FAQ.map((e) => [e.id, e]));
-export const START_CHIPS = ["tour", "do", "ai", "streak", "theme"] as const;
+export const START_CHIPS = ["tour", "do", "study", "ai", "streak"] as const;
 export const chipLabel = (id: string) => BY_ID[id]?.chip ?? id;
 
 const GREET = ["chao", "hello", "hi", "xin chao", "alo", "hey"];

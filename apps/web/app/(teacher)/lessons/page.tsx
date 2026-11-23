@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { StateBadge } from "@/components/badges";
 import { Badge, Empty, ErrorBox, Loading, PageHeader } from "@/components/ui";
+import { ClassProgressBoard } from "@/features/class-progress";
+import { InstallApp } from "@/features/install-app";
 import { api, unwrap } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fmtDateTime } from "@/lib/format";
@@ -20,19 +22,21 @@ export default function LessonsPage() {
         sub={isTeacher ? "Bấm vào một bài để soạn, duyệt hoặc giao cho lớp. Bài đã xuất bản muốn sửa thì tạo bản mới." : "Bài được giao cho thầy cô duyệt."}
         actions={
           isTeacher ? (
-            <Link className="btn btn-primary" href="/lessons/new">
+            <Link className="btn btn-primary" href="/lessons/new" data-tour="new-lesson">
               Tạo bài mới
             </Link>
           ) : null
         }
       />
+      {isTeacher ? <ClassProgressBoard /> : null}
+      <h2 className="section-title">Bài học của {isTeacher ? "thầy cô" : "lớp được giao duyệt"}</h2>
       <ErrorBox error={lessons.error} />
       {lessons.isPending ? (
         <Loading />
       ) : lessons.data?.items.length === 0 ? (
         <Empty>Chưa có bài nào.</Empty>
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap" data-tour="lesson-table">
           <table>
             <thead>
               <tr>
@@ -80,6 +84,7 @@ export default function LessonsPage() {
           </table>
         </div>
       )}
+      <InstallApp audience="teacher" />
     </>
   );
 }

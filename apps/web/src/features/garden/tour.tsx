@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { Species } from "./species";
 import { MascotAvatar } from "./tree";
 
@@ -17,7 +17,7 @@ export function tourSteps(name: TourName, s: Species): TourStep[] {
   if (name === "home") {
     return [
       { title: `Chào em, mình là ${s.mascot}!`, text: `${s.hello} Mình dẫn em đi một vòng xem trang này có gì nhé.` },
-      { target: "nav", title: "Thanh điều hướng", text: "“Bài của em” luôn đưa em về trang này, nơi có mọi bài thầy cô giao." },
+      { target: "nav", title: "Thanh điều hướng", text: "“Bài của em” luôn đưa em về trang này, nơi có mọi bài thầy cô giao. “Tự học” có các cách học trước hay, mình sẽ kèm em từng bước." },
       { target: "garden", title: "Khu vườn của em", text: `Đây là nhà của mình. Mỗi bài em làm xong trước hạn, mình lớn thêm và chuỗi 🔥 tăng 1. Cuối tuần hay nghỉ lễ không có bài thì chuỗi vẫn giữ. Mình qua ${s.stages.length} giai đoạn từ “${s.stages[0]}” tới “${s.stages[s.stages.length - 1]}”.` },
       { target: "strip", title: "Tổng quan", text: "Số bài em còn phải làm và số bài đã xong." },
       { target: "assignments", title: "Bài được giao", text: "Bấm vào một thẻ để làm bài. Thẻ ghi hạn nộp và em đã làm bao nhiêu câu." },
@@ -49,17 +49,45 @@ function findTarget(name?: string): HTMLElement | null {
  * Steps whose target is not on the page (e.g. no assignments yet) are skipped.
  */
 export function Tour({ name, species, stage, open, onClose }: { name: TourName; species: Species; stage: number; open: boolean; onClose: () => void }) {
+  return (
+    <SpotlightTour
+      tourKey={`${name}:${species.id}`}
+      steps={() => tourSteps(name, species)}
+      guide={species.mascot}
+      accent={species.accent}
+      avatar={<MascotAvatar species={species} stage={stage} size={46} className="mascot-bob" />}
+      open={open}
+      onClose={onClose}
+    />
+  );
+}
+
+/**
+ * The same spotlight for any guide (the student's mascot, the teachers' globe). `steps` is read when the tour opens
+ * (or `tourKey` changes); steps whose target is not on the page are skipped.
+ */
+export function SpotlightTour({ tourKey, steps: getSteps, guide, accent, avatar, open, onClose }: {
+  tourKey: string;
+  steps: () => TourStep[];
+  guide: string;
+  accent: string;
+  avatar: ReactNode;
+  open: boolean;
+  onClose: () => void;
+}) {
   const [steps, setSteps] = useState<TourStep[]>([]);
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const card = useRef<HTMLDivElement>(null);
   const [cardPos, setCardPos] = useState<{ top: number; left: number } | null>(null);
+  const read = useRef(getSteps);
+  read.current = getSteps;
 
   useEffect(() => {
     if (!open) return;
-    setSteps(tourSteps(name, species).filter((s) => !s.target || findTarget(s.target)));
+    setSteps(read.current().filter((s) => !s.target || findTarget(s.target)));
     setI(0);
-  }, [open, name, species]);
+  }, [open, tourKey]);
 
   const step = steps[i];
   const measure = useCallback(() => {
@@ -124,7 +152,7 @@ export function Tour({ name, species, stage, open, onClose }: { name: TourName; 
   const last = i === steps.length - 1;
 
   return (
-    <div className="tour" style={{ ["--mascot" as string]: species.accent }}>
+    <div className="tour" style={{ ["--mascot" as string]: accent }}>
       <div className="tour-blocker" onClick={(e) => e.stopPropagation()} />
       {rect ? (
         <div className="tour-spot" style={{ top: rect.top, left: rect.left, width: rect.width, height: rect.height }} aria-hidden="true" />
@@ -141,11 +169,11 @@ export function Tour({ name, species, stage, open, onClose }: { name: TourName; 
         style={cardPos ? { top: cardPos.top, left: cardPos.left } : { visibility: "hidden" }}
       >
         <div className="tour-card-head">
-          <MascotAvatar species={species} stage={stage} size={46} className="mascot-bob" />
+          {avatar}
           <div>
             <strong>{step.title}</strong>
             <span className="tour-count">
-              {species.mascot} · {i + 1}/{steps.length}
+              {guide} · {i + 1}/{steps.length}
             </span>
           </div>
         </div>

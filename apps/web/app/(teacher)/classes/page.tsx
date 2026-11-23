@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import { Empty, ErrorBox, Loading, PageHeader } from "@/components/ui";
 import { api, unwrap } from "@/lib/api";
 import { AssignmentActions } from "@/features/assignments";
+import { ClassProgressBoard } from "@/features/class-progress";
 import { Insights } from "@/features/insights";
 import { RequireRole } from "@/lib/auth";
 import { fmtDateTime, fmtPercent } from "@/lib/format";
@@ -43,7 +44,7 @@ function ClassesView() {
       {classes.isPending ? (
         <Loading />
       ) : (
-        <nav className="tabs" aria-label="Lớp">
+        <nav className="tabs" aria-label="Lớp" data-tour="class-tabs">
           {classes.data?.items.map((c) => (
             <button
               key={c.id}
@@ -56,13 +57,14 @@ function ClassesView() {
           ))}
         </nav>
       )}
+      {classId ? <ClassProgressBoard classId={classId} title="Tiến độ của lớp" /> : null}
       <ErrorBox error={assignments.error} />
       {assignments.isPending && classId ? (
         <Loading />
       ) : assignments.data?.items.length === 0 ? (
         <Empty>Lớp chưa có bài giao. Giao bài từ tab &quot;Xuất bản & giao bài&quot; của một bài đã xuất bản.</Empty>
       ) : (
-        <ul className="stack plain">
+        <ul className="stack plain" data-tour="assignment-list">
           {assignments.data?.items.map((a) => (
             <li key={a.id} className="card" id={`a-${a.id}`}>
               <div className="section-head">

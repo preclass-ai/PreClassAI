@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useTheme } from "@/lib/theme";
 import { answerChip, answerFaq, chipLabel, START_CHIPS, type FaqAction, type FaqAnswer, type FaqContext } from "./faq";
@@ -120,6 +120,7 @@ function MascotDock({ species, stage, progress, onAssignment }: {
   const log = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const { toggle } = useTheme();
+  const router = useRouter();
   const ctx: FaqContext = { species, progress, onAssignment };
 
   useEffect(() => {
@@ -145,6 +146,7 @@ function MascotDock({ species, stage, progress, onAssignment }: {
   function act(a: FaqAction) {
     if (a === "theme") return toggle();
     setOpen(false);
+    if (a === "selfstudy") return router.push("/student/tu-hoc");
     window.dispatchEvent(new Event(a === "tour" ? TOUR_EVENT : PICKER_EVENT));
   }
 

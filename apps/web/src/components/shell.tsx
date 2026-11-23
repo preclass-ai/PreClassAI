@@ -14,6 +14,7 @@ const NAV: { href: string; label: string; roles: Role[] }[] = [
   { href: "/classes", label: "Lớp & bài giao", roles: ["TEACHER"] },
   { href: "/admin/audit", label: "Nhật ký", roles: ["ADMIN"] },
   { href: "/student", label: "Bài của em", roles: ["STUDENT"] },
+  { href: "/student/tu-hoc", label: "Tự học", roles: ["STUDENT"] },
 ];
 
 export function AppShell({ children, narrow }: { children: ReactNode; narrow?: boolean }) {
@@ -22,6 +23,8 @@ export function AppShell({ children, narrow }: { children: ReactNode; narrow?: b
   const [logoutError, setLogoutError] = useState<unknown>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const links = NAV.filter((n) => user && n.roles.includes(user.role));
+  // The longest matching link is current: "/student/tu-hoc" must not also light up "/student".
+  const current = links.filter((l) => pathname === l.href || pathname.startsWith(`${l.href}/`)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -49,7 +52,7 @@ export function AppShell({ children, narrow }: { children: ReactNode; narrow?: b
         </Link>
         <nav aria-label="Điều hướng chính" data-tour="nav">
           {links.map((l) => (
-            <Link key={l.href} href={l.href} aria-current={pathname.startsWith(l.href) ? "page" : undefined}>
+            <Link key={l.href} href={l.href} aria-current={l.href === current ? "page" : undefined}>
               {l.label}
             </Link>
           ))}

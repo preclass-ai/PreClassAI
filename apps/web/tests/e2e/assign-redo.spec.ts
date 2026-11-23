@@ -1,17 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { expectNoHorizontalScroll, login } from "./helpers";
 
-// Writes student data (answers, closes the box) and only HS10-09 is free of other specs: runs once, on desktop.
+// Writes student data (answers) and only HS10-09 is free of other specs: runs once, on desktop.
 
-test("student can start with the 3 steps, close them for good, and redo a question for practice", async ({ page }, info) => {
+test("student can redo a question for practice", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop-1280", "writes student data, runs once");
   await login(page, "HS10-09");
-  const steps = page.getByRole("region", { name: "3 bước bắt đầu" });
-  await expect(steps).toBeVisible();
-  await steps.getByRole("button", { name: "Đóng khung 3 bước bắt đầu" }).click();
-  await page.reload();
   await expect(page.getByRole("heading", { name: "Bài được giao" })).toBeVisible();
-  await expect(steps).toHaveCount(0); // closed stays closed
 
   await page.locator(".assignment-card").first().click();
   const open = page.locator("section.item").filter({ has: page.locator(".options") }).first();
