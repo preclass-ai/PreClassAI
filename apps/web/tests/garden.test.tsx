@@ -8,6 +8,7 @@ vi.mock("@/features/habit-api", async (orig) => ({ ...(await orig<typeof import(
 import { answerFaq, normalize } from "@/features/garden/faq";
 import { GardenCard } from "@/features/garden/garden-card";
 import { progressOf, SPECIES_BY_ID, stageFor, stageRange, tasksToNext } from "@/features/garden/species";
+import { HabitBar } from "@/features/habit";
 import HabitChat from "@/features/habit-chat";
 import { ThemeToggle } from "@/lib/theme";
 
@@ -105,5 +106,19 @@ describe("theme toggle", () => {
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(localStorage.getItem("preclass.theme")).toBe("dark");
     expect(sw).toHaveAttribute("aria-checked", "true");
+  });
+});
+
+describe("habit bar on an assignment", () => {
+  it("says how many questions are left before the streak goes up, with no daily goal", () => {
+    withClient(<HabitBar assignmentId="open" answered={1} total={3} closed={false} />);
+    const bar = screen.getByRole("region", { name: "Thói quen học của em" });
+    expect(bar).toHaveTextContent("Chuỗi 9 bài");
+    expect(bar).toHaveTextContent("Còn 2 câu nữa là xong bài, chuỗi lên 🔥 10.");
+    expect(bar).not.toHaveTextContent(/Mục tiêu hôm nay/);
+  });
+  it("does not blame the student when the assignment is over", () => {
+    withClient(<HabitBar assignmentId="open" answered={1} total={3} closed />);
+    expect(screen.getByRole("region", { name: "Thói quen học của em" })).toHaveTextContent("cây của em vẫn giữ nguyên");
   });
 });

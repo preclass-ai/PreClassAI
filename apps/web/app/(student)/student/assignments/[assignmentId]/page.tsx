@@ -109,7 +109,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
         </header>
       )}
       {inFocus ? null : <GuestBanner />}
-      {inFocus ? null : <HabitBar assignmentId={assignmentId} />}
+      {inFocus ? null : <HabitBar assignmentId={assignmentId} answered={answered} total={data.items.length} closed={isClosed} />}
       {hasReview && !inFocus ? <Steps stage={stage} /> : null}
       {stage === "ask" ? (
         <ReviewAsk assignmentId={assignmentId} onChoose={(c) => setView(c === "done" ? "quiz" : "review")} onSaved={reload} />

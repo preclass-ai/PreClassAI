@@ -7,8 +7,8 @@ import { Button } from "@/components/ui";
 import { errorCode, errorMessage } from "@/lib/errors";
 import { newRequestId } from "@/lib/uuid";
 import { HabitMark, HintIcon, SourceRef } from "./habit-parts";
-import { stageFor } from "./garden/species";
-import { useMascot, useProgress } from "./garden/store";
+import { progressOf, stageFor } from "./garden/species";
+import { streakIfDone, useAssignmentList, useMascot, useProgress } from "./garden/store";
 import { MascotAvatar } from "./garden/tree";
 import { hintTier } from "@/lib/labels";
 import { usePersonalizationOn, usePrefs } from "./personalization";
@@ -19,30 +19,39 @@ const HabitChat = dynamic(() => import("./habit-chat"), { ssr: false });
 
 const BADGE_HINT: Record<string, string> = {
   TU_LUC: "Đúng ngay lần đầu, không cần gợi ý",
-  KIEN_TRI: "Học 3 ngày liên tiếp",
+  KIEN_TRI: "Học 3 ngày liên tiếp", // computed by the server on calendar days (backend follow-up: move to the assignment streak)
   THAM_HIEM: "Đọc phần nguồn rồi làm đúng",
 };
 
-export function HabitBar({ assignmentId }: { assignmentId: string }) {
+/**
+ * What this assignment does for the streak: the streak counts finished assignments (never calendar days), so the bar
+ * says how many questions are left before it goes up. Badges come from HABIT and show only when it is on.
+ */
+export function HabitBar({ assignmentId, answered, total, closed }: { assignmentId: string; answered: number; total: number; closed: boolean }) {
   const on = useHabitOn();
   const h = useHabit(assignmentId, on);
-  const progress = useProgress(); // the streak counts finished assignments, not calendar days (holidays never break it)
-  if (!on || !h.data) return null;
-  const { todayDone, todayGoal, badges } = h.data;
-  const done = Math.min(todayDone, todayGoal);
+  const items = useAssignmentList();
+  const species = useMascot();
+  if (!items || total === 0) return null;
+  const { streak, done } = progressOf(items);
+  const after = streakIfDone(items, assignmentId);
+  const left = Math.max(0, total - answered);
+  const badges = h.data?.badges ?? [];
+  const next =
+    left === 0
+      ? "Em đã xong bài này, chuỗi đã được tính."
+      : closed
+        ? "Bài này đã hết hạn. Chuỗi bắt đầu lại từ bài tiếp theo, cây của em vẫn giữ nguyên."
+        : after > streak
+          ? `Còn ${left} câu nữa là xong bài, chuỗi lên 🔥 ${after}.`
+          : `Còn ${left} câu nữa là xong bài, cây của em lớn thêm.`;
   return (
-    <section className="habit-bar" aria-label="Thói quen học của em" data-tour="habit-bar">
+    <section className="habit-bar" aria-label="Thói quen học của em" data-tour="habit-bar" style={species ? { ["--mascot" as string]: species.accent } : undefined}>
+      {species ? <MascotAvatar species={species} stage={stageFor(done)} size={36} /> : null}
       <span className="habit-streak">
-        <span aria-hidden="true">🔥</span> {progress?.streak ?? 0} bài liên tiếp
+        <span aria-hidden="true">🔥</span> {streak > 0 ? `Chuỗi ${streak} bài` : "Chưa có chuỗi"}
       </span>
-      <span className="habit-goal">
-        <span>
-          Mục tiêu hôm nay {done}/{todayGoal}
-        </span>
-        <span className="bar" role="progressbar" aria-valuemin={0} aria-valuemax={todayGoal} aria-valuenow={done} aria-label="Mục tiêu hôm nay">
-          <span style={{ width: `${todayGoal ? (100 * done) / todayGoal : 0}%` }} />
-        </span>
-      </span>
+      <span className="habit-next">{next}</span>
       {badges.length ? (
         <ul className="habit-badges">
           {badges.map((b) => (

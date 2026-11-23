@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { api, unwrap } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { isSpeciesId, progressOf, SPECIES_BY_ID, type Progress, type Species, type SpeciesId } from "./species";
+import { isSpeciesId, progressOf, SPECIES_BY_ID, type AssignmentLike, type Progress, type Species, type SpeciesId } from "./species";
 
 /**
  * The garden choice lives in this browser only (localStorage, per user id): no student data leaves the device and the
@@ -93,9 +93,18 @@ export function useMascot(): Species | null {
  * The server marks an assignment DONE once every question is answered, which can only happen before its due date.
  * null until the list has loaded.
  */
+export function useAssignmentList() {
+  return useQuery({ queryKey: ["student-assignments"], queryFn: () => unwrap(api.GET("/v1/student/assignments")) }).data?.items;
+}
+
 export function useProgress(): Progress | null {
-  const list = useQuery({ queryKey: ["student-assignments"], queryFn: () => unwrap(api.GET("/v1/student/assignments")) });
-  return useMemo(() => (list.data ? progressOf(list.data.items) : null), [list.data]);
+  const items = useAssignmentList();
+  return useMemo(() => (items ? progressOf(items) : null), [items]);
+}
+
+/** The streak if this assignment were finished now (it may not raise it, e.g. when a later one was missed). */
+export function streakIfDone(items: readonly AssignmentLike[], assignmentId: string): number {
+  return progressOf(items.map((a) => (a.id === assignmentId ? { ...a, status: "DONE" as const } : a))).streak;
 }
 
 /** Ask the mascot to start the guided tour from anywhere (mascot dock, garden card, FAQ answer). */

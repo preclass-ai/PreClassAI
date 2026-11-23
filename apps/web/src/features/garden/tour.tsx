@@ -27,7 +27,7 @@ export function tourSteps(name: TourName, s: Species): TourStep[] {
   }
   return [
     { title: "Vào bài rồi!", text: `${s.mascot} chỉ nhanh các phần của trang làm bài nhé.` },
-    { target: "habit-bar", title: "Thói quen học", text: "Chuỗi bài, mục tiêu hôm nay và huy hiệu em đã có. Làm xong hết các câu của bài này là chuỗi tăng thêm 1." },
+    { target: "habit-bar", title: "Thói quen học", text: "Chuỗi bài của em, còn mấy câu nữa là xong bài này, và huy hiệu em đã có. Xong bài trước hạn là chuỗi tăng thêm 1." },
     { target: "pers", title: "Cách học hôm nay", text: "Chọn kiểu gợi ý em thích, bật chế độ tập trung để làm từng câu một, hoặc hẹn giờ." },
     { target: "hint", title: "Gợi ý từng bậc", text: "Kẹt thì bấm gợi ý: mỗi lần một bậc, cụ thể dần. Mỗi câu có số lượt giới hạn, nên thử tự nghĩ trước nha." },
     { target: "ask-ai", title: "Hỏi HABIT AI", text: `Bấm đây là ${s.mascot} vào khung trò chuyện, cùng em phân tích đúng câu này. Mình không nói đáp án, nhưng sẽ chỉ chỗ số liệu và cách nghĩ.` },

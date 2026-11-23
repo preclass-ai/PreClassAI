@@ -10,7 +10,7 @@ test("Habit: hints 1 to 3 of 10, refusals, answer, explanation, goal", async ({ 
   await page.locator(".assignment-card").first().click();
   await expect(page.locator("section.item").first()).toBeVisible({ timeout: 30_000 });
   const bar = page.getByRole("region", { name: "Thói quen học của em" });
-  await expect(bar).toContainText("Mục tiêu hôm nay 0/3");
+  await expect(bar).toContainText(/Còn \d+ câu nữa là xong bài/); // the streak counts finished assignments, not days
   await page.screenshot({ path: shot("s07-habit", info.project.name), fullPage: true });
   await expectNoHorizontalScroll(page);
 
@@ -53,7 +53,7 @@ test("Habit: hints 1 to 3 of 10, refusals, answer, explanation, goal", async ({ 
   await item.getByRole("button", { name: "HABIT AI giải thích" }).click();
   await expect(page.getByRole("dialog", { name: "Hỏi HABIT AI" }).locator(".habit-msg.habit").first()).not.toBeEmpty();
   await page.keyboard.press("Escape");
-  await expect(bar).toContainText("Mục tiêu hôm nay 1/3");
-  await expect(bar).toContainText("bài liên tiếp"); // the streak counts finished assignments, not days
+  await expect(bar).toContainText(/Còn \d+ câu nữa là xong bài|Em đã xong bài này/);
+  await expect(bar).toContainText(/Chưa có chuỗi|Chuỗi \d+ bài/);
   await page.screenshot({ path: shot("after-answer", info.project.name), fullPage: true });
 });
