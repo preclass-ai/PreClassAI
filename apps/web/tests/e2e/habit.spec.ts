@@ -54,6 +54,6 @@ test("Habit: hints 1 to 3 of 10, refusals, answer, explanation, goal", async ({ 
   await expect(page.getByRole("dialog", { name: "Hỏi HABIT AI" }).locator(".habit-msg.habit").first()).not.toBeEmpty();
   await page.keyboard.press("Escape");
   await expect(bar).toContainText("Mục tiêu hôm nay 1/3");
-  await expect(bar).toContainText("1 ngày liên tiếp");
+  await expect(bar).toContainText("bài liên tiếp"); // the streak counts finished assignments, not days
   await page.screenshot({ path: shot("after-answer", info.project.name), fullPage: true });
 });

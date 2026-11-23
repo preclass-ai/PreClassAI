@@ -85,7 +85,8 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
     disabled: isClosed,
     onAnswered: () => {
       void qc.invalidateQueries({ queryKey: key });
-      void qc.invalidateQueries({ queryKey: habitKey(assignmentId) }); // streak + daily goal
+      void qc.invalidateQueries({ queryKey: habitKey(assignmentId) }); // daily goal + badges
+      void qc.invalidateQueries({ queryKey: ["student-assignments"] }); // assignment streak + garden stage
     },
     onClosed: () => setClosed(true),
     onOpenReview: hasReview ? openReview : undefined,
@@ -327,7 +328,7 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed, onOp
           )}
           {error ? <div className="alert alert-danger" role="alert">{errorMessage(error)}</div> : null}
           <div className="submit-row">
-            <Button type="submit" variant="primary" className="submit-btn" busy={busy} disabled={(disabled && !redo) || !ready}>
+            <Button type="submit" variant="primary" className="submit-btn" data-tour="submit" busy={busy} disabled={(disabled && !redo) || !ready}>
               {redo ? "Nộp lần làm lại" : "Nộp câu trả lời"}
             </Button>
             <span className={numericError ? "submit-note field-error" : "submit-note"} id={noteId} aria-live="polite">

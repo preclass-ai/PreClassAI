@@ -9,6 +9,7 @@ import { api, ApiError, unwrap } from "@/lib/api";
 import { homeFor, ME_KEY, useAuth } from "@/lib/auth";
 import { withTimeout, useAfter } from "@/lib/http";
 import { safeNext } from "@/lib/redirect";
+import { ThemeToggle } from "@/lib/theme";
 
 const WRONG_CODE = "Mã khảo sát không đúng. Em kiểm tra lại mã ở đầu trang bài làm (dạng KS-XXXX).";
 
@@ -181,6 +182,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <main className="login-page">
+      <div className="login-theme"><ThemeToggle /></div>
       <div className="login-layout">
         <section className="login-story" aria-label="Giới thiệu PreClass AI">
           <div className="login-story-top"><span className="story-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 0C12.6 6.6 17.4 11.4 24 12C17.4 12.6 12.6 17.4 12 24C11.4 17.4 6.6 12.6 0 12C6.6 11.4 11.4 6.6 12 0Z" /></svg></span> Gia sư AI cá nhân</div>

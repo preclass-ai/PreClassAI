@@ -2,8 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { GardenCard } from "@/features/garden/garden-card";
+import { useGarden, useProgress } from "@/features/garden/store";
 import { GuestBanner } from "@/features/guest";
-import { useHabit, useHabitOn } from "@/features/habit-api";
 import { Badge, Empty, ErrorBox, Loading } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
@@ -16,18 +17,18 @@ const STATUS: Record<Schemas["StudentAssignmentSummary"]["status"], { label: str
   CLOSED: { label: "Hết hạn", tone: "neutral" },
 };
 
-/** One line: what is left, and the study streak (only when HABIT AI is on). */
-function StudyStrip({ todo, done, firstId }: { todo: number; done: number; firstId: string | undefined }) {
-  const on = useHabitOn();
-  const h = useHabit(firstId ?? "", on && !!firstId);
+/** One line: what is left, and the assignment streak (only before a tree is planted: the garden shows it then). */
+function StudyStrip({ todo, done }: { todo: number; done: number }) {
+  const progress = useProgress();
+  const planted = !!useGarden().species;
   return (
-    <div className="student-strip" aria-label="Tổng quan bài tập">
+    <div className="student-strip" aria-label="Tổng quan bài tập" data-tour="strip">
       <span>
         <strong>{todo} bài cần làm</strong> <span aria-hidden="true">·</span> {done} bài đã xong
       </span>
-      {h.data ? (
+      {progress && !planted ? (
         <span className="strip-habit">
-          <span aria-hidden="true">🔥</span> {h.data.streak} ngày, mục tiêu {Math.min(h.data.todayDone, h.data.todayGoal)}/{h.data.todayGoal}
+          <span aria-hidden="true">🔥</span> {progress.streak} bài liên tiếp
         </span>
       ) : null}
     </div>
@@ -51,15 +52,16 @@ export default function StudentHome() {
         <div className="student-hero-art" aria-hidden="true"><span className="hero-orbit hero-orbit-one" /><span className="hero-orbit hero-orbit-two" /><span className="hero-pin">⌖</span></div>
       </header>
       <GuestBanner />
+      <GardenCard />
       <ErrorBox error={list.error} />
       {list.isPending ? (
         <Loading />
       ) : (
         <>
-          <StudyStrip todo={unfinished} done={completed} firstId={assignments[0]?.id} />
+          <StudyStrip todo={unfinished} done={completed} />
           <h2 className="section-title">Bài được giao</h2>
           {assignments.length === 0 ? <Empty>Hiện chưa có bài nào được giao. Khi thầy cô giao bài, em sẽ thấy ở đây.</Empty> : null}
-          <ul className="assignment-grid plain">
+          <ul className="assignment-grid plain" data-tour="assignments">
           {assignments.map((a) => {
             const s = STATUS[a.status];
             return (

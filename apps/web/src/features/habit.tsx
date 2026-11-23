@@ -7,6 +7,9 @@ import { Button } from "@/components/ui";
 import { errorCode, errorMessage } from "@/lib/errors";
 import { newRequestId } from "@/lib/uuid";
 import { HabitMark, HintIcon, SourceRef } from "./habit-parts";
+import { stageFor } from "./garden/species";
+import { useMascot, useProgress } from "./garden/store";
+import { MascotAvatar } from "./garden/tree";
 import { hintTier } from "@/lib/labels";
 import { usePersonalizationOn, usePrefs } from "./personalization";
 import { askHabit, habitKey, useHabit, useHabitOn, type ChatReply } from "./habit-api";
@@ -23,13 +26,14 @@ const BADGE_HINT: Record<string, string> = {
 export function HabitBar({ assignmentId }: { assignmentId: string }) {
   const on = useHabitOn();
   const h = useHabit(assignmentId, on);
+  const progress = useProgress(); // the streak counts finished assignments, not calendar days (holidays never break it)
   if (!on || !h.data) return null;
-  const { streak, todayDone, todayGoal, badges } = h.data;
+  const { todayDone, todayGoal, badges } = h.data;
   const done = Math.min(todayDone, todayGoal);
   return (
-    <section className="habit-bar" aria-label="Thói quen học của em">
+    <section className="habit-bar" aria-label="Thói quen học của em" data-tour="habit-bar">
       <span className="habit-streak">
-        <span aria-hidden="true">🔥</span> {streak} ngày liên tiếp
+        <span aria-hidden="true">🔥</span> {progress?.streak ?? 0} bài liên tiếp
       </span>
       <span className="habit-goal">
         <span>
@@ -72,6 +76,11 @@ export function HabitItem({ assignmentId, itemId, answered, explanation, onOpenR
   const persOn = usePersonalizationOn();
   const prefs = usePrefs(persOn);
   const close = useCallback(() => setOpen(false), []);
+  // The seed the student planted speaks for HABIT AI here, at the stage their finished assignments have grown it to.
+  const species = useMascot();
+  const progress = useProgress();
+  const mascot = species ? { species, stage: stageFor(progress?.done ?? 0) } : null;
+  const aiIcon = mascot ? <MascotAvatar species={mascot.species} stage={mascot.stage} size={26} /> : <HabitMark />;
   if (!on) return null;
 
   const info = h.data?.hintsAvailable.find((x) => x.itemId === itemId);
@@ -102,15 +111,15 @@ export function HabitItem({ assignmentId, itemId, answered, explanation, onOpenR
   }
 
   const chat = mounted ? (
-    <HabitChat assignmentId={assignmentId} itemId={itemId} answered={answered} explanation={explanation} open={open} onClose={close} onOpenReview={onOpenReview} />
+    <HabitChat assignmentId={assignmentId} itemId={itemId} answered={answered} explanation={explanation} open={open} onClose={close} onOpenReview={onOpenReview} mascot={mascot} />
   ) : null;
 
   if (answered) {
     return (
       <div className="habit">
         <div className="habit-actions">
-          <Button variant={prefs.uu_tien_giai_thich ? "primary" : "ghost"} className={prefs.uu_tien_giai_thich ? "habit-btn" : "habit-ghost"} onClick={openChat}>
-            <HabitMark /> HABIT AI giải thích
+          <Button variant={prefs.uu_tien_giai_thich ? "primary" : "ghost"} className={prefs.uu_tien_giai_thich ? "habit-btn" : "habit-ghost"} onClick={openChat} data-tour="ask-ai">
+            {aiIcon} HABIT AI giải thích
           </Button>
         </div>
         {chat}
@@ -128,11 +137,11 @@ export function HabitItem({ assignmentId, itemId, answered, explanation, onOpenR
         </div>
       ) : null}
       <div className="habit-actions">
-        <Button variant="ghost" className="habit-ghost" onClick={() => void hint()} busy={busy} disabled={used >= max || limited}>
+        <Button variant="ghost" className="habit-ghost" onClick={() => void hint()} busy={busy} disabled={used >= max || limited} data-tour="hint">
           <HintIcon /> {used >= max ? "Đã dùng hết gợi ý" : `${hintTier(used + 1)} · còn ${max - used} lượt`}
         </Button>
-        <Button variant="ghost" className="habit-ghost" onClick={openChat}>
-          <HabitMark /> Hỏi HABIT AI
+        <Button variant="ghost" className="habit-ghost" onClick={openChat} data-tour="ask-ai">
+          {aiIcon} Hỏi HABIT AI
         </Button>
       </div>
       <div aria-live="polite">
