@@ -3,10 +3,9 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Badge, ErrorBox, Loading } from "@/components/ui";
+import { ErrorBox, Loading } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api";
 import { fmtDateTime } from "@/lib/format";
-import type { Tone } from "@/lib/labels";
 
 /**
  * "Tiến độ học sinh": how far each class got on what it was assigned, and who to remind.
@@ -110,13 +109,6 @@ export function timeLeft(dueAt: string, now: number): string {
   return ms >= 0 ? `còn ${span}` : `quá hạn ${span}`;
 }
 
-const PHASE: Record<Phase, { label: string; tone: Tone }> = {
-  soon: { label: "Sắp hết hạn", tone: "warning" },
-  open: { label: "Đang mở", tone: "info" },
-  closed: { label: "Đã hết hạn", tone: "neutral" },
-  upcoming: { label: "Chưa mở", tone: "neutral" },
-};
-
 const pct = (n: number, d: number) => (d ? Math.round((100 * n) / d) : 0);
 
 export function ClassProgressBoard({ classId, title = "Tiến độ học sinh" }: { classId?: string; title?: string }) {
@@ -158,17 +150,37 @@ export function ClassProgressBoard({ classId, title = "Tiến độ học sinh" 
     ]);
   }
 
+  const pctAll = summary.rate === null ? null : Math.round(summary.rate * 100);
+  const classLabel = targets.find((c) => c.id === pick)?.code;
+
   return (
     <section className="card pb" aria-labelledby="pb-title" data-tour="progress">
-      <div className="section-head">
+      <header className="pb-head">
         <div>
           <h2 id="pb-title">{title}</h2>
-          <p className="muted small">
-            Số liệu của cả lớp, không hiện tên. Cần biết cụ thể em nào thì tải tệp kết quả (theo mã đăng nhập).
-          </p>
+          <p className="muted small">Số liệu cả lớp, không hiện tên. Cần biết từng em thì tải danh sách CSV (theo mã đăng nhập).</p>
         </div>
-        <button type="button" className="btn" onClick={() => void refresh()}>Cập nhật</button>
-      </div>
+        <div className="pb-tools">
+          {!classId && targets.length > 1 ? (
+            <div className="pb-seg-ctl" role="group" aria-label="Lớp">
+              <button type="button" aria-pressed={pick === "all"} onClick={() => setPick("all")}>Tất cả lớp</button>
+              {targets.map((c) => (
+                <button key={c.id} type="button" aria-pressed={pick === c.id} onClick={() => setPick(c.id)}>{c.code}</button>
+              ))}
+            </div>
+          ) : null}
+          <label className="pb-switch">
+            <input type="checkbox" checked={onlyAttention} onChange={(e) => setOnlyAttention(e.target.checked)} />
+            <span aria-hidden="true" />
+            Chỉ bài cần nhắc
+          </label>
+          <button type="button" className="pb-icon-btn" onClick={() => void refresh()} aria-label="Cập nhật số liệu" title="Cập nhật số liệu">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M20 11a8 8 0 1 0-2.3 5.7" /><path d="M20 4v7h-7" />
+            </svg>
+          </button>
+        </div>
+      </header>
       <ErrorBox error={error} />
       {pending ? (
         <Loading />
@@ -176,61 +188,55 @@ export function ClassProgressBoard({ classId, title = "Tiến độ học sinh" 
         <p className="pb-empty">Chưa có bài nào đang mở. Giao bài cho lớp là tiến độ hiện ở đây.</p>
       ) : (
         <>
-          <div className="pb-filters">
-            {!classId && targets.length > 1 ? (
-              <label>
-                Lớp{" "}
-                <select value={pick} onChange={(e) => setPick(e.target.value)}>
-                  <option value="all">Tất cả lớp</option>
-                  {targets.map((c) => (
-                    <option key={c.id} value={c.id}>{c.code}</option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <label className="pb-check">
-              <input type="checkbox" checked={onlyAttention} onChange={(e) => setOnlyAttention(e.target.checked)} /> Chỉ bài cần nhắc
-            </label>
-          </div>
-
-          <div className="pb-tiles">
-            <div className="pb-tile pb-tile-hero">
-              <span>Đã hoàn thành</span>
-              <strong>{summary.rate === null ? "–" : `${Math.round(summary.rate * 100)}%`}</strong>
-              <small>{summary.scope === "open" ? "lượt bài đang mở" : "lượt bài trên bảng"}</small>
+          <dl className="pb-kpis">
+            <div className="pb-kpi">
+              <dt>Hoàn thành</dt>
+              <dd>
+                <strong>{pctAll === null ? "–" : `${pctAll}%`}</strong>
+                <span className="pb-meter" aria-hidden="true"><span style={{ width: `${pctAll ?? 0}%` }} /></span>
+              </dd>
+              <small>{summary.scope === "open" ? "trên các bài đang mở" : "trên các bài gần đây"}{classLabel ? ` · ${classLabel}` : ""}</small>
             </div>
-            <div className={`pb-tile${summary.todo ? " pb-tile-alert" : ""}`}>
-              <span><i aria-hidden="true">○</i> Chưa làm</span>
-              <strong>{summary.todo}</strong>
-              <small>lượt học sinh chưa mở bài</small>
+            <div className={`pb-kpi${summary.todo ? " is-danger" : ""}`}>
+              <dt>Chưa mở bài</dt>
+              <dd><strong>{summary.todo}</strong></dd>
+              <small>lượt học sinh</small>
             </div>
-            <div className="pb-tile">
-              <span><i aria-hidden="true">◐</i> Đang làm dở</span>
-              <strong>{summary.doing}</strong>
-              <small>đã làm một phần</small>
+            <div className="pb-kpi">
+              <dt>Đang làm dở</dt>
+              <dd><strong>{summary.doing}</strong></dd>
+              <small>lượt học sinh</small>
             </div>
-            <div className={`pb-tile${summary.urgent ? " pb-tile-warn" : ""}`}>
-              <span><i aria-hidden="true">⏰</i> Cần nhắc</span>
-              <strong>{summary.urgent}</strong>
-              <small>bài sắp hoặc vừa hết hạn còn em chưa xong</small>
+            <div className={`pb-kpi${summary.urgent ? " is-warning" : ""}`}>
+              <dt>Cần nhắc</dt>
+              <dd><strong>{summary.urgent}</strong></dd>
+              <small>{summary.urgent ? "bài sắp hoặc vừa hết hạn" : "không có bài nào"}</small>
             </div>
-          </div>
+          </dl>
 
           {alerts.length ? <Alerts rows={alerts} now={now} /> : null}
 
-          <div className="pb-legend" aria-hidden="true">
-            <span><i className="pb-sw done" /> ✓ Đã xong</span>
-            <span><i className="pb-sw doing" /> ◐ Đang làm</span>
-            <span><i className="pb-sw todo" /> ○ Chưa làm</span>
-          </div>
           {shown.length === 0 ? (
-            <p className="pb-empty">Không có bài nào cần nhắc. Lớp đang theo kịp!</p>
+            <p className="pb-empty">Không có bài nào cần nhắc. Lớp đang theo kịp.</p>
           ) : (
-            <ul className="pb-rows plain">
-              {shown.map((r) => (
-                <ProgressRow key={r.a.id} r={r} now={now} attention={needsAttention(r, now)} />
-              ))}
-            </ul>
+            <div className="pb-table">
+              <div className="pb-thead" aria-hidden="true">
+                <span>Bài</span>
+                <span>Hạn nộp</span>
+                <span className="pb-legend">
+                  Tiến độ
+                  <i className="pb-dot done" /> Xong
+                  <i className="pb-dot doing" /> Đang làm
+                  <i className="pb-dot todo" /> Chưa làm
+                </span>
+                <span className="pb-right">Xong</span>
+              </div>
+              <ul className="pb-rows plain">
+                {shown.map((r) => (
+                  <ProgressRow key={r.a.id} r={r} now={now} attention={needsAttention(r, now)} />
+                ))}
+              </ul>
+            </div>
           )}
         </>
       )}
@@ -238,47 +244,47 @@ export function ClassProgressBoard({ classId, title = "Tiến độ học sinh" 
   );
 }
 
-function Segment({ kind, n, of, label }: { kind: "done" | "doing" | "todo"; n: number; of: number; label: string }) {
-  if (!n) return null;
-  const share = pct(n, of);
-  return (
-    <span className={`pb-seg ${kind}`} style={{ width: `${(100 * n) / of}%` }} data-tip={`${label}: ${n} em (${share}%)`}>
-      {share >= 9 ? n : ""}
-    </span>
-  );
-}
-
 function ProgressRow({ r, now, attention }: { r: Row; now: number; attention: boolean }) {
-  const phase = PHASE[r.phase];
   const href = `/classes?class=${r.cls.id}&assignment=${r.a.id}`;
+  const left = timeLeft(r.a.dueAt, now);
+  const tone = r.phase === "closed" ? "closed" : r.phase === "soon" ? "soon" : "open";
+  const w = (n: number) => `${r.students ? (100 * n) / r.students : 0}%`;
   return (
     <li className={`pb-row${attention ? " attention" : ""}`}>
       <div className="pb-label">
         <Link href={href}>{r.a.studentTitle}</Link>
         <span className="muted small">
-          {r.cls.code} · hạn {fmtDateTime(r.a.dueAt)} · {timeLeft(r.a.dueAt, now)}
+          Lớp {r.cls.code}
+          {attention ? <span className="pb-flag">Cần nhắc</span> : null}
         </span>
       </div>
-      <Badge tone={phase.tone}>{phase.label}</Badge>
+      <div className={`pb-due ${tone}`}>
+        <span>{left.charAt(0).toUpperCase() + left.slice(1)}</span>
+        <small className="muted">{fmtDateTime(r.a.dueAt)}</small>
+      </div>
       {!r.loaded ? (
-        <span className="pb-bar pb-bar-wait" aria-label="Đang tải tiến độ" />
+        <span className="pb-track pb-wait" aria-label="Đang tải tiến độ" />
       ) : r.students === 0 ? (
-        <span className="muted small pb-bar-none">Lớp chưa có học sinh</span>
+        <span className="muted small">Lớp chưa có học sinh</span>
       ) : (
-        <span
-          className="pb-bar"
-          role="img"
-          aria-label={`${r.a.studentTitle}, lớp ${r.cls.code}: ${r.done} em đã xong, ${r.doing} em đang làm, ${r.todo} em chưa làm, trên ${r.students} em`}
-        >
-          <Segment kind="done" n={r.done} of={r.students} label="Đã xong" />
-          <Segment kind="doing" n={r.doing} of={r.students} label="Đang làm" />
-          <Segment kind="todo" n={r.todo} of={r.students} label="Chưa làm" />
-        </span>
+        <div className="pb-progress">
+          <span
+            className="pb-track"
+            role="img"
+            aria-label={`${r.a.studentTitle}, lớp ${r.cls.code}: ${r.done} em đã xong, ${r.doing} em đang làm, ${r.todo} em chưa làm, trên ${r.students} em`}
+          >
+            {r.done ? <span className="pb-fill done" style={{ width: w(r.done) }} title={`Đã xong: ${r.done} em`} /> : null}
+            {r.doing ? <span className="pb-fill doing" style={{ width: w(r.doing) }} title={`Đang làm: ${r.doing} em`} /> : null}
+          </span>
+          <span className="pb-counts small">
+            <b>{r.done}</b> xong · <b>{r.doing}</b> đang làm · <b className={r.todo ? "todo" : undefined}>{r.todo}</b> chưa làm
+          </span>
+        </div>
       )}
-      <span className="pb-pct">
+      <div className="pb-pct">
         <strong>{r.loaded ? `${pct(r.done, r.students)}%` : "…"}</strong>
-        <small>{r.loaded ? `${r.done}/${r.students} xong` : ""}</small>
-      </span>
+        <small>{r.loaded ? `${r.done}/${r.students}` : ""}</small>
+      </div>
     </li>
   );
 }
@@ -295,7 +301,12 @@ function Alerts({ rows, now }: { rows: Row[]; now: number }) {
   }
   return (
     <div className="pb-alerts" role="region" aria-label="Cần nhắc học sinh">
-      <h3><span aria-hidden="true">⚠</span> Cần nhắc ngay</h3>
+      <h3>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 8v5M12 16.5v.5" /><path d="M10.3 3.9 2.6 17.2A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.8L13.7 3.9a2 2 0 0 0-3.4 0z" />
+        </svg>
+        Cần nhắc ngay <span className="muted">· {rows.length} bài</span>
+      </h3>
       <ul className="plain">
         {rows.map((r) => (
           <li key={r.a.id}>
@@ -306,7 +317,7 @@ function Alerts({ rows, now }: { rows: Row[]; now: number }) {
               </span>
             </div>
             <div className="row-actions">
-              <button type="button" className="btn" onClick={() => void copy(r)}>
+              <button type="button" className="btn pb-btn" onClick={() => void copy(r)}>
                 {copied === r.a.id ? "Đã sao chép ✓" : "Sao chép lời nhắc"}
               </button>
               <a className="link-btn" href={`/v1/classes/${r.cls.id}/assignments/${r.a.id}/results.csv`} download>

@@ -88,7 +88,7 @@ export const TEACHER_FAQ: readonly Entry[] = [
     chip: "Xem lớp làm đến đâu?",
     keys: ["tien do", "hoan thanh", "bieu do", "lop lam", "theo doi", "giam sat", "bao nhieu em", "thong ke", "muc do"],
     answer: {
-      text: "Bảng “Tiến độ học sinh” ở đầu trang Bài học gom mọi lớp: mỗi bài một thanh xanh (đã xong), vàng (đang làm), đỏ (chưa làm). Bài sắp hết hạn mà còn em chưa xong được tô nổi và đưa lên đầu. Bấm tên bài để xem từng câu: bao nhiêu em trả lời, tỉ lệ đúng ngay lần đầu.",
+      text: "Bảng “Tiến độ học sinh” ở đầu trang Bài học gom mọi lớp: mỗi bài một thanh: phần xanh là em đã xong, vàng là đang làm, phần còn trống là chưa làm. Bài sắp hết hạn mà còn em chưa xong được gắn nhãn “Cần nhắc” và đưa lên đầu. Bấm tên bài để xem từng câu: bao nhiêu em trả lời, tỉ lệ đúng ngay lần đầu.",
       actions: [{ label: "Mở Lớp & bài giao", kind: "go", href: "/classes" }],
       follow: ["remind", "csv"],
     },
@@ -179,7 +179,7 @@ export function teacherTourSteps(name: TeacherTour): TourStep[] {
     return [
       hello,
       { target: "nav", title: "Bốn trang chính", text: "Bài học: soạn và duyệt. Nguồn: tài liệu gốc. Giáo án: nạp giáo án để tạo bài làm trước giờ học. Lớp & bài giao: giao bài, sửa hạn, xem kết quả." },
-      { target: "progress", title: "Tiến độ học sinh", text: "Mỗi bài đang giao là một thanh: xanh đã xong, vàng đang làm, đỏ chưa làm. Bài sắp hết hạn còn em chưa xong được đưa lên đầu, kèm lời nhắc sao chép sẵn để gửi lớp." },
+      { target: "progress", title: "Tiến độ học sinh", text: "Mỗi bài đang giao là một thanh: xanh đã xong, vàng đang làm, phần trống là chưa làm. Bài sắp hết hạn còn em chưa xong được đưa lên đầu, kèm lời nhắc sao chép sẵn để gửi lớp." },
       { target: "new-lesson", title: "Tạo bài mới", text: "Chọn nguồn, để AI soạn nháp có gắn chỗ trích, rồi thầy cô duyệt từng khối." },
       { target: "lesson-table", title: "Danh sách bài học", text: "Cột “Tiến độ duyệt” cho biết còn bao nhiêu khối chưa duyệt, có vấn đề hay cần duyệt lại." },
       { target: "install", title: "Cài lên máy", text: "Cài PreClass AI như ứng dụng để mở một chạm trên điện thoại hay máy tính." },

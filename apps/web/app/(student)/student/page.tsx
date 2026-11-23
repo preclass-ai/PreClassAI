@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { GardenCard } from "@/features/garden/garden-card";
-import type { SpeciesId } from "@/features/garden/species";
+import { stageFor, type SpeciesId } from "@/features/garden/species";
+import { MascotAvatar } from "@/features/garden/tree";
 import { useGarden, useProgress } from "@/features/garden/store";
 import { GuestBanner } from "@/features/guest";
 import { InstallApp } from "@/features/install-app";
@@ -21,20 +22,61 @@ const STATUS: Record<Schemas["StudentAssignmentSummary"]["status"], { label: str
   CLOSED: { label: "Hết hạn", tone: "neutral" },
 };
 
-/** One line: what is left, and the assignment streak (only before a tree is planted: the garden shows it then). */
+/** Hours from now to a due date, in words ("còn 18 giờ", "còn 3 ngày"). */
+function dueIn(dueAt: string, now = Date.now()): { text: string; soon: boolean } {
+  const h = (Date.parse(dueAt) - now) / 3_600_000;
+  if (h <= 0) return { text: "đã hết hạn", soon: true };
+  const text = h < 1 ? "còn dưới 1 giờ" : h < 48 ? `còn ${Math.round(h)} giờ` : `còn ${Math.round(h / 24)} ngày`;
+  return { text, soon: h <= 48 };
+}
+
+/**
+ * Overview strip under the garden: the student's mascot (or a sprout before planting), what is left with a small
+ * progress bar, the nearest due date, and the streak once there is one (a "0" streak only discourages).
+ */
 function StudyStrip({ todo, done }: { todo: number; done: number }) {
   const progress = useProgress();
-  const planted = !!useGarden().species;
+  const garden = useGarden();
+  const next = progress?.pending[0];
+  const due = next ? dueIn(next.dueAt) : null;
+  const total = todo + done;
   return (
     <div className="student-strip" aria-label="Tổng quan bài tập" data-tour="strip">
-      <span>
-        <strong>{todo} bài cần làm</strong> <span aria-hidden="true">·</span> {done} bài đã xong
+      <span className="strip-icon" aria-hidden="true">
+        {garden.species ? (
+          <MascotAvatar species={garden.species} stage={stageFor(progress?.done ?? 0)} size={46} />
+        ) : (
+          <svg viewBox="0 0 48 48" width="46" height="46">
+            <ellipse cx="24" cy="40" rx="15" ry="4.5" fill="#c08a5a" />
+            <ellipse cx="24" cy="38.5" rx="12" ry="3.2" fill="#8a5a36" />
+            <path d="M24 38V24" stroke="#5aa64a" strokeWidth="2.6" strokeLinecap="round" />
+            <path d="M24 26c0-6 4-10 12-10-.4 7-4.6 10.6-12 10z" fill="#8fd16b" />
+            <path d="M24 28c-.4-5.4-4-8.6-10.6-8.6.2 5.8 3.8 8.9 10.6 8.6z" fill="#b5e27a" />
+          </svg>
+        )}
       </span>
-      {progress && !planted ? (
-        <span className="strip-habit">
-          <span aria-hidden="true">🔥</span> {progress.streak} bài liên tiếp
+      <span className="strip-main">
+        <span className="strip-count">
+          <strong>{todo} bài cần làm</strong> <span aria-hidden="true">·</span> {done} bài đã xong
         </span>
-      ) : null}
+        {total ? (
+          <span className="strip-bar" role="progressbar" aria-label="Bài đã xong" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
+            <span style={{ width: `${(100 * done) / total}%` }} />
+          </span>
+        ) : null}
+      </span>
+      <span className="strip-chips">
+        {next && due ? (
+          <span className={`strip-chip${due.soon ? " soon" : ""}`} title={`Hạn ${fmtDate(next.dueAt)}`}>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg> Gần hạn nhất: <b>{due.text}</b>
+          </span>
+        ) : todo === 0 && total ? (
+          <span className="strip-chip ok"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg> Xong hết bài rồi!</span>
+        ) : null}
+        {progress && progress.streak > 0 ? (
+          <span className="strip-chip streak"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 2.5c.6 3.2 4.8 5.6 4.8 10.4A4.8 4.8 0 0 1 12 17.7a4.8 4.8 0 0 1-4.8-4.8c0-2 .9-3.2 1.8-4.3.2 1.6 1 2.7 2.1 3 .2-3.6 1-6.3.9-9.1z" /><path d="M7 19.5h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg> {progress.streak} bài liên tiếp</span>
+        ) : null}
+      </span>
     </div>
   );
 }

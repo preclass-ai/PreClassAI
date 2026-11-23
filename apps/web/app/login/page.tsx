@@ -185,9 +185,24 @@ export default function LoginPage() {
       <div className="login-theme"><ThemeToggle /></div>
       <div className="login-layout">
         <section className="login-story" aria-label="Giới thiệu PreClass AI">
-          <div className="login-story-top"><span className="story-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 0C12.6 6.6 17.4 11.4 24 12C17.4 12.6 12.6 17.4 12 24C11.4 17.4 6.6 12.6 0 12C6.6 11.4 11.4 6.6 12 0Z" /></svg></span> Gia sư AI cá nhân</div>
-          <div className="login-story-copy"><p className="eyebrow">Cùng học</p><h2>Học trước, hiểu sâu.</h2><p>Em tự làm, xin gợi ý khi cần, rồi xem lời giải thầy cô đã duyệt.</p></div>
-          <div className="atlas-graphic" aria-hidden="true"><span className="atlas-ring atlas-ring-one" /><span className="atlas-ring atlas-ring-two" /><span className="atlas-center">✦</span></div>
+          {/* Brand poster: sakura branch and the sprout mascot reading (public/brand); the copy stays real text. */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- decorative static art */}
+          <img className="login-branch" src="/brand/login-branch.webp" alt="" aria-hidden="true" width={252} height={206} />
+          <div className="login-story-top">
+            <svg className="story-globe" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+              <circle cx="24" cy="24" r="18" stroke="currentColor" strokeWidth="2.4" />
+              <path d="M6 24h36M24 6c6 5 9 11 9 18s-3 13-9 18M24 6c-6 5-9 11-9 18s3 13 9 18" stroke="currentColor" strokeWidth="2.4" />
+              <circle cx="32" cy="15" r="4" fill="currentColor" />
+            </svg>
+            <span><strong>PreClass <em>AI</em></strong><small>Học trước, hiểu sâu</small></span>
+          </div>
+          <div className="login-story-copy">
+            <p className="eyebrow">Cùng học</p>
+            <h2>Học trước, hiểu sâu.<span className="story-spark" aria-hidden="true">✦</span></h2>
+            <p>Em tự làm, xin gợi ý khi cần, rồi xem lời giải thầy cô đã duyệt.</p>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element -- decorative static art */}
+          <img className="login-scene" src="/brand/login-scene.webp" alt="" aria-hidden="true" width={788} height={410} />
         </section>
         <Suspense>
           <LoginForm />
