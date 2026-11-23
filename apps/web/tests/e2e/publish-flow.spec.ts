@@ -22,7 +22,7 @@ test("new revision → approve block by block → publish → assign (S04–S06)
   await expect(page.getByText(/Còn \d+ khối chưa duyệt\./).first()).toBeVisible();
   await page.getByRole("button", { name: "Duyệt tất cả khối không có cảnh báo" }).click();
   const confirm = page.getByRole("alertdialog", { name: "Xác nhận duyệt tất cả" });
-  await expect(confirm).toContainText(/Duyệt \d+ khối, bỏ qua \d+ khối có cảnh báo/);
+  await expect(confirm).toContainText(/Duyệt \d+ khối, bỏ qua \d+ khối\./);
   await confirm.getByRole("button", { name: /^Duyệt \d+ khối$/ }).click();
   await expect(confirm).toHaveCount(0);
   const approve = page.getByRole("button", { name: "Duyệt khối này" });

@@ -27,6 +27,7 @@ const MESSAGES: Record<string, string> = {
   HINT_LIMIT: "Em đã dùng hết gợi ý cho câu này. Em thử làm và nộp bài nhé!",
   AI_BUSY: "AI đang soạn câu hỏi cho giáo án này. Đợi một lát nhé.",
   QUIZ_GEN_OFF: "Tính năng AI soạn câu hỏi đang tắt.",
+  QUIZ_COUNT: "Tổng số câu mỗi lần soạn không quá 8. Giảm số câu rồi thử lại.",
   INVALID_CARD: "Thẻ ôn này không có trong bài.",
   NOT_ANSWERED: "Em hãy trả lời câu này trước, rồi HABIT AI sẽ giải thích nhé.",
   MESSAGE_REQUIRED: "Em hãy nhập câu hỏi.",

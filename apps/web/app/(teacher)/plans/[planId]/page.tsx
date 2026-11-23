@@ -8,6 +8,7 @@ import { Badge, Button, ErrorBox, Loading, Notice, PageHeader } from "@/componen
 import { api, unwrap } from "@/lib/api";
 import { AiDrafts } from "@/features/ai-drafts";
 import { fmtDate } from "@/lib/format";
+import { splitObjectives } from "@/lib/objectives";
 
 const ACTIVITY: Record<string, string> = { mo_dau: "Mở đầu", hinh_thanh: "Hình thành kiến thức", luyen_tap: "Luyện tập", van_dung: "Vận dụng" };
 const TYPE: Record<string, string> = { knowledge_box: "Khung kiến thức", table_cell: "Bảng", figure_caption: "Chú thích hình" };
@@ -60,13 +61,18 @@ export default function PlanPage() {
       <section className="card stack" aria-labelledby="obj">
         <h2 id="obj">Mục tiêu</h2>
         {p.objectives.length === 0 ? <p className="muted">Chưa đọc được mục tiêu.</p> : (
-          <ul>
-            {p.objectives.map((o, i) => (
-              <li key={i}>
-                {o.text} {o.competencyName ? <Badge tone="info">{o.competencyName}</Badge> : null}
-              </li>
-            ))}
-          </ul>
+          splitObjectives(p.objectives).map((g, gi) => (
+            <div key={gi} className="stack">
+              {g.title ? <h3>{g.title}</h3> : null}
+              <ul>
+                {g.items.map((o, i) => (
+                  <li key={i}>
+                    {o.text} {o.competencyName ? <Badge tone="info">{o.competencyName}</Badge> : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
         )}
       </section>
 

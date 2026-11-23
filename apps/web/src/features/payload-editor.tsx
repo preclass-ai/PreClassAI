@@ -81,6 +81,14 @@ export function PayloadEditor({ kind, value, onChange }: {
           <Field label="Đề bài">
             <textarea required rows={3} value={s(p, "stem")} onChange={(e) => set("stem", e.target.value)} />
           </Field>
+          <Field label="Mức độ (nhãn gợi ý)">
+            <select value={s(p, "level")} onChange={(e) => set("level", e.target.value || null)}>
+              <option value="">Không gắn</option>
+              <option value="NHAN_BIET">Nhận biết</option>
+              <option value="THONG_HIEU">Thông hiểu</option>
+              <option value="VAN_DUNG">Vận dụng</option>
+            </select>
+          </Field>
         </div>
       );
     case "option":

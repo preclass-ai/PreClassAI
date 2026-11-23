@@ -34,6 +34,7 @@ from app.schemas import (
     PlanAiItemOut,
     PlanAiItemUpdate,
     PlanAiList,
+    PlanAiRegenerate,
     PlanDetail,
     PlanItem,
     PlanJobLatest,
@@ -328,7 +329,7 @@ async def set_mcq_competency(db: AsyncSession, user: CurrentUser, plan_id: UUID,
 # ---------------------------------------------------------------- AI drafts: review, edit, regenerate
 def _ai_out(i: m.PlanAiItem) -> PlanAiItemOut:
     return PlanAiItemOut(id=i.id, kind=i.kind, position=i.position, status=i.status, origin=i.origin,
-                         payload=i.payload, source_quote=i.source_quote, needs_confirmation=i.needs_confirmation)
+                         payload=quizgen.clean_payload(i.kind, i.payload), source_quote=i.source_quote, needs_confirmation=i.needs_confirmation)
 
 
 async def list_ai_items(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> PlanAiList:
@@ -349,10 +350,16 @@ async def update_ai_item(db: AsyncSession, user: CurrentUser, plan_id: UUID, ite
     status = body.status or it.status
     if body.payload is not None:
         try:
-            model: Any = quizgen.AiQuestion if it.kind == "quiz" else quizgen.AiCard
-            it.payload = model.model_validate(body.payload).model_dump(mode="json")
+            numeric = it.kind == "quiz" and body.payload.get("item_type") == "NUMERIC"
+            model: Any = quizgen.AiNumeric if numeric else quizgen.AiQuestion if it.kind == "quiz" else quizgen.AiCard
+            draft = model.model_validate(body.payload)
+            if numeric and not quizgen.numeric_math_ok(draft):
+                raise ValueError("answer does not follow from the operands")
+            if numeric:
+                draft.answer = quizgen.numeric_value(draft)  # the key is always the server's own result
+            it.payload = draft.model_dump(mode="json")
         except ValueError as e:
-            raise ApiError(422, "PAYLOAD_INVALID", "Nội dung chưa hợp lệ: cần đủ 4 phương án, 3 gợi ý và đoạn trích nguồn") from e
+            raise ApiError(422, "PAYLOAD_INVALID", "Nội dung chưa hợp lệ: cần đủ 4 phương án, 3 gợi ý và đoạn trích nguồn (câu trả lời số: đáp án phải khớp phép tính)") from e
         status = body.status or "draft"
     it.status = status
     it.needs_confirmation = status != "approved"  # the model's answer counts as confirmed only when the teacher approves it
@@ -360,18 +367,21 @@ async def update_ai_item(db: AsyncSession, user: CurrentUser, plan_id: UUID, ite
     return _ai_out(it)
 
 
-async def regenerate_ai(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> PlanOut:
+async def regenerate_ai(db: AsyncSession, user: CurrentUser, plan_id: UUID, body: PlanAiRegenerate) -> PlanOut:
     """Approved items stay, the rest is redrafted in the background."""
     p = await _own(db, user, plan_id)
     if not get_settings().quiz_gen_enabled:
         raise ApiError(409, "QUIZ_GEN_OFF", "Tính năng AI soạn câu hỏi đang tắt")
+    total = body.mcq + body.numeric
+    if total > get_settings().quiz_gen_per_lesson:
+        raise ApiError(422, "QUIZ_COUNT", f"Tổng số câu không quá {get_settings().quiz_gen_per_lesson}")
     if p.ai_state in ("queued", "running"):
         raise ApiError(409, "AI_BUSY", "AI đang soạn câu hỏi cho giáo án này")
     if await _lesson_of(db, p) is not None:
         raise ApiError(409, "LESSON_EXISTS", "Bài chuẩn bị đã được tạo, không soạn lại được")
     p.ai_state = "queued"
     await db.commit()
-    quizgen.start(p.id)
+    quizgen.start(p.id, quizgen.QuizSpec(body.mcq, body.numeric, body.level))
     return await _out(db, p)
 
 
@@ -474,7 +484,7 @@ async def build_lesson(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> Pl
         src = _anchor_for(it.source_quote, by)
         if src is None:
             continue
-        d = it.payload
+        d = quizgen.clean_payload(it.kind, it.payload)  # sentence ids from older drafts never reach students
         if it.kind == "review":
             card = {"title": d["title"], "points": d["points"], "example": d["example"],
                     "check": {"statement": d["check"]["statement"], "answerTrue": d["check"]["answer_true"], "explanation": d["check"]["explanation"]}}
@@ -483,8 +493,18 @@ async def build_lesson(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> Pl
             continue
         ai_q += 1
         k = f"aq{ai_q}"
+        level = {"level": d["level"]} if d.get("level") else {}
+        if d.get("item_type") == "NUMERIC":  # part III: the key is the server's own result, with the derivation VAL-03 recomputes
+            more = _number_sources(d["stem"], src, by)
+            deriv = {"op": d["op"], "operands": d["operands"]}
+            add(k, "worksheet_item", {"stem": d["stem"], "itemType": "NUMERIC", "skill": d["skill_tag"], "hints": d["hints"],
+                                      "sourceQuote": it.source_quote[:500], **level}, src, tr="AI_PROPOSED", more=more)
+            add(f"{k}k", "answer_key", {"value": d["answer"], "unit": d["unit"], "tolerance": 0.05, "derivation": deriv}, src,
+                parent=k, tr="AI_PROPOSED", more=more)
+            add(f"{k}e", "explanation", {"text": d["explanation"], "derivation": deriv}, src, parent=k, tr="AI_PROPOSED", more=more)
+            continue
         add(k, "worksheet_item", {"stem": d["stem"], "itemType": "MCQ", "skill": d["skill_tag"], "hints": d["hints"],
-                          "sourceQuote": it.source_quote[:500]}, src, tr="AI_PROPOSED",
+                          "sourceQuote": it.source_quote[:500], **level}, src, tr="AI_PROPOSED",
             more=_number_sources(d["stem"], src, by))
         for i, o in enumerate(d["options"]):
             add(f"{k}{chr(97 + i)}", "option", {"label": chr(65 + i), "text": o}, src, parent=k, tr="AI_PROPOSED", more=_number_sources(o, src, by))

@@ -62,6 +62,7 @@ LinkStatus = Literal["VERIFIED", "UNRESOLVED"]
 OutputType = Literal["WORKSHEET", "FLASHCARDS"]
 Skill = Literal["READ_TABLE", "COMPARE", "CALCULATE", "EXPLAIN"]
 ItemType = Literal["MCQ", "SHORT", "NUMERIC"]
+Level = Literal["NHAN_BIET", "THONG_HIEU", "VAN_DUNG"]
 JobStatus = Literal["QUEUED", "RUNNING", "SUCCEEDED", "FAILED"]
 ReviewAction = Literal["APPROVE", "REJECT", "REQUEST_CHANGES"]
 Severity = Literal["BLOCKER", "WARNING"]
@@ -456,6 +457,7 @@ class WorksheetItemPayload(ApiModel):
     skill: Skill
     hints: list[str] | None = Field(None, description="Fixed hints 1..3 (AI-drafted questions); never shown outside Habit.")
     source_quote: str | None = Field(None, description="Plan passage an AI-drafted question is based on.")
+    level: Level | None = Field(None, description="Suggested level label; the teacher can change it.")
 
 
 class ReviewCheckPayload(ApiModel):
@@ -690,8 +692,9 @@ class ApproveAllRequest(ApiModel):
 class ApproveAllOut(ApiModel):
     approved: int = Field(description="Blocks approved (or that would be approved when `applied` is false).")
     skipped: int = Field(description="Unapproved blocks left for a hand review: a warning, a blocker, or not checked yet.")
+    skipped_ai: int = Field(0, description="Of `skipped`: AI drafted blocks (`AI_PROPOSED`), approved only one by one.")
     applied: bool
-    model_config = ex({"approved": 12, "skipped": 3, "applied": False})
+    model_config = ex({"approved": 12, "skipped": 3, "skippedAi": 2, "applied": False})
 
 
 class ReviewOut(ApiModel):
@@ -856,7 +859,7 @@ class StudentAssignmentOut(ApiModel):
     due_at: datetime
     blocks: list[StudentContentBlock]
     items: list[StudentItem]
-    review: list[StudentReviewCard] = Field(default_factory=list, description="Approved review cards; empty = no review step.")
+    review_cards: list[StudentReviewCard] = Field(default_factory=list, description="Approved review cards; empty = none.")
     review_state: ReviewState = Field(default_factory=ReviewState)
     model_config = ex({
         "id": I["assign"], "title": "Phân bố dân cư theo vùng", "openAt": T1, "dueAt": "2026-11-30T23:59:00+07:00",
@@ -1133,7 +1136,8 @@ class PlanAiItemOut(ApiModel):
     position: int
     status: Literal["draft", "approved", "rejected"]
     origin: str = Field(description="`ai_generated`: written by the model, never published before the teacher approves it.")
-    payload: dict[str, Any] = Field(description="quiz: stem, options[4], correct_index, explanation, hints[3], skill_tag. "
+    payload: dict[str, Any] = Field(description="quiz: stem, options[4], correct_index, explanation, hints[3], skill_tag, level "
+                                    "(`item_type` MCQ); NUMERIC: stem, op, operands, unit, answer, explanation, hints. "
                                     "review: title, points, example, check{statement, answer_true, explanation}.")
     source_quote: str = Field(description="The passage of the lesson plan the item is based on.")
     needs_confirmation: bool = Field(description="True until the teacher approves.")
@@ -1141,6 +1145,15 @@ class PlanAiItemOut(ApiModel):
 
 class PlanAiList(ApiModel):
     items: list[PlanAiItemOut]
+
+
+class PlanAiRegenerate(ApiModel):
+    """What the teacher wants drafted, by part of the national exam format (from 2025). Part II (true/false x4) is not offered."""
+
+    mcq: int = Field(6, ge=0, le=20, description="Part I: multiple choice questions.")
+    numeric: int = Field(2, ge=0, le=20, description="Part III: one-number answer, recomputed by the server.")
+    level: Level | None = Field(None, description="Suggested level label for each question.")
+    model_config = ex({"mcq": 6, "numeric": 2, "level": "THONG_HIEU"})
 
 
 class PlanAiItemUpdate(ApiModel):

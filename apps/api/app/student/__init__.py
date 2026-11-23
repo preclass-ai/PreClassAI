@@ -114,7 +114,7 @@ async def get_assignment(db: AsyncSession, user: CurrentUser, assignment_id: UUI
             options=[StudentOption(label=o["payload"]["label"], text=o["payload"]["text"]) for o in opts],
             result=_result(snap, it["id"], att.is_correct) if att else None))
     return StudentAssignmentOut(id=a.id, title=snap["title"], open_at=a.open_at, due_at=a.due_at, blocks=blocks, items=items,
-                                review=review.cards(snap), review_state=await review.state(db, a.id, user.id))
+                                review_cards=review.cards(snap), review_state=await review.state(db, a.id, user.id))
 
 
 async def list_assignments(db: AsyncSession, user: CurrentUser) -> StudentAssignmentList:

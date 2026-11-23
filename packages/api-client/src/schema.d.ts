@@ -543,7 +543,7 @@ export interface paths {
         put?: never;
         /**
          * Redraft questions and review cards in the background; approved items stay
-         * @description Poll `GET /lesson-plans/{id}` for `aiState`. 409: `QUIZ_GEN_OFF`, `AI_BUSY`, `LESSON_EXISTS`.
+         * @description Body (optional): how many multiple choice (part I) and numeric (part III) questions, and a level label. Defaults 6 and 2; the total may not exceed `QUIZ_GEN_PER_LESSON` (422 `QUIZ_COUNT`). Poll `GET /lesson-plans/{id}` for `aiState`. 409: `QUIZ_GEN_OFF`, `AI_BUSY`, `LESSON_EXISTS`.
          */
         post: operations["regeneratePlanAiItems"];
         delete?: never;
@@ -1380,7 +1380,8 @@ export interface components {
          * @example {
          *       "applied": false,
          *       "approved": 12,
-         *       "skipped": 3
+         *       "skipped": 3,
+         *       "skippedAi": 2
          *     }
          */
         ApproveAllOut: {
@@ -1396,6 +1397,12 @@ export interface components {
              * @description Unapproved blocks left for a hand review: a warning, a blocker, or not checked yet.
              */
             skipped: number;
+            /**
+             * Skippedai
+             * @description Of `skipped`: AI drafted blocks (`AI_PROPOSED`), approved only one by one.
+             * @default 0
+             */
+            skippedAi: number;
         };
         /** ApproveAllRequest */
         ApproveAllRequest: {
@@ -2932,7 +2939,7 @@ export interface components {
             origin: string;
             /**
              * Payload
-             * @description quiz: stem, options[4], correct_index, explanation, hints[3], skill_tag. review: title, points, example, check{statement, answer_true, explanation}.
+             * @description quiz: stem, options[4], correct_index, explanation, hints[3], skill_tag, level (`item_type` MCQ); NUMERIC: stem, op, operands, unit, answer, explanation, hints. review: title, points, example, check{statement, answer_true, explanation}.
              */
             payload: {
                 [key: string]: unknown;
@@ -2966,6 +2973,34 @@ export interface components {
         PlanAiList: {
             /** Items */
             items: components["schemas"]["PlanAiItemOut"][];
+        };
+        /**
+         * PlanAiRegenerate
+         * @description What the teacher wants drafted, by part of the national exam format (from 2025). Part II (true/false x4) is not offered.
+         * @example {
+         *       "level": "THONG_HIEU",
+         *       "mcq": 6,
+         *       "numeric": 2
+         *     }
+         */
+        PlanAiRegenerate: {
+            /**
+             * Level
+             * @description Suggested level label for each question.
+             */
+            level?: ("NHAN_BIET" | "THONG_HIEU" | "VAN_DUNG") | null;
+            /**
+             * Mcq
+             * @description Part I: multiple choice questions.
+             * @default 6
+             */
+            mcq: number;
+            /**
+             * Numeric
+             * @description Part III: one-number answer, recomputed by the server.
+             * @default 2
+             */
+            numeric: number;
         };
         /** PlanDetail */
         PlanDetail: {
@@ -4282,10 +4317,10 @@ export interface components {
              */
             openAt: string;
             /**
-             * Review
-             * @description Approved review cards; empty = no review step.
+             * Reviewcards
+             * @description Approved review cards; empty = none.
              */
-            review?: components["schemas"]["StudentReviewCard"][];
+            reviewCards?: components["schemas"]["StudentReviewCard"][];
             reviewState?: components["schemas"]["ReviewState"];
             /** Title */
             title: string;
@@ -4678,6 +4713,11 @@ export interface components {
              * @enum {string}
              */
             itemType: "MCQ" | "SHORT" | "NUMERIC";
+            /**
+             * Level
+             * @description Suggested level label; the teacher can change it.
+             */
+            level?: ("NHAN_BIET" | "THONG_HIEU" | "VAN_DUNG") | null;
             /**
              * Skill
              * @enum {string}
@@ -6347,7 +6387,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PlanAiRegenerate"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             202: {
@@ -6394,13 +6438,13 @@ export interface operations {
                     "application/json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };

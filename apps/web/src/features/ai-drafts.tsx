@@ -8,6 +8,10 @@ import { api, unwrap, type Schemas } from "@/lib/api";
 type Item = Schemas["PlanAiItemOut"];
 type Plan = Schemas["PlanDetail"];
 const LETTERS = ["A", "B", "C", "D"];
+const LEVELS: Record<string, string> = { NHAN_BIET: "Nhận biết", THONG_HIEU: "Thông hiểu", VAN_DUNG: "Vận dụng" };
+const OPS: Record<string, string> = { sum: "Tổng", diff: "Hiệu (số đầu trừ các số sau)", ratio: "Thương (số đầu chia số thứ hai)", percent: "Tỉ lệ phần trăm (số đầu chia số thứ hai, nhân 100)" };
+const MAX_TOTAL = 8; // QUIZ_GEN_PER_LESSON default; the server answers QUIZ_COUNT when its own limit is lower
+const vn = (n: unknown) => String(n).replace(".", ",");
 const STATUS: Record<Item["status"], { tone: "info" | "success" | "warning"; label: string }> = {
   draft: { tone: "warning", label: "Cần xác nhận" },
   approved: { tone: "success", label: "Đã duyệt" },
@@ -39,8 +43,18 @@ export function AiDrafts({ plan }: { plan: Plan }) {
     void qc.invalidateQueries({ queryKey: ["plan", planId] });
     void qc.invalidateQueries({ queryKey: ["plans"] });
   };
+  const [mcq, setMcq] = useState(6);
+  const [numeric, setNumeric] = useState(2);
+  const [level, setLevel] = useState("");
+  const total = mcq + numeric;
   const regen = useMutation({
-    mutationFn: () => unwrap(api.POST("/v1/lesson-plans/{plan_id}/ai-items/regenerate", { params: { path: { plan_id: planId } } })),
+    mutationFn: () =>
+      unwrap(
+        api.POST("/v1/lesson-plans/{plan_id}/ai-items/regenerate", {
+          params: { path: { plan_id: planId } },
+          body: { mcq, numeric, level: (level || null) as Schemas["PlanAiRegenerate"]["level"] },
+        }),
+      ),
     onSuccess: refresh,
   });
   const items = (list.data?.items ?? []).filter((i) => i.kind === tab);
@@ -84,9 +98,36 @@ export function AiDrafts({ plan }: { plan: Plan }) {
         <AiItemCard key={`${it.id}-${it.status}-${JSON.stringify(it.payload).length}`} planId={planId} item={it} locked={locked} onChange={refresh} />
       ))}
       {!locked ? (
-        <Button busy={regen.isPending} disabled={busy} onClick={() => regen.mutate()}>
-          Tạo lại câu hỏi
-        </Button>
+        <fieldset className="stack" disabled={busy}>
+          <legend className="small">Chọn dạng câu theo cấu trúc đề tốt nghiệp THPT</legend>
+          <div className="row">
+            <label className="stack">
+              <span className="small">Phần I: trắc nghiệm nhiều lựa chọn</span>
+              <input type="number" min={0} max={MAX_TOTAL} value={mcq} onChange={(e) => setMcq(Math.max(0, Number(e.target.value) || 0))} />
+            </label>
+            <label className="stack">
+              <span className="small">Phần III: trả lời ngắn bằng một số</span>
+              <input type="number" min={0} max={MAX_TOTAL} value={numeric} onChange={(e) => setNumeric(Math.max(0, Number(e.target.value) || 0))} />
+            </label>
+            <label className="stack">
+              <span className="small">Mức độ</span>
+              <select value={level} onChange={(e) => setLevel(e.target.value)}>
+                <option value="">Không gắn</option>
+                {Object.entries(LEVELS).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <p className="muted small">
+            Tổng {total} câu, không quá {MAX_TOTAL}. Phần II (đúng/sai 4 ý) chưa có. Số câu được tính cả các câu đã Duyệt giữ lại.
+          </p>
+          <Button busy={regen.isPending} disabled={busy || total === 0 || total > MAX_TOTAL} onClick={() => regen.mutate()}>
+            Tạo lại câu hỏi
+          </Button>
+        </fieldset>
       ) : null}
       {!locked ? <p className="muted small">Mục đã Duyệt được giữ lại, các mục còn lại được soạn mới.</p> : null}
     </section>
@@ -109,6 +150,8 @@ function AiItemCard({ planId, item, locked, onChange }: { planId: string; item: 
     <article className="card stack" aria-label={item.kind === "quiz" ? "Câu hỏi AI soạn" : "Thẻ ôn AI soạn"}>
       <div className="row">
         <Badge tone="info">AI soạn</Badge> <Badge tone={st.tone}>{st.label}</Badge>
+        {item.kind === "quiz" ? <Badge tone="info">{p.item_type === "NUMERIC" ? "Phần III: trả lời số" : "Phần I: trắc nghiệm"}</Badge> : null}
+        {typeof p.level === "string" && LEVELS[p.level] ? <Badge tone="info">{LEVELS[p.level]}</Badge> : null}
       </div>
       {editing ? (
         <ItemForm item={item} busy={act.isPending} onCancel={() => setEditing(false)} onSave={(payload) => act.mutate({ payload })} />
@@ -139,6 +182,7 @@ function AiItemCard({ planId, item, locked, onChange }: { planId: string; item: 
 }
 
 function QuizView({ p }: { p: Record<string, unknown> }) {
+  if (p.item_type === "NUMERIC") return <NumericView p={p} />;
   const options = (p.options as string[]) ?? [];
   const right = Number(p.correct_index);
   return (
@@ -153,6 +197,33 @@ function QuizView({ p }: { p: Record<string, unknown> }) {
           </li>
         ))}
       </ul>
+      <p className="small">Giải thích: {String(p.explanation)}</p>
+      <details>
+        <summary className="small">3 gợi ý cố định</summary>
+        <ol className="small">
+          {((p.hints as string[]) ?? []).map((h, i) => (
+            <li key={i}>{h}</li>
+          ))}
+        </ol>
+      </details>
+    </div>
+  );
+}
+
+/** Part III: the answer shown is the one the server worked out from the operands, not the model's own claim. */
+function NumericView({ p }: { p: Record<string, unknown> }) {
+  const operands = ((p.operands as number[]) ?? []).map(vn).join("; ");
+  return (
+    <div className="stack">
+      <p>
+        <strong>{String(p.stem)}</strong>
+      </p>
+      <p className="small">
+        Đáp án (máy tính lại): <strong>{vn(p.answer)}</strong> {String(p.unit)} <Badge tone="success">Phép tính khớp</Badge>
+      </p>
+      <p className="small">
+        Phép tính: {OPS[String(p.op)] ?? String(p.op)} của {operands}
+      </p>
       <p className="small">Giải thích: {String(p.explanation)}</p>
       <details>
         <summary className="small">3 gợi ý cố định</summary>
@@ -207,7 +278,27 @@ function ItemForm({ item, busy, onSave, onCancel }: { item: Item; busy: boolean;
         onSave({ ...v, source_quote: item.sourceQuote });
       }}
     >
-      {item.kind === "quiz" ? (
+      {item.kind === "quiz" && v.item_type === "NUMERIC" ? (
+        <>
+          {field("Câu hỏi (nêu đủ số liệu cần dùng)", String(v.stem ?? ""), (s) => set("stem", s), 3)}
+          <label className="stack">
+            <span className="small">Phép tính</span>
+            <select value={String(v.op)} onChange={(e) => set("op", e.target.value)}>
+              {Object.entries(OPS).map(([k, label]) => (
+                <option key={k} value={k}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {field("Các số (cách nhau bằng dấu chấm phẩy, đều phải có trong đoạn trích)", ((v.operands as number[]) ?? []).map(vn).join("; "),
+            (s) => set("operands", s.split(";").map((x) => Number(x.trim().replace(",", "."))).filter((x) => !Number.isNaN(x))))}
+          {field("Đơn vị", String(v.unit ?? ""), (s) => set("unit", s))}
+          <p className="muted small">Đáp án do máy tính lại từ các số và phép tính khi lưu.</p>
+          {field("Giải thích", String(v.explanation ?? ""), (s) => set("explanation", s), 2)}
+          {arr("hints").map((h, i) => field(`Gợi ý ${i + 1}`, h, (s) => setAt("hints", i, s)))}
+        </>
+      ) : item.kind === "quiz" ? (
         <>
           {field("Câu hỏi", String(v.stem ?? ""), (s) => set("stem", s), 2)}
           {arr("options").map((o, i) => field(`Phương án ${LETTERS[i]}`, o, (s) => setAt("options", i, s)))}
@@ -236,6 +327,19 @@ function ItemForm({ item, busy, onSave, onCancel }: { item: Item; busy: boolean;
           {field("Giải thích ngay", check.explanation, (s) => set("check", { ...check, explanation: s }), 2)}
         </>
       )}
+      {item.kind === "quiz" ? (
+        <label className="stack">
+          <span className="small">Mức độ (nhãn gợi ý)</span>
+          <select value={String(v.level ?? "")} onChange={(e) => set("level", e.target.value || null)}>
+            <option value="">Không gắn</option>
+            {Object.entries(LEVELS).map(([k, label]) => (
+              <option key={k} value={k}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <div className="row">
         <Button type="submit" variant="primary" busy={busy}>
           Lưu

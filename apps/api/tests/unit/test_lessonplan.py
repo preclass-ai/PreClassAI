@@ -110,6 +110,23 @@ def test_open_question_is_not_an_mcq() -> None:
     assert _parse_mcq(_Unit("mcq", [Line("Câu 1. Em hãy nêu ví dụ về đô thị.", 1)])) is None
 
 
+def test_the_last_option_stops_where_the_next_section_starts() -> None:
+    from app.lessonplan.model import Line
+
+    text = ("Câu 4. Vì sao nước ta thu hút đầu tư nước ngoài? A. Thị trường lớn. B. Vị trí thuận lợi. C. Chính trị ổn định. "
+            "D. Nguồn lao động giá rẻ. c) Sản phẩm: Học sinh hoàn thành phiếu học tập. d) Tổ chức thực hiện: Bước 1: Chuyển giao nhiệm vụ.")
+    parsed = _parse_mcq(_Unit("mcq", [Line(text, 1)]))
+    assert parsed is not None
+    stem, opts, _ = parsed
+    assert stem == "Vì sao nước ta thu hút đầu tư nước ngoài?"
+    assert [t for _, t in opts] == ["Thị trường lớn.", "Vị trí thuận lợi.", "Chính trị ổn định.", "Nguồn lao động giá rẻ."]
+    for tail in ("Hoạt động 3: Luyện tập", "Bước 2: Thực hiện", "a) Mục tiêu: nêu được"):  # other section starts also end it
+        got = _parse_mcq(_Unit("mcq", [Line(f"Câu 1. Hỏi gì? A. một B. hai C. ba D. bốn. {tail}", 1)]))
+        assert got is not None and got[1][3][1] == "bốn."
+    plain = _parse_mcq(_Unit("mcq", [Line("Câu 2. Hỏi gì? A. một B. hai C. ba D. bốn sản phẩm nông nghiệp", 1)]))
+    assert plain is not None and plain[1][3][1] == "bốn sản phẩm nông nghiệp"  # a lower-case word inside an option is not a boundary
+
+
 def test_a_file_that_is_not_a_plan_format_is_refused() -> None:
     from app.errors import ApiError
 

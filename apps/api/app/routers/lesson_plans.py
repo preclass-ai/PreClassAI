@@ -16,6 +16,7 @@ from app.schemas import (
     PlanAiItemOut,
     PlanAiItemUpdate,
     PlanAiList,
+    PlanAiRegenerate,
     PlanDetail,
     PlanJobLatest,
     PlanJobOut,
@@ -108,10 +109,12 @@ async def ai_items(plan_id: UUID, cu: Teacher, db: Db) -> PlanAiList:
 
 @router.post("/{plan_id}/ai-items/regenerate", status_code=202, operation_id="regeneratePlanAiItems", response_model=PlanOut,
              summary="Redraft questions and review cards in the background; approved items stay",
-             description="Poll `GET /lesson-plans/{id}` for `aiState`. 409: `QUIZ_GEN_OFF`, `AI_BUSY`, `LESSON_EXISTS`.",
-             responses=errs(401, 403, 404, 409))
-async def regenerate(plan_id: UUID, cu: Teacher, db: Db) -> PlanOut:
-    return await service.regenerate_ai(db, cu, plan_id)
+             description="Body (optional): how many multiple choice (part I) and numeric (part III) questions, and a level label. Defaults 6 and 2; "
+             "the total may not exceed `QUIZ_GEN_PER_LESSON` (422 `QUIZ_COUNT`). Poll `GET /lesson-plans/{id}` for `aiState`. "
+             "409: `QUIZ_GEN_OFF`, `AI_BUSY`, `LESSON_EXISTS`.",
+             responses=errs(401, 403, 404, 409, 422))
+async def regenerate(plan_id: UUID, cu: Teacher, db: Db, body: PlanAiRegenerate | None = None) -> PlanOut:
+    return await service.regenerate_ai(db, cu, plan_id, body or PlanAiRegenerate())
 
 
 @router.patch("/{plan_id}/ai-items/{item_id}", operation_id="updatePlanAiItem", response_model=PlanAiItemOut,
