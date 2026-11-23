@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { ErrorBox } from "@/components/ui";
 import { useAuth, type Role } from "@/lib/auth";
+import { ThemeToggle } from "@/lib/theme";
 
 const NAV: { href: string; label: string; roles: Role[] }[] = [
   { href: "/lessons", label: "Bài học", roles: ["TEACHER", "REVIEWER"] },
@@ -46,7 +47,7 @@ export function AppShell({ children, narrow }: { children: ReactNode; narrow?: b
           </svg>
           <span className="brand-copy"><strong>PreClass <em>AI</em></strong><small>Học trước, hiểu sâu</small></span>
         </Link>
-        <nav aria-label="Điều hướng chính">
+        <nav aria-label="Điều hướng chính" data-tour="nav">
           {links.map((l) => (
             <Link key={l.href} href={l.href} aria-current={pathname.startsWith(l.href) ? "page" : undefined}>
               {l.label}
@@ -54,6 +55,7 @@ export function AppShell({ children, narrow }: { children: ReactNode; narrow?: b
           ))}
         </nav>
         <div className="topbar-user">
+          <ThemeToggle />
           <span className="muted">{user?.displayName}</span>
           <button type="button" className="link-btn" disabled={loggingOut} onClick={() => void handleLogout()}>
             Đăng xuất

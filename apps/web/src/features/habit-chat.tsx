@@ -7,6 +7,8 @@ import { newRequestId } from "@/lib/uuid";
 import type { Schemas } from "@/lib/api";
 import { askHabit, type ChatReply } from "./habit-api";
 import { HabitMark, SourceRef } from "./habit-parts";
+import type { Species } from "./garden/species";
+import { MascotAvatar } from "./garden/tree";
 
 type QuickId = NonNullable<Schemas["ChatRequest"]["quick"]>;
 // Structured buttons: they never go through the free-text classifier on the server.
@@ -28,7 +30,15 @@ type Msg = {
 };
 
 /** Bottom sheet (narrow) / side panel (wide). Plain text only: replies are rendered as React text, never as HTML. */
-export default function HabitChat({ assignmentId, itemId, answered, explanation, open, onClose, onOpenReview }: {
+export type ChatMascot = { species: Species; stage: number } | null;
+
+function mascotIntro(m: NonNullable<ChatMascot>, answered: boolean): string {
+  return answered
+    ? `${m.species.mascot} đây! Em đọc lời giải thầy cô đã duyệt ở trên nhé. Chỗ nào chưa hiểu, cứ hỏi mình.`
+    : `${m.species.mascot} đây! Mình cùng em nghĩ câu này nhé. Mình không nói đáp án, nhưng sẽ chỉ em số liệu nằm ở đâu và nên bắt đầu từ đâu.`;
+}
+
+export default function HabitChat({ assignmentId, itemId, answered, explanation, open, onClose, onOpenReview, mascot = null }: {
   assignmentId: string;
   itemId: string;
   answered: boolean;
@@ -36,12 +46,17 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
   open: boolean;
   onClose: () => void;
   onOpenReview?: (cardId: string) => void;
+  mascot?: ChatMascot; // the student's own mascot speaks for HABIT AI (null: plain HABIT AI)
 }) {
   const dlg = useRef<HTMLDialogElement>(null);
   const log = useRef<HTMLDivElement>(null);
   const seq = useRef(0);
   const retry = useRef<{ text: string; rid: string } | null>(null);
-  const [msgs, setMsgs] = useState<Msg[]>(() => (answered && explanation ? [{ id: 0, from: "habit", text: explanation }] : []));
+  const [msgs, setMsgs] = useState<Msg[]>(() => {
+    const first: Msg[] = answered && explanation ? [{ id: 0, from: "habit", text: explanation }] : [];
+    return mascot ? [...first, { id: -1, from: "habit", text: mascotIntro(mascot, answered) }] : first;
+  });
+  const who = mascot?.species.mascot ?? "HABIT AI";
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<unknown>(null);
@@ -146,11 +161,20 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
   }
 
   return (
-    <dialog ref={dlg} className="habit-sheet" aria-label="Hỏi HABIT AI" onClose={onClose}>
+    <dialog ref={dlg} className={`habit-sheet${mascot ? " with-mascot" : ""}`} aria-label="Hỏi HABIT AI" onClose={onClose} style={mascot ? { ["--mascot" as string]: mascot.species.accent } : undefined}>
       <header className="habit-sheet-head" {...grab}>
         <span className="habit-grab" aria-hidden="true" />
         <strong className="habit-title">
-          <HabitMark /> HABIT AI
+          {mascot ? (
+            <>
+              <MascotAvatar species={mascot.species} stage={mascot.stage} size={34} className="mascot-bob" /> {mascot.species.mascot}
+              <span className="habit-via">HABIT AI</span>
+            </>
+          ) : (
+            <>
+              <HabitMark /> HABIT AI
+            </>
+          )}
           <span className="habit-online">
             <i aria-hidden="true" /> đang trực tuyến
           </span>
@@ -163,12 +187,14 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
       <div ref={log} className="habit-log" aria-live="polite" aria-busy={busy}>
         {msgs.map((m, idx) => (
           <div key={m.id} className="habit-turn">
-            <div className={`habit-msg ${m.from}${m.refused ? " refused" : ""}`}>
-              <p>{m.text}</p>
-              {m.refs?.map((s) => (
-                <SourceRef key={s.blockId} excerpt={s.excerpt} />
-              ))}
-            </div>
+            {mascot && m.from === "habit" ? (
+              <div className="habit-row">
+                <MascotAvatar species={mascot.species} stage={mascot.stage} size={28} />
+                <Bubble m={m} />
+              </div>
+            ) : (
+              <Bubble m={m} />
+            )}
             {m.openReview && onOpenReview ? (
               <button
                 type="button"
@@ -198,7 +224,7 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
             ) : null}
           </div>
         ))}
-        {busy ? <div className="habit-msg habit habit-think" role="status">HABIT AI đang nghĩ<span className="habit-dots" aria-hidden="true"><i /><i /><i /></span></div> : null}
+        {busy ? <div className="habit-msg habit habit-think" role="status">{who} đang nghĩ<span className="habit-dots" aria-hidden="true"><i /><i /><i /></span></div> : null}
         {limited ? (
           <div className="habit-limit" role="status">
             Hôm nay em hỏi nhiều rồi, thử tự làm nhé!
@@ -249,5 +275,16 @@ export default function HabitChat({ assignmentId, itemId, answered, explanation,
         </form>
       ) : null}
     </dialog>
+  );
+}
+
+function Bubble({ m }: { m: Msg }) {
+  return (
+    <div className={`habit-msg ${m.from}${m.refused ? " refused" : ""}`}>
+      <p>{m.text}</p>
+      {m.refs?.map((s) => (
+        <SourceRef key={s.blockId} excerpt={s.excerpt} />
+      ))}
+    </div>
   );
 }

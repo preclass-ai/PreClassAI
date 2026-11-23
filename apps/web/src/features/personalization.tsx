@@ -75,7 +75,7 @@ export function PersonalizationBar({ focus, onFocus }: { focus: boolean; onFocus
   }
 
   return (
-    <section className="pers-bar" aria-label="Cách học hôm nay">
+    <section className="pers-bar" aria-label="Cách học hôm nay" data-tour="pers">
       <details>
         <summary>Em muốn học theo cách nào hôm nay?</summary>
         <fieldset className="pers-options">
