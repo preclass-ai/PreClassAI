@@ -17,6 +17,7 @@ from app.schemas import (
     LessonHistory,
     LessonList,
     LessonOut,
+    LessonPatch,
     RevisionOut,
     RevisionSourcesResult,
     RevisionSourcesUpdate,
@@ -220,6 +221,25 @@ async def get_lesson(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -> Le
     return await _lesson_out(db, await _readable_lesson(db, user, lesson_id))
 
 
+async def update_lesson(db: AsyncSession, user: CurrentUser, lesson_id: UUID, body: LessonPatch) -> LessonOut:
+    """Rename / edit the goal of an own lesson. The published snapshot is immutable: students keep the old name until the
+    next publish (or an assignment display title). Each change is logged with before and after."""
+    lesson = await db.scalar(select(m.Lesson).where(m.Lesson.id == lesson_id, m.Lesson.author_id == user.id).with_for_update())
+    if lesson is None:
+        raise ApiError(404, "NOT_FOUND", "Không tìm thấy")
+    new = {"title": body.title, "goal": (body.goal or "").strip() or None if body.goal is not None else lesson.goal}
+    if body.title is None:
+        new["title"] = lesson.title
+    for field, after in new.items():
+        before = getattr(lesson, field)
+        if after != before:
+            db.add(m.RenameLog(target_type="lesson", target_id=lesson.id, field=field, before=before, after=after,
+                               actor_id=user.id))
+            setattr(lesson, field, after)
+    await db.commit()
+    return await _lesson_out(db, lesson)
+
+
 async def lesson_history(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -> LessonHistory:
     await _readable_lesson(db, user, lesson_id)
     revs = (await db.execute(
@@ -250,6 +270,10 @@ async def lesson_history(db: AsyncSession, user: CurrentUser, lesson_id: UUID) -
         wd = (await db.execute(select(m.AuditLog).where(
             m.AuditLog.action == "WITHDRAW", m.AuditLog.resource_id.in_([p.id for p in pubs])))).scalars().all()
         events += [HistoryEvent(at=a.created_at, actor_type="TEACHER", actor_id=a.actor_id, operation="WITHDRAW") for a in wd]
+    renames = (await db.execute(select(m.RenameLog).where(
+        m.RenameLog.target_type == "lesson", m.RenameLog.target_id == lesson_id))).scalars().all()
+    events += [HistoryEvent(at=x.created_at, actor_type="TEACHER", actor_id=x.actor_id, operation="RENAME",
+                            summary=x.field, before={x.field: x.before}, after={x.field: x.after}) for x in renames]
     events.sort(key=lambda e: e.at, reverse=True)
     events = events[:200]
     ids = {e.actor_id for e in events if e.actor_id}

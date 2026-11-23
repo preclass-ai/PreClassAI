@@ -139,7 +139,7 @@ async def list_class_assignments(class_id: UUID, cu: Annotated[CurrentUser, Depe
 
 
 @router.patch("/classes/{class_id}/assignments/{assignment_id}", tags=["classes"], operation_id="updateAssignment",
-              response_model=AssignmentOut, summary="Change the due time of an assignment (TEACHER of that class)",
+              response_model=AssignmentOut, summary="Change the due time and/or the student-facing name of an assignment (TEACHER of that class)",
               responses=errs(401, 403, 404, 422))
 async def update_assignment(class_id: UUID, assignment_id: UUID, body: AssignmentUpdate, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> AssignmentOut:
     return await update_assignment_service(db, cu, class_id, assignment_id, body)

@@ -242,7 +242,13 @@ async def _lesson_of(db: AsyncSession, p: m.LessonPlan) -> UUID | None:
         select(m.Lesson.id).join(m.LessonRevision, m.LessonRevision.lesson_id == m.Lesson.id)
         .join(m.LessonSource, m.LessonSource.lesson_revision_id == m.LessonRevision.id)
         .where(m.LessonSource.source_revision_id == p.source_revision_id, m.Lesson.author_id == p.owner_id,
-               m.Lesson.title == f"Chuẩn bị: {p.title}"[:200]).limit(1))
+               m.Lesson.lesson_plan_id == p.id).limit(1))
+
+
+def default_title(plan_title: str) -> str:
+    """The lesson's own title from the plan (\"Bài 4. Sự hình thành ...\"): no \"Chuẩn bị:\" prefix, first letter capital, 3 to 120 characters."""
+    t = " ".join(re.sub(r"^\s*chuẩn bị\s*:\s*", "", plan_title, flags=re.I).split())[:120].strip()
+    return t[:1].upper() + t[1:] if len(t) >= 3 else "Bài chuẩn bị trước giờ học"
 
 
 async def _out(db: AsyncSession, p: m.LessonPlan) -> PlanOut:
@@ -425,8 +431,8 @@ async def build_lesson(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> Pl
     def anchors_of(kind: str) -> list[m.SourceAnchor]:
         return [by[a] for s in secs if s.activity_type == kind for a in s.anchor_ids if a in by and by[a].kind != "HEADING"]
 
-    lesson = m.Lesson(author_id=user.id, grade=p.grade if p.grade in (10, 11) else 10, title=f"Chuẩn bị: {p.title}"[:200],
-                      goal="Bài chuẩn bị trước giờ học, dựng từ giáo án.", teach_date=p.taught_from)
+    lesson = m.Lesson(author_id=user.id, grade=p.grade if p.grade in (10, 11) else 10, title=default_title(p.title),
+                      goal="Bài chuẩn bị trước giờ học, dựng từ giáo án.", teach_date=p.taught_from, lesson_plan_id=p.id)
     db.add(lesson)
     await db.flush()
     rev = m.LessonRevision(lesson_id=lesson.id, revision_no=1, state="DRAFT")

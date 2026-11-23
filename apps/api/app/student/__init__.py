@@ -113,8 +113,9 @@ async def get_assignment(db: AsyncSession, user: CurrentUser, assignment_id: UUI
             id=UUID(it["id"]), position=it["position"], item_type=p["itemType"], skill=p["skill"], stem=p["stem"],
             options=[StudentOption(label=o["payload"]["label"], text=o["payload"]["text"]) for o in opts],
             result=_result(snap, it["id"], att.is_correct) if att else None))
-    return StudentAssignmentOut(id=a.id, title=snap["title"], open_at=a.open_at, due_at=a.due_at, blocks=blocks, items=items,
-                                review_cards=review.cards(snap), review_state=await review.state(db, a.id, user.id))
+    return StudentAssignmentOut(id=a.id, title=a.display_title or snap["title"], open_at=a.open_at, due_at=a.due_at,
+                                blocks=blocks, items=items, review_cards=review.cards(snap),
+                                review_state=await review.state(db, a.id, user.id))
 
 
 async def list_assignments(db: AsyncSession, user: CurrentUser) -> StudentAssignmentList:
@@ -133,7 +134,7 @@ async def list_assignments(db: AsyncSession, user: CurrentUser) -> StudentAssign
         status = ("DONE" if n and answered >= n else "CLOSED" if now > a.due_at
                   else "IN_PROGRESS" if answered else "NOT_STARTED")
         out.append(StudentAssignmentSummary(
-            id=a.id, title=pv.snapshot["title"], class_code=code, class_name=cname or code, open_at=a.open_at,
+            id=a.id, title=a.display_title or pv.snapshot["title"], class_code=code, class_name=cname or code, open_at=a.open_at,
             due_at=a.due_at, status=status, answered_count=answered, item_count=n))
     return StudentAssignmentList(items=out)
 

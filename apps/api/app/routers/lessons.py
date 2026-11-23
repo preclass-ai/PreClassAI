@@ -26,6 +26,7 @@ from app.schemas import (
     LessonHistory,
     LessonList,
     LessonOut,
+    LessonPatch,
     ProvenanceOut,
     ProvenanceUpdate,
     RevisionSourcesResult,
@@ -54,6 +55,15 @@ async def list_lessons(cu: Annotated[CurrentUser, Depends(require_role("TEACHER"
             summary="One lesson with its current revision", responses=errs(401, 404))
 async def get_lesson(lesson_id: UUID, cu: Annotated[CurrentUser, Depends(require_role("TEACHER", "REVIEWER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> LessonOut:
     return await lessons_service.get_lesson(db, cu, lesson_id)
+
+
+@router.patch("/lessons/{lesson_id}", tags=["lessons"], operation_id="patchLesson", response_model=LessonOut,
+              summary="Rename a lesson / edit its goal (author)",
+              description="Does not change a published version: students see the new name after the next publish, or at once through "
+              "`PATCH /classes/{id}/assignments/{id}` with `displayTitle`. Logged in the lesson history (`RENAME`).",
+              responses=errs(401, 403, 404, 422))
+async def patch_lesson(lesson_id: UUID, body: LessonPatch, cu: Annotated[CurrentUser, Depends(require_role("TEACHER"))], db: Annotated[AsyncSession, Depends(get_db)]) -> LessonOut:
+    return await lessons_service.update_lesson(db, cu, lesson_id, body)
 
 
 @router.get("/lessons/{lesson_id}/history", tags=["lessons"], operation_id="getLessonHistory",
