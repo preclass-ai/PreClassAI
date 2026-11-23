@@ -80,7 +80,7 @@ class Session(Base):
 
 class Class(Base):
     __tablename__ = "class"
-    __table_args__ = (CheckConstraint("grade IN (10, 11)", name="ck_class_grade"),)
+    __table_args__ = (CheckConstraint("grade IN (10, 11, 12)", name="ck_class_grade"),)
     id: Mapped[uuid.UUID] = pk()
     code: Mapped[str] = mapped_column(Text, unique=True)
     grade: Mapped[int] = mapped_column(Integer)
@@ -140,7 +140,7 @@ class SourceAnchor(Base):
 
 class Lesson(Base):
     __tablename__ = "lesson"
-    __table_args__ = (CheckConstraint("grade IN (10, 11)", name="ck_lesson_grade"), _in("subject", "GEOGRAPHY"))
+    __table_args__ = (CheckConstraint("grade IN (10, 11, 12)", name="ck_lesson_grade"), _in("subject", "GEOGRAPHY"))
     id: Mapped[uuid.UUID] = pk()
     author_id: Mapped[uuid.UUID] = fk("app_user.id")
     subject: Mapped[str] = mapped_column(Text, server_default="GEOGRAPHY")
@@ -148,6 +148,7 @@ class Lesson(Base):
     title: Mapped[str] = mapped_column(Text)
     goal: Mapped[str | None] = mapped_column(Text)
     teach_date: Mapped[date | None] = mapped_column(Date)  # from the lesson plan; the assign form suggests a due date from it
+    lesson_plan_id: Mapped[uuid.UUID | None] = fk("lesson_plan.id", nullable=True)  # plan it was built from (survives renames)
     created_at: Mapped[datetime] = ts()
 
 
@@ -340,6 +341,7 @@ class Assignment(Base):
     open_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # soft cancel: history stays
+    display_title: Mapped[str | None] = mapped_column(Text)  # what students see instead of the (immutable) snapshot title
     created_at: Mapped[datetime] = ts()
 
 
@@ -377,6 +379,20 @@ class AuditLog(Base):
     resource_type: Mapped[str] = mapped_column(Text)
     resource_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     meta: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, server_default=text("'{}'"))  # no content
+    created_at: Mapped[datetime] = ts()
+
+
+class RenameLog(Base):
+    """Every change of a lesson title/goal or an assignment's display title: who, when, before, after. Append-only (trigger)."""
+    __tablename__ = "rename_log"
+    id: Mapped[uuid.UUID] = pk()
+    target_type: Mapped[str] = mapped_column(Text)
+    target_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    field: Mapped[str] = mapped_column(Text)
+    before: Mapped[str | None] = mapped_column(Text)
+    after: Mapped[str | None] = mapped_column(Text)
+    actor_id: Mapped[uuid.UUID | None] = fk("app_user.id", nullable=True)
+    actor_label: Mapped[str | None] = mapped_column(Text)  # set by the ops script instead of an actor
     created_at: Mapped[datetime] = ts()
 
 

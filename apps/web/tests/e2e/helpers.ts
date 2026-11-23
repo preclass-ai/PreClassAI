@@ -26,6 +26,8 @@ export async function openAccountForm(page: Page) {
 }
 
 export async function login(page: Page, identifier: string) {
+  // The first-visit seed picker is a modal that blocks clicks; "Để sau" is remembered per session under this key.
+  await page.addInitScript(() => sessionStorage.setItem("preclass.garden.later", "1"));
   await page.goto("/login");
   await openAccountForm(page);
   await page.getByLabel("Email hoặc mã học sinh").fill(identifier);

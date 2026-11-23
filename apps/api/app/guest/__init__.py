@@ -114,7 +114,8 @@ async def find_guest(db: AsyncSession, raw_code: str) -> m.AppUser:
 
 
 async def assignment_for_lesson(db: AsyncSession, lesson_key: str | None) -> UUID | None:
-    """Assignment (in the survey class) of the lesson whose seed slug is `lesson_key`, e.g. dan-so-vung."""
+    """Open (not cancelled) assignment in the survey class of the lesson whose seed slug is `lesson_key`, e.g. dan-so-vung;
+    the most recently opened one if there are duplicates."""
     if not lesson_key:
         return None
     return await db.scalar(
@@ -123,8 +124,8 @@ async def assignment_for_lesson(db: AsyncSession, lesson_key: str | None) -> UUI
         .join(m.LessonRevision, m.LessonRevision.id == m.PublishedVersion.lesson_revision_id)
         .join(m.Class, m.Class.id == m.Assignment.class_id)
         .where(m.LessonRevision.lesson_id == uid(f"{lesson_key}:lesson"), m.PublishedVersion.state == "ACTIVE",
-               m.Class.code == get_settings().guest_class_code)
-        .limit(1))
+               m.Assignment.cancelled_at.is_(None), m.Class.code == get_settings().guest_class_code)
+        .order_by(m.Assignment.open_at.desc(), m.Assignment.created_at.desc()).limit(1))
 
 
 def _safe(cell: str) -> str:

@@ -8,7 +8,7 @@ from datetime import date, datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 from app.ids import uid
@@ -69,7 +69,7 @@ Severity = Literal["BLOCKER", "WARNING"]
 Outcome = Literal["PASS", "FAIL"]
 PublishedState = Literal["ACTIVE", "WITHDRAWN"]
 ActorType = Literal["AI", "TEACHER", "SYSTEM"]
-Operation = Literal["GENERATE", "EDIT", "REGENERATE", "SOURCE_REPLACED"]
+Operation = Literal["GENERATE", "EDIT", "REGENERATE", "SOURCE_REPLACED", "RENAME"]
 
 
 # ---------------------------------------------------------------- errors (RFC 9457)
@@ -171,7 +171,7 @@ class GuestOut(ApiModel):
 class ClassOut(ApiModel):
     id: UUID
     code: str
-    grade: Literal[10, 11]
+    grade: Literal[10, 11, 12]
     student_count: int
     is_survey: bool = Field(False, description="The anonymous survey class (GUEST_CLASS_CODE): its students are guests.")
     model_config = ex({"id": I["class"], "code": "10A1", "grade": 10, "studentCount": 15, "isSurvey": False})
@@ -307,17 +307,39 @@ _REV = e0(RevisionOut)
 
 class LessonCreate(ApiModel):
     title: str = Field(min_length=1, max_length=200)
-    grade: Literal[10, 11]
+    grade: Literal[10, 11, 12]
     goal: str | None = None
     source_revision_ids: list[UUID] = Field(min_length=1)
     model_config = ex({"title": "Phân bố dân cư theo vùng", "grade": 10,
                        "goal": "Đọc và so sánh số dân giữa các vùng.", "sourceRevisionIds": [I["srcrev"]]})
 
 
+def clean_title(v: str) -> str:
+    """Trim and collapse spaces; 3 to 120 characters."""
+    v = " ".join(v.split())
+    if not 3 <= len(v) <= 120:
+        raise ValueError("Tên bài dài từ 3 đến 120 ký tự")
+    return v
+
+
+class LessonPatch(ApiModel):
+    """Rename a lesson and/or edit its goal. The published snapshot is not touched: a new name reaches students with the
+    next publish (or at once through an assignment's display title)."""
+
+    title: str | None = Field(None, description="3 to 120 characters, spaces trimmed.")
+    goal: str | None = Field(None, max_length=500, description="Empty string clears the goal.")
+    model_config = ex({"title": "Bài 4. Sự hình thành Trái Đất", "goal": "Mô tả được cấu trúc của Trái Đất."})
+
+    @field_validator("title")
+    @classmethod
+    def _title(cls, v: str | None) -> str | None:
+        return None if v is None else clean_title(v)
+
+
 class LessonOut(ApiModel):
     id: UUID
     title: str
-    grade: Literal[10, 11]
+    grade: Literal[10, 11, 12]
     subject: Literal["GEOGRAPHY"] = "GEOGRAPHY"
     goal: str | None
     author_id: UUID
@@ -758,19 +780,29 @@ class AssignmentOut(ApiModel):
     class_id: UUID
     class_code: str
     lesson_id: UUID = Field(description="Lesson the published version comes from (link back to it).")
-    lesson_title: str
+    lesson_title: str = Field(description="Current lesson title (the teacher can rename it).")
+    display_title: str | None = Field(None, description="This assignment's own student-facing name, when the teacher set one.")
+    student_title: str = Field(description="What students see: `displayTitle`, else the title frozen in the published version.")
     revision_no: int = Field(description="Revision number of the lesson that was published (\"Bản #n\").")
     open_at: datetime
     due_at: datetime
     model_config = ex({"id": I["assign"], "publishedVersionId": I["pub"], "classId": I["class"],
                        "classCode": "10A1", "lessonId": I["lesson"], "lessonTitle": "Phân bố dân cư theo vùng",
-                       "revisionNo": 1, "openAt": T1,
+                       "displayTitle": None, "studentTitle": "Phân bố dân cư theo vùng", "revisionNo": 1, "openAt": T1,
                        "dueAt": "2026-11-30T23:59:00+07:00"})
 
 
 class AssignmentUpdate(ApiModel):
-    due_at: datetime = Field(description="New due time; must be after the opening time.")
+    """Send `dueAt` and/or `displayTitle`. `displayTitle` null or empty goes back to the title of the published version."""
+
+    due_at: datetime | None = Field(None, description="New due time; must be after the opening time.")
+    display_title: str | None = Field(None, description="Student-facing name of this assignment, 3 to 120 characters.")
     model_config = ex({"dueAt": "2026-12-05T23:59:00+07:00"})
+
+    @field_validator("display_title")
+    @classmethod
+    def _title(cls, v: str | None) -> str | None:
+        return clean_title(v) if v and v.strip() else None
 
 
 class AssignmentList(Page):

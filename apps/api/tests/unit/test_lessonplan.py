@@ -161,3 +161,8 @@ async def test_parse_runs_in_the_isolated_child_process() -> None:
 
     plan = await parse_isolated("plan", plan_docx(), Limits(timeout_s=60))
     assert isinstance(plan, PlanFile) and plan.lessons[0].activities == ALL4
+
+
+def test_grade_12_plan_is_read_from_the_subject_line() -> None:
+    (lesson,) = parse_plan_file(plan_docx(grade=12)).lessons
+    assert lesson.subject == "DIA_LI" and lesson.grade == 12

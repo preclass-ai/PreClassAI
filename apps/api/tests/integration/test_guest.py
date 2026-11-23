@@ -193,3 +193,23 @@ async def test_config_names_the_ai_host_only_when_the_model_is_in_use(client: ht
     finally:
         monkeypatch.undo()
         get_settings.cache_clear()
+
+
+async def test_assignment_for_lesson_skips_cancelled_and_takes_latest_open(db: AsyncSession, guests_on: None) -> None:
+    """Two duplicate assignments (as on dev) and a cancelled one that opened last: guests get the newest open one."""
+    from datetime import timedelta
+
+    from sqlalchemy import select
+
+    from app.db import models as m
+    from app.guest import assignment_for_lesson
+
+    base = (await db.execute(select(m.Assignment).where(m.Assignment.id == KS_ASSIGN))).scalar_one()
+    dup, cancelled = uuid.uuid4(), uuid.uuid4()
+    for aid, shift, cancel in ((dup, 1, None), (cancelled, 2, base.open_at)):
+        db.add(m.Assignment(id=aid, published_version_id=base.published_version_id, class_id=base.class_id,
+                            open_at=base.open_at + timedelta(days=shift), due_at=base.due_at, cancelled_at=cancel))
+    await db.flush()
+    assert await assignment_for_lesson(db, "dan-so-vung") == dup
+    await db.execute(text("UPDATE assignment SET cancelled_at = now() WHERE id = :i"), {"i": dup})
+    assert await assignment_for_lesson(db, "dan-so-vung") == KS_ASSIGN

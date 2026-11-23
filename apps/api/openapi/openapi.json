@@ -458,7 +458,8 @@
                 "lessonTitle": "Phân bố dân cư theo vùng",
                 "openAt": "2026-11-15T09:00:00+07:00",
                 "publishedVersionId": "c3dc4c47-da3a-5734-89c4-261ab71ee0bf",
-                "revisionNo": 1
+                "revisionNo": 1,
+                "studentTitle": "Phân bố dân cư theo vùng"
               }
             ]
           }
@@ -500,7 +501,8 @@
             "lessonTitle": "Phân bố dân cư theo vùng",
             "openAt": "2026-11-15T09:00:00+07:00",
             "publishedVersionId": "c3dc4c47-da3a-5734-89c4-261ab71ee0bf",
-            "revisionNo": 1
+            "revisionNo": 1,
+            "studentTitle": "Phân bố dân cư theo vùng"
           }
         ],
         "properties": {
@@ -512,6 +514,18 @@
             "format": "uuid",
             "title": "Classid",
             "type": "string"
+          },
+          "displayTitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "This assignment's own student-facing name, when the teacher set one.",
+            "title": "Displaytitle"
           },
           "dueAt": {
             "format": "date-time",
@@ -530,6 +544,7 @@
             "type": "string"
           },
           "lessonTitle": {
+            "description": "Current lesson title (the teacher can rename it).",
             "title": "Lessontitle",
             "type": "string"
           },
@@ -547,6 +562,11 @@
             "description": "Revision number of the lesson that was published (\"Bản #n\").",
             "title": "Revisionno",
             "type": "integer"
+          },
+          "studentTitle": {
+            "description": "What students see: `displayTitle`, else the title frozen in the published version.",
+            "title": "Studenttitle",
+            "type": "string"
           }
         },
         "required": [
@@ -556,6 +576,7 @@
           "classCode",
           "lessonId",
           "lessonTitle",
+          "studentTitle",
           "revisionNo",
           "openAt",
           "dueAt"
@@ -564,22 +585,39 @@
         "type": "object"
       },
       "AssignmentUpdate": {
+        "description": "Send `dueAt` and/or `displayTitle`. `displayTitle` null or empty goes back to the title of the published version.",
         "examples": [
           {
             "dueAt": "2026-12-05T23:59:00+07:00"
           }
         ],
         "properties": {
+          "displayTitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Student-facing name of this assignment, 3 to 120 characters.",
+            "title": "Displaytitle"
+          },
           "dueAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "New due time; must be after the opening time.",
-            "format": "date-time",
-            "title": "Dueat",
-            "type": "string"
+            "title": "Dueat"
           }
         },
-        "required": [
-          "dueAt"
-        ],
         "title": "AssignmentUpdate",
         "type": "object"
       },
@@ -1740,7 +1778,8 @@
           "grade": {
             "enum": [
               10,
-              11
+              11,
+              12
             ],
             "title": "Grade",
             "type": "integer"
@@ -2400,7 +2439,8 @@
                   "GENERATE",
                   "EDIT",
                   "REGENERATE",
-                  "SOURCE_REPLACED"
+                  "SOURCE_REPLACED",
+                  "RENAME"
                 ],
                 "type": "string"
               },
@@ -2935,7 +2975,8 @@
           "grade": {
             "enum": [
               10,
-              11
+              11,
+              12
             ],
             "title": "Grade",
             "type": "integer"
@@ -3133,7 +3174,8 @@
           "grade": {
             "enum": [
               10,
-              11
+              11,
+              12
             ],
             "title": "Grade",
             "type": "integer"
@@ -3189,6 +3231,44 @@
           "createdAt"
         ],
         "title": "LessonOut",
+        "type": "object"
+      },
+      "LessonPatch": {
+        "description": "Rename a lesson and/or edit its goal. The published snapshot is not touched: a new name reaches students with the\nnext publish (or at once through an assignment's display title).",
+        "examples": [
+          {
+            "goal": "Mô tả được cấu trúc của Trái Đất.",
+            "title": "Bài 4. Sự hình thành Trái Đất"
+          }
+        ],
+        "properties": {
+          "goal": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Empty string clears the goal.",
+            "title": "Goal"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "3 to 120 characters, spaces trimmed.",
+            "title": "Title"
+          }
+        },
+        "title": "LessonPatch",
         "type": "object"
       },
       "LinkIn": {
@@ -6465,7 +6545,8 @@
               "GENERATE",
               "EDIT",
               "REGENERATE",
-              "SOURCE_REPLACED"
+              "SOURCE_REPLACED",
+              "RENAME"
             ],
             "title": "Operation",
             "type": "string"
@@ -7998,7 +8079,7 @@
             "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
           }
         },
-        "summary": "Change the due time of an assignment (TEACHER of that class)",
+        "summary": "Change the due time and/or the student-facing name of an assignment (TEACHER of that class)",
         "tags": [
           "classes"
         ]
@@ -9581,6 +9662,88 @@
           }
         },
         "summary": "One lesson with its current revision",
+        "tags": [
+          "lessons"
+        ]
+      },
+      "patch": {
+        "description": "Does not change a published version: students see the new name after the next publish, or at once through `PATCH /classes/{id}/assignments/{id}` with `displayTitle`. Logged in the lesson history (`RENAME`).",
+        "operationId": "patchLesson",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lesson_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Lesson Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Sai vai trò (FORBIDDEN_ROLE)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Dữ liệu không hợp lệ (VALIDATION_ERROR)."
+          }
+        },
+        "summary": "Rename a lesson / edit its goal (author)",
         "tags": [
           "lessons"
         ]

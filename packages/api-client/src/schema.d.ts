@@ -288,7 +288,7 @@ export interface paths {
         delete: operations["cancelAssignment"];
         options?: never;
         head?: never;
-        /** Change the due time of an assignment (TEACHER of that class) */
+        /** Change the due time and/or the student-facing name of an assignment (TEACHER of that class) */
         patch: operations["updateAssignment"];
         trace?: never;
     };
@@ -658,7 +658,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Rename a lesson / edit its goal (author)
+         * @description Does not change a published version: students see the new name after the next publish, or at once through `PATCH /classes/{id}/assignments/{id}` with `displayTitle`. Logged in the lesson history (`RENAME`).
+         */
+        patch: operations["patchLesson"];
         trace?: never;
     };
     "/v1/lessons/{lesson_id}/assignments": {
@@ -1456,7 +1460,8 @@ export interface components {
          *           "lessonTitle": "Phân bố dân cư theo vùng",
          *           "openAt": "2026-11-15T09:00:00+07:00",
          *           "publishedVersionId": "c3dc4c47-da3a-5734-89c4-261ab71ee0bf",
-         *           "revisionNo": 1
+         *           "revisionNo": 1,
+         *           "studentTitle": "Phân bố dân cư theo vùng"
          *         }
          *       ]
          *     }
@@ -1478,7 +1483,8 @@ export interface components {
          *       "lessonTitle": "Phân bố dân cư theo vùng",
          *       "openAt": "2026-11-15T09:00:00+07:00",
          *       "publishedVersionId": "c3dc4c47-da3a-5734-89c4-261ab71ee0bf",
-         *       "revisionNo": 1
+         *       "revisionNo": 1,
+         *       "studentTitle": "Phân bố dân cư theo vùng"
          *     }
          */
         AssignmentOut: {
@@ -1489,6 +1495,11 @@ export interface components {
              * Format: uuid
              */
             classId: string;
+            /**
+             * Displaytitle
+             * @description This assignment's own student-facing name, when the teacher set one.
+             */
+            displayTitle?: string | null;
             /**
              * Dueat
              * Format: date-time
@@ -1505,7 +1516,10 @@ export interface components {
              * @description Lesson the published version comes from (link back to it).
              */
             lessonId: string;
-            /** Lessontitle */
+            /**
+             * Lessontitle
+             * @description Current lesson title (the teacher can rename it).
+             */
             lessonTitle: string;
             /**
              * Openat
@@ -1522,20 +1536,30 @@ export interface components {
              * @description Revision number of the lesson that was published ("Bản #n").
              */
             revisionNo: number;
+            /**
+             * Studenttitle
+             * @description What students see: `displayTitle`, else the title frozen in the published version.
+             */
+            studentTitle: string;
         };
         /**
          * AssignmentUpdate
+         * @description Send `dueAt` and/or `displayTitle`. `displayTitle` null or empty goes back to the title of the published version.
          * @example {
          *       "dueAt": "2026-12-05T23:59:00+07:00"
          *     }
          */
         AssignmentUpdate: {
             /**
+             * Displaytitle
+             * @description Student-facing name of this assignment, 3 to 120 characters.
+             */
+            displayTitle?: string | null;
+            /**
              * Dueat
-             * Format: date-time
              * @description New due time; must be after the opening time.
              */
-            dueAt: string;
+            dueAt?: string | null;
         };
         /**
          * AttemptRequest
@@ -2121,7 +2145,7 @@ export interface components {
              * Grade
              * @enum {integer}
              */
-            grade: 10 | 11;
+            grade: 10 | 11 | 12;
             /**
              * Id
              * Format: uuid
@@ -2435,7 +2459,7 @@ export interface components {
              */
             blockKind?: string | null;
             /** Operation */
-            operation: ("GENERATE" | "EDIT" | "REGENERATE" | "SOURCE_REPLACED") | ("REVIEW" | "PUBLISH" | "WITHDRAW");
+            operation: ("GENERATE" | "EDIT" | "REGENERATE" | "SOURCE_REPLACED" | "RENAME") | ("REVIEW" | "PUBLISH" | "WITHDRAW");
             /** Summary */
             summary?: string | null;
         };
@@ -2714,7 +2738,7 @@ export interface components {
              * Grade
              * @enum {integer}
              */
-            grade: 10 | 11;
+            grade: 10 | 11 | 12;
             /** Sourcerevisionids */
             sourceRevisionIds: string[];
             /** Title */
@@ -2842,7 +2866,7 @@ export interface components {
              * Grade
              * @enum {integer}
              */
-            grade: 10 | 11;
+            grade: 10 | 11 | 12;
             /**
              * Id
              * Format: uuid
@@ -2863,6 +2887,27 @@ export interface components {
             teachDate?: string | null;
             /** Title */
             title: string;
+        };
+        /**
+         * LessonPatch
+         * @description Rename a lesson and/or edit its goal. The published snapshot is not touched: a new name reaches students with the
+         *     next publish (or at once through an assignment's display title).
+         * @example {
+         *       "goal": "Mô tả được cấu trúc của Trái Đất.",
+         *       "title": "Bài 4. Sự hình thành Trái Đất"
+         *     }
+         */
+        LessonPatch: {
+            /**
+             * Goal
+             * @description Empty string clears the goal.
+             */
+            goal?: string | null;
+            /**
+             * Title
+             * @description 3 to 120 characters, spaces trimmed.
+             */
+            title?: string | null;
         };
         /** LinkIn */
         LinkIn: {
@@ -4557,7 +4602,7 @@ export interface components {
              * Operation
              * @enum {string}
              */
-            operation: "GENERATE" | "EDIT" | "REGENERATE" | "SOURCE_REPLACED";
+            operation: "GENERATE" | "EDIT" | "REGENERATE" | "SOURCE_REPLACED" | "RENAME";
         };
         /**
          * UserOut
@@ -6857,6 +6902,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patchLesson: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lesson_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LessonPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LessonOut"];
+                };
+            };
+            /** @description Chưa đăng nhập hoặc phiên hết hạn (UNAUTHENTICATED). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Sai vai trò (FORBIDDEN_ROLE). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Không tìm thấy, hoặc tài nguyên của người/lớp khác (NOT_FOUND). Không phân biệt hai trường hợp. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Dữ liệu không hợp lệ (VALIDATION_ERROR). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };

@@ -68,7 +68,7 @@ function ClassesView() {
               <div className="section-head">
                 <div>
                   <h2>
-                    <Link href={href(a.id)} scroll={false}>{a.lessonTitle}</Link>
+                    <Link href={href(a.id)} scroll={false}>{a.studentTitle}</Link>
                   </h2>
                   <p className="muted small">
                     Giao từ Bản #{a.revisionNo} · Mở {fmtDateTime(a.openAt)} · hạn {fmtDateTime(a.dueAt)} ·{" "}

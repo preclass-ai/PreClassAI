@@ -5,13 +5,15 @@ import { useState } from "react";
 import { Button, ErrorBox, Field } from "@/components/ui";
 import { api, unwrap, type Schemas } from "@/lib/api";
 import { fmtDateTime, localInputToIso, toLocalInput } from "@/lib/format";
+import { checkTitle, cleanTitle, TITLE_MAX } from "@/lib/title";
 
 type Assignment = Schemas["AssignmentOut"];
 
 /** Change the due time or cancel one assignment. Cancel is soft: students stop seeing it, answers already given stay. */
 export function AssignmentActions({ classId, assignment }: { classId: string; assignment: Assignment }) {
   const qc = useQueryClient();
-  const [mode, setMode] = useState<"none" | "due" | "cancel">("none");
+  const [mode, setMode] = useState<"none" | "due" | "name" | "cancel">("none");
+  const [name, setName] = useState(assignment.studentTitle);
   const [due, setDue] = useState(() => toLocalInput(new Date(assignment.dueAt)));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -38,6 +40,9 @@ export function AssignmentActions({ classId, assignment }: { classId: string; as
         <button type="button" className="link-btn" onClick={() => setMode(mode === "due" ? "none" : "due")}>
           Sửa hạn
         </button>
+        <button type="button" className="link-btn" onClick={() => setMode(mode === "name" ? "none" : "name")}>
+          Đổi tên hiển thị
+        </button>
         <button type="button" className="link-btn" onClick={() => setMode(mode === "cancel" ? "none" : "cancel")}>
           Hủy giao
         </button>
@@ -59,9 +64,32 @@ export function AssignmentActions({ classId, assignment }: { classId: string; as
           </Button>
         </form>
       ) : null}
+      {mode === "name" ? (
+        <form
+          className="stack"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!checkTitle(name)) void run(() => unwrap(api.PATCH("/v1/classes/{class_id}/assignments/{assignment_id}", { ...path, body: { displayTitle: cleanTitle(name) } })));
+          }}
+        >
+          <Field label="Tên học sinh thấy" hint={checkTitle(name) ?? `${cleanTitle(name).length}/${TITLE_MAX} ký tự. Chỉ đổi tên của bài giao này cho lớp ${assignment.classCode}.`}>
+            <input value={name} aria-invalid={checkTitle(name) ? true : undefined} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <div className="row-actions">
+            <Button type="submit" variant="primary" busy={busy} disabled={!!checkTitle(name)}>
+              Lưu tên
+            </Button>
+            {assignment.displayTitle ? (
+              <Button busy={busy} onClick={() => void run(() => unwrap(api.PATCH("/v1/classes/{class_id}/assignments/{assignment_id}", { ...path, body: { displayTitle: null } })))}>
+                Về tên của bản đã xuất bản
+              </Button>
+            ) : null}
+          </div>
+        </form>
+      ) : null}
       {mode === "cancel" ? (
         <div className="alert alert-warning" role="group" aria-label="Xác nhận hủy giao">
-          <p>Hủy giao &quot;{assignment.lessonTitle}&quot; cho lớp {assignment.classCode}? Học sinh sẽ không thấy bài nữa, câu đã trả lời vẫn được giữ.</p>
+          <p>Hủy giao &quot;{assignment.studentTitle}&quot; cho lớp {assignment.classCode}? Học sinh sẽ không thấy bài nữa, câu đã trả lời vẫn được giữ.</p>
           <div className="row-actions">
             <Button variant="primary" busy={busy} onClick={() => void run(() => unwrap(api.DELETE("/v1/classes/{class_id}/assignments/{assignment_id}", path)))}>
               Xác nhận hủy giao
