@@ -28,6 +28,8 @@ from app.generation.providers import AnchorView, Draft, DraftBlock
 from app.habit import rules
 from app.lessonplan import quizgen
 from app.lessonplan.model import PlanFile
+from app.lessonplan.redact import fold
+from app.lessonplan.structure import STEP, SUB
 from app.schemas import (
     Competency,
     CompetencyList,
@@ -57,6 +59,10 @@ from app.validation import validate_revision
 log = logging.getLogger(__name__)
 VN_OFFSET = timedelta(hours=7)
 MAX_PRACTICE = 5
+# Lines a student cannot use on their own: teacher-facing CV 5512 scaffolding ("a) Mục tiêu: ...", "Bước 1: GV ...")
+# and in-class prompts that need a picture, video or game the pre-class lesson does not carry.
+_TEACHER_SIDE = re.compile(r"\b(?:gv|giao vien)\b")
+_IN_CLASS = re.compile(r"\b(?:tranh|hinh anh|video|clip|quan sat|tro choi|o chu|lat cac)\b")
 
 
 def due_before(taught_from: date | None) -> datetime | None:
@@ -416,6 +422,12 @@ def _first(items: list[m.SourceAnchor], pred: Any) -> m.SourceAnchor | None:
     return next((a for a in items if pred(a)), None)
 
 
+def _for_student(a: m.SourceAnchor) -> bool:
+    """A mở đầu / vận dụng line a student can act on at home, alone (not lesson-plan scaffolding, not an in-class prompt)."""
+    f = fold(a.excerpt).lstrip("*-•+ ").strip()
+    return not (SUB.match(f) or STEP.match(f) or _TEACHER_SIDE.search(f) or _IN_CLASS.search(f))
+
+
 async def build_lesson(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> PlanLessonOut:
     """Default mapping (the teacher edits the draft afterwards like any lesson):
     mở đầu -> 1 trigger question; hình thành -> up to 2 reading cards + 1 flashcard quoted verbatim; luyện tập -> up to 5
@@ -461,7 +473,7 @@ async def build_lesson(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> Pl
         blocks.append(DraftBlock(key=key, kind=kind, parentKey=parent, payload=payload, transformation=tr,
                                  anchorAliases=[alias[a.id] for a in (anchor, *more)], isFactual=factual))
 
-    opening = anchors_of("mo_dau")
+    opening = [a for a in anchors_of("mo_dau") if _for_student(a)]
     trig = _first(opening, lambda a: a.excerpt.rstrip().endswith("?")) or _first(opening, lambda a: len(a.excerpt) > 20)
     if trig:
         add("open", "instruction", {"text": trig.excerpt}, trig, code=ACTIVITY_COMPETENCY["mo_dau"])
@@ -516,7 +528,7 @@ async def build_lesson(db: AsyncSession, user: CurrentUser, plan_id: UUID) -> Pl
             add(f"{k}{chr(97 + i)}", "option", {"label": chr(65 + i), "text": o}, src, parent=k, tr="AI_PROPOSED", more=_number_sources(o, src, by))
         add(f"{k}k", "answer_key", {"correct": chr(65 + d["correct_index"])}, src, parent=k, tr="AI_PROPOSED")
         add(f"{k}e", "explanation", {"text": d["explanation"]}, src, parent=k, tr="AI_PROPOSED", more=_number_sources(d["explanation"], src, by))
-    apply = _first(anchors_of("van_dung"), lambda a: len(a.excerpt) > 20)
+    apply = _first([a for a in anchors_of("van_dung") if _for_student(a)], lambda a: len(a.excerpt) > 20)
     if apply:
         add("apply", "instruction", {"text": apply.excerpt}, apply, code=ACTIVITY_COMPETENCY["van_dung"])
     n = await _persist(db, rev, Draft(blocks=blocks), views, alias_id, "plan-5512/1", meta)

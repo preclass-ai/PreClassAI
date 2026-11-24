@@ -166,3 +166,19 @@ async def test_parse_runs_in_the_isolated_child_process() -> None:
 def test_grade_12_plan_is_read_from_the_subject_line() -> None:
     (lesson,) = parse_plan_file(plan_docx(grade=12)).lessons
     assert lesson.subject == "DIA_LI" and lesson.grade == 12
+
+
+def test_only_student_usable_lines_open_or_close_the_pre_class_lesson() -> None:
+    from types import SimpleNamespace
+
+    from app.lessonplan.service import _for_student
+
+    def ok(t: str) -> bool:
+        return _for_student(SimpleNamespace(excerpt=t))  # type: ignore[arg-type]
+
+    assert not ok("a) Mục tiêu: Vận dụng tri thức địa lí giải quyết vấn đề thực tiễn.")
+    assert not ok("b) Nội dung: Quan sát hình ảnh và trả lời câu hỏi.")
+    assert not ok("Bước 1: GV chuyển giao nhiệm vụ cho cả lớp.")
+    assert not ok("* Câu hỏi: Lật các số và cho biết tên nghề nghiệp được thể hiện qua bức tranh?")
+    assert ok("Em có sống ở đô thị không?")
+    assert ok("Em hãy vẽ biểu đồ dân số của địa phương mình.")
