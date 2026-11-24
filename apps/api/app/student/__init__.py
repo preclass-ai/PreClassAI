@@ -18,6 +18,7 @@ from app.config import get_settings
 from app.db import models as m
 from app.errors import ApiError
 from app.habit.activity import bump
+from app.lessonplan.audience import for_student, student_text
 from app.schemas import (
     AnswerIn,
     AttemptRequest,
@@ -85,10 +86,11 @@ def _result(snap: dict[str, Any], item_id: str, is_correct: bool | None) -> Atte
     if key and item and item["payload"]["itemType"] == "MCQ" and key["payload"].get("correct"):
         label = key["payload"]["correct"]
         text = next((o["payload"]["text"] for o in _children(snap, item_id, "option") if o["payload"]["label"] == label), "")
-        right = f"{label}. {text}".strip()
+        right = student_text(f"{label}. {text}".strip())
     elif key and key["payload"].get("value") is not None:
         right = f"{key['payload']['value']} {key['payload'].get('unit') or ''}".strip()
-    return AttemptResult(item_id=UUID(item_id), is_correct=is_correct, explanation=exp["payload"]["text"] if exp else None,
+    return AttemptResult(item_id=UUID(item_id), is_correct=is_correct,
+                         explanation=student_text(exp["payload"]["text"]) if exp else None,
                          correct_answer=right, source_quote=(item["payload"].get("sourceQuote") if item else None))
 
 
@@ -98,20 +100,34 @@ async def _attempts(db: AsyncSession, assignment_id: UUID, student_id: UUID) -> 
     return {a.item_block_id: a for a in rows}
 
 
+async def _from_plan(db: AsyncSession, pv: m.PublishedVersion) -> bool:
+    return await db.scalar(select(m.Lesson.lesson_plan_id.is_not(None)).join(
+        m.LessonRevision, m.LessonRevision.lesson_id == m.Lesson.id).where(m.LessonRevision.id == pv.lesson_revision_id)) or False
+
+
+def _shown(b: dict[str, Any], from_plan: bool) -> bool:
+    """Lessons built from a plan before the builder skipped them can carry an instruction quoting teacher-only plan text
+    ("a) Mục tiêu: ...", an in-class picture game). The snapshot is immutable, so such a block is left out when read."""
+    if b["kind"] not in _CONTENT:
+        return False
+    return not (from_plan and b["kind"] == "instruction" and not for_student(str(b["payload"].get("text", ""))))
+
+
 async def get_assignment(db: AsyncSession, user: CurrentUser, assignment_id: UUID) -> StudentAssignmentOut:
     a, pv, _ = await _load(db, user, assignment_id)
     snap = pv.snapshot
     done = await _attempts(db, a.id, user.id)
+    from_plan = await _from_plan(db, pv)
     blocks = [StudentContentBlock(id=UUID(b["id"]), kind=b["kind"], position=b["position"], payload=b["payload"])
-              for b in snap["blocks"] if b["kind"] in _CONTENT]
+              for b in snap["blocks"] if _shown(b, from_plan)]
     items: list[StudentItem] = []
     for it in _items(snap):
         p = it["payload"]
         opts = sorted(_children(snap, it["id"], "option"), key=lambda o: o["payload"]["label"])
         att = done.get(UUID(it["id"]))
         items.append(StudentItem(
-            id=UUID(it["id"]), position=it["position"], item_type=p["itemType"], skill=p["skill"], stem=p["stem"],
-            options=[StudentOption(label=o["payload"]["label"], text=o["payload"]["text"]) for o in opts],
+            id=UUID(it["id"]), position=it["position"], item_type=p["itemType"], skill=p["skill"], stem=student_text(p["stem"]),
+            options=[StudentOption(label=o["payload"]["label"], text=student_text(o["payload"]["text"])) for o in opts],
             result=_result(snap, it["id"], att.is_correct) if att else None))
     return StudentAssignmentOut(id=a.id, title=a.display_title or snap["title"], open_at=a.open_at, due_at=a.due_at,
                                 blocks=blocks, items=items, review_cards=review.cards(snap),

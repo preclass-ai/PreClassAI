@@ -169,12 +169,7 @@ def test_grade_12_plan_is_read_from_the_subject_line() -> None:
 
 
 def test_only_student_usable_lines_open_or_close_the_pre_class_lesson() -> None:
-    from types import SimpleNamespace
-
-    from app.lessonplan.service import _for_student
-
-    def ok(t: str) -> bool:
-        return _for_student(SimpleNamespace(excerpt=t))  # type: ignore[arg-type]
+    from app.lessonplan.audience import for_student as ok
 
     assert not ok("a) Mục tiêu: Vận dụng tri thức địa lí giải quyết vấn đề thực tiễn.")
     assert not ok("b) Nội dung: Quan sát hình ảnh và trả lời câu hỏi.")
@@ -182,3 +177,22 @@ def test_only_student_usable_lines_open_or_close_the_pre_class_lesson() -> None:
     assert not ok("* Câu hỏi: Lật các số và cho biết tên nghề nghiệp được thể hiện qua bức tranh?")
     assert ok("Em có sống ở đô thị không?")
     assert ok("Em hãy vẽ biểu đồ dân số của địa phương mình.")
+
+
+def test_published_text_cites_the_lesson_not_the_plan() -> None:
+    from app.lessonplan.audience import student_text
+
+    assert student_text("Theo giáo án, môn Địa lí giúp học sinh:") == "Theo bài học, môn Địa lí giúp học sinh:"
+    assert student_text("Em đọc lại phần giáo án. Giáo án viết rõ.") == "Em đọc lại phần bài học. Bài học viết rõ."
+
+
+def test_teacher_only_instruction_of_a_plan_lesson_is_not_shown() -> None:
+    from app.student import _shown
+
+    def blk(text: str) -> dict:
+        return {"kind": "instruction", "payload": {"text": text}}
+
+    assert not _shown(blk("a) Mục tiêu:Vận dụng tri thức địa lí giải quyết vấn đề thực tiễn."), True)
+    assert not _shown(blk("* Câu hỏi: Lật các số và cho biết tên nghề nghiệp được thể hiện qua bức tranh?"), True)
+    assert _shown(blk("Em hãy vẽ biểu đồ dân số của địa phương mình."), True)
+    assert _shown(blk("Quan sát bảng số liệu và trả lời."), False)  # a lesson not built from a plan is left as the teacher wrote it
