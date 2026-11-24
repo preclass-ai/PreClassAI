@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any
 
+from app.lessonplan.audience import student_text
 from app.sources.numbers import parse_numbers
 
 STOP = {"la", "va", "cua", "cho", "em", "co", "khong", "nay", "nao", "gi", "the", "nhu", "voi", "mot", "cac", "nhung",
@@ -143,7 +144,7 @@ def build_view(snap: dict[str, Any], item: dict[str, Any]) -> ItemView:
     v = ItemView(item["id"], item["payload"]["stem"], item["payload"]["itemType"], item["payload"]["skill"], opts, blocks,
                  fact.get("unit"), fact.get("period"), key.get("correct") if key else None,
                  Decimal(str(val)) if val is not None else None, exp["text"] if exp else None)
-    v.hints = [str(h) for h in item["payload"].get("hints") or []][:3]
+    v.hints = [student_text(str(h)) for h in item["payload"].get("hints") or []][:3]
     v.facts = [_fact_line(f) for f in facts]
     v.rows = [str(f.get("region") or f.get("label") or "") for f in facts]
     # Data facts are on the student's screen: quoting them is not a leak (the answer itself is still discarded below).

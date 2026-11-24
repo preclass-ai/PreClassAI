@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import models as m
 from app.errors import ApiError
 from app.habit import rules
+from app.lessonplan.audience import student_text
 from app.schemas import ReviewCardPayload, ReviewProgressIn, ReviewState, StudentReviewCard
 
 
@@ -20,8 +21,18 @@ def raw_cards(snap: dict[str, Any]) -> list[dict[str, Any]]:
     return sorted((b for b in snap["blocks"] if b["kind"] == "review_card"), key=lambda b: b["position"])
 
 
+def _words(v: Any) -> Any:
+    if isinstance(v, str):
+        return student_text(v)
+    if isinstance(v, list):
+        return [_words(x) for x in v]
+    if isinstance(v, dict):
+        return {k: _words(x) for k, x in v.items()}
+    return v
+
+
 def cards(snap: dict[str, Any]) -> list[StudentReviewCard]:
-    return [StudentReviewCard(id=UUID(b["id"]), position=b["position"], **ReviewCardPayload.model_validate(b["payload"]).model_dump())
+    return [StudentReviewCard(id=UUID(b["id"]), position=b["position"], **ReviewCardPayload.model_validate(_words(b["payload"])).model_dump())
             for b in raw_cards(snap)]
 
 
