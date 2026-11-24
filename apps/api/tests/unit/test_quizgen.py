@@ -20,7 +20,7 @@ SRC = Source(PLAN)
 def q(**kw: object) -> AiQuestion:
     base: dict[str, object] = {
         "stem": "Dân số nước ta năm 2021 là bao nhiêu triệu người?", "options": ["98,5 triệu người", "Đứng thứ nhất Đông Nam Á", "Đứng thứ hai Đông Nam Á", "Không được nêu trong giáo án"],
-        "correct_index": 0, "explanation": "Theo giáo án, dân số năm 2021 là 98,5 triệu người.",
+        "correct_index": 0, "explanation": "Theo bài học, dân số năm 2021 là 98,5 triệu người.",
         "hints": ["Em đọc lại phần dân số trong bài.", "Em tìm con số gắn với năm đề hỏi.", "Em chú ý đơn vị là triệu người."],
         "skill_tag": "READ_TABLE", "source_quote": "Dân số nước ta năm 2021 là 98,5 triệu người, đứng thứ ba Đông Nam Á."}
     return AiQuestion.model_validate({**base, **kw})
@@ -68,10 +68,11 @@ def test_a_geography_question_with_the_word_nhom_is_kept() -> None:
 def test_sentence_references_become_theo_giao_an() -> None:
     from app.lessonplan.quizgen import clean_refs
 
-    assert clean_refs("Số liệu nằm ở mục [3] của bài.") == "Số liệu nằm theo giáo án của bài."
-    assert clean_refs("Theo [S2], dân số tăng.") == "Theo giáo án, dân số tăng."
-    assert clean_refs("[S4] nêu mật độ dân số.") == "Theo giáo án nêu mật độ dân số."
-    assert clean_refs("Đáp án đúng, xem [1, 2].") == "Đáp án đúng, theo giáo án."
+    assert clean_refs("Số liệu nằm ở mục [3] của bài.") == "Số liệu nằm theo bài học của bài."
+    assert clean_refs("Theo [S2], dân số tăng.") == "Theo bài học, dân số tăng."
+    assert clean_refs("[S4] nêu mật độ dân số.") == "Theo bài học nêu mật độ dân số."
+    assert clean_refs("Đáp án đúng, xem [1, 2].") == "Đáp án đúng, theo bài học."
+    assert clean_refs("Theo giáo án, môn Địa lí liên quan tới gì? Giáo án viết rõ.") == "Theo bài học, môn Địa lí liên quan tới gì? Bài học viết rõ."
     assert clean_refs("Không có tham chiếu nào.") == "Không có tham chiếu nào."
     d = q(explanation="Theo [S1] và mục [2], dân số là 98,5 triệu người.", hints=["Đọc [S1].", "Em xem mục [2] nhé.", "Chú ý đơn vị em nhé."])
     assert "[" not in d.explanation and all("[" not in h for h in d.hints)  # cleaned before the draft is stored
@@ -133,7 +134,7 @@ def test_old_drafts_are_cleaned_for_display() -> None:
     from app.lessonplan.quizgen import clean_payload
 
     out = clean_payload("quiz", {"explanation": "Xem mục [4].", "hints": ["Đọc [S2].", "a", "b"]})
-    assert out["explanation"] == "Theo giáo án." and out["hints"][0] == "Đọc theo giáo án."
+    assert out["explanation"] == "Theo bài học." and out["hints"][0] == "Đọc theo bài học."
 
 
 def test_duplicate_options_are_rejected() -> None:

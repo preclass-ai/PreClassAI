@@ -206,7 +206,7 @@ async def test_whole_flow_review_cards_gate_and_habit_points_to_a_card(client: h
     hint = (await client.post(f"{url_s}/chat", json={"itemId": item["id"], "action": "hint", "requestId": "22222222-2222-4222-8222-222222222222"})).json()
     assert hint["hintLevel"] == 1 and hint["reply"] == next(b for b in ai_items if b["id"] == item["id"])["payload"]["hints"][0]  # AI hints are fixed
     done = (await client.post(f"{url_s}/attempts", json={"itemId": item["id"], "answer": {"choice": "A"}, "requestId": "33333333-3333-4333-8333-333333333333"})).json()
-    assert done["sourceQuote"] and done["correctAnswer"].startswith(("A.", "B.", "C.", "D.")) and done["explanation"]  # "Theo giáo án: <quote>"
+    assert done["sourceQuote"] and done["correctAnswer"].startswith(("A.", "B.", "C.", "D.")) and done["explanation"]  # "Theo bài học: <quote>"
 
 
 class ReviewBroken:
@@ -442,8 +442,8 @@ async def test_opening_an_assignment_before_answering_shows_no_answer_explanatio
     rest = {k: v for k, v in a.items() if k != "reviewCards"}
     leaks = [(path, k) for path, k, _ in _walk(rest) if k in LEAK_KEYS]
     assert not leaks, leaks  # nothing outside the cards, at any depth (reviewState only holds progress)
-    asked = json.dumps(a["items"], ensure_ascii=False)  # the questions themselves: no source quote of an AI question, no "Theo giáo án:" text
-    assert "Theo giáo án:" not in asked and all(q["sourceQuote"] not in asked for q in items if q["kind"] == "quiz")
+    asked = json.dumps(a["items"], ensure_ascii=False)  # the questions themselves: no source quote of an AI question, no "Theo bài học:" text
+    assert "Theo bài học:" not in asked and all(q["sourceQuote"] not in asked for q in items if q["kind"] == "quiz")
     cards = json.dumps(a["reviewCards"], ensure_ascii=False)
     assert texts  # a card may restate the fact a question asks about; VAL-10 only blocks cued or numeric answers (see the handoff)
     for k in answers:
