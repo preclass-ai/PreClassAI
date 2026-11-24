@@ -13,6 +13,7 @@ import { api, unwrap, type Schemas } from "@/lib/api";
 import { errorCode, errorMessage } from "@/lib/errors";
 import { fmtDate, fmtNumber, parseAnswerNumber } from "@/lib/format";
 import { SKILL } from "@/lib/labels";
+import { isTeacherOnly, studentText } from "@/lib/student-text";
 import { newRequestId } from "@/lib/uuid";
 
 type Item = Schemas["StudentItem"];
@@ -69,7 +70,7 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
   const isClosed = closed || new Date(data.dueAt).getTime() < Date.now();
   // Content and items share one position space in the snapshot: show them in authoring order.
   const entries = [
-    ...data.blocks.filter((b) => b.kind !== "card_back").map((b) => ({ pos: b.position, block: b as ContentBlock })),
+    ...data.blocks.filter((b) => b.kind !== "card_back" && !(b.kind === "instruction" && isTeacherOnly(blockText(b)))).map((b) => ({ pos: b.position, block: b as ContentBlock })),
     ...data.items.map((i) => ({ pos: i.position, item: i as Item })),
   ].sort((x, y) => x.pos - y.pos);
   const answered = data.items.filter((i) => i.result).length;
@@ -168,6 +169,11 @@ export default function StudentAssignmentPage({ params }: { params: Promise<{ as
       {!inFocus && items.length > 0 && answered === items.length ? <GuestSurveyCard /> : null}
     </article>
   );
+}
+
+function blockText(b: ContentBlock): string {
+  const t = (b.payload as Record<string, unknown>).text;
+  return typeof t === "string" ? t : "";
 }
 
 function ContentView({ block }: { block: ContentBlock }) {
@@ -272,7 +278,7 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed, onOp
     <section className="card item" aria-labelledby={`q-${item.id}`}>
       <div className="item-top"><span className="question-number">Câu {no}</span><span className={`skill-chip skill-${item.skill}`}>{SKILL[item.skill]}</span></div>
       <p id={`q-${item.id}`} className="stem">
-        {item.stem}
+        {studentText(item.stem)}
       </p>
       <HabitItem assignmentId={assignmentId} itemId={item.id} answered={!!result} explanation={result?.explanation ?? null} onOpenReview={onOpenReview} />
       {result && !redo ? (
@@ -300,7 +306,7 @@ function ItemView({ no, item, assignmentId, disabled, onAnswered, onClosed, onOp
                     onChange={() => setChoice(o.label)}
                   />
                   <span>
-                    <strong>{o.label}.</strong> {o.text}
+                    <strong>{o.label}.</strong> {studentText(o.text)}
                   </span>
                 </label>
               ))}
@@ -349,11 +355,11 @@ function Result({ result, title }: { result: Schemas["AttemptResult"]; title?: s
       <strong>{title ? `${title}: ${label}` : label}</strong>
       {result.correctAnswer ? (
         <p className="answer-reveal">
-          <strong>Đáp án đúng:</strong> {result.correctAnswer}
+          <strong>Đáp án đúng:</strong> {studentText(result.correctAnswer)}
         </p>
       ) : null}
-      {result.explanation ? <p className="explanation">{result.explanation}</p> : null}
-      <p className="source-line muted small">{result.sourceQuote ? `Theo giáo án: ${result.sourceQuote}` : "Nguồn: tài liệu giáo viên đã duyệt"}</p>
+      {result.explanation ? <p className="explanation">{studentText(result.explanation)}</p> : null}
+      <p className="source-line muted small">{result.sourceQuote ? `Trích bài học: ${result.sourceQuote}` : "Nguồn: tài liệu giáo viên đã duyệt"}</p>
     </div>
   );
 }
